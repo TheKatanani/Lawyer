@@ -110,8 +110,8 @@ export async function DELETE(req: NextRequest) {
     // Audit log
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
-      actorUid: session.uid,
-      actorEmail: session.email,
+      actorUid: user.uid,
+      actorEmail: user.email,
       action: 'MEDIA_ASSET_DELETED',
       targetType: 'mediaAsset',
       targetId: assetId,
