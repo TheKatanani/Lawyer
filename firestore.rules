@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Explicit Zero-Trust Rule: All browser SDK operations are rejected.
+    // Database access is mediated 100% by the server-side Data Access Layer (DAL)
+    // using the Firebase Admin SDK in Node runtime.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

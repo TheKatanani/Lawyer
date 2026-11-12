@@ -1,0 +1,163 @@
+import React from 'react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/server/auth/session';
+import { store } from '@/server/db/store';
+import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+
+export default async function AdminOverviewPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    redirect('/admin/login');
+  }
+
+  const serviceCount = store.services.size;
+  const teamCount = store.teamMembers.size;
+  const articleCount = store.articles.size;
+  const inquiryList = Array.from(store.inquiries.values());
+  const newInquiries = inquiryList.filter((i) => i.status === 'new').length;
+  const recentAudits = store.auditLogs.slice(0, 5);
+
+  return (
+    <div className="space-y-10">
+      {/* Page Header */}
+      <div className="space-y-1 border-b border-border pb-6">
+        <h1 className="font-heading-ar font-bold text-2xl sm:text-3xl text-ink">
+          نظرة عامة على المنصة (Platform Overview)
+        </h1>
+        <p className="text-sm text-muted">
+          مرحباً بك، <span className="font-semibold text-ink">{user.displayName}</span>. إليك ملخص حي لحالة المحتوى والطلبات الواردة.
+        </p>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase">مجالات الاختصاص</span>
+            <Briefcase className="w-5 h-5 text-gold-ink" />
+          </div>
+          <span className="font-heading-ar font-bold text-3xl text-ink block">{serviceCount}</span>
+          <span className="text-xs text-success flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" /> جميعها منشورة بزوج اللغتين (AR/EN)
+          </span>
+        </div>
+
+        <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase">طلبات التواصل الجديدة</span>
+            <Inbox className="w-5 h-5 text-gold-ink" />
+          </div>
+          <span className="font-heading-ar font-bold text-3xl text-ink block">{newInquiries}</span>
+          <span className="text-xs text-muted">إجمالي الطلبات: {inquiryList.length}</span>
+        </div>
+
+        <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase">فريق العمل المعتمد</span>
+            <Users className="w-5 h-5 text-gold-ink" />
+          </div>
+          <span className="font-heading-ar font-bold text-3xl text-ink block">{teamCount}</span>
+          <span className="text-xs text-muted">محامون ومستشارون مرخصون</span>
+        </div>
+
+        <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase">الرؤى والتحليلات</span>
+            <BookOpen className="w-5 h-5 text-gold-ink" />
+          </div>
+          <span className="font-heading-ar font-bold text-3xl text-ink block">{articleCount}</span>
+          <span className="text-xs text-muted">مقالات توعية قانونية</span>
+        </div>
+      </div>
+
+      {/* Quick Action Navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link
+          href="/admin/inquiries"
+          className="p-6 bg-surface rounded-sm border border-border hover:border-gold/60 transition-all shadow-xs flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-10 h-10 rounded-sm bg-canvas border border-border flex items-center justify-center text-gold-ink">
+              <Inbox className="w-5 h-5" />
+            </div>
+            <h3 className="font-heading-ar font-bold text-lg text-ink group-hover:text-gold-ink transition-colors">
+              فرز ومعالجة الاستفسارات
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              متابعة طلبات التواصل الجديدة، تعيين المحامي المسؤول، وتسجيل الملاحظات الإجرائية.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-semibold text-ink group-hover:text-gold-ink">
+            <span>فتح قائمة الطلبات</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/services"
+          className="p-6 bg-surface rounded-sm border border-border hover:border-gold/60 transition-all shadow-xs flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-10 h-10 rounded-sm bg-canvas border border-border flex items-center justify-center text-gold-ink">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <h3 className="font-heading-ar font-bold text-lg text-ink group-hover:text-gold-ink transition-colors">
+              إدارة خدمات وتراخيص المنشأة
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              تحديث مجالات الاختصاص، المخرجات القانونية، وضمان اكتمال نسختي العربية والإنجليزية قبل النشر.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-semibold text-ink group-hover:text-gold-ink">
+            <span>إدارة الخدمات</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/audit"
+          className="p-6 bg-surface rounded-sm border border-border hover:border-gold/60 transition-all shadow-xs flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-10 h-10 rounded-sm bg-canvas border border-border flex items-center justify-center text-gold-ink">
+              <History className="w-5 h-5" />
+            </div>
+            <h3 className="font-heading-ar font-bold text-lg text-ink group-hover:text-gold-ink transition-colors">
+              سجل التدقيق الأمني والنظامي
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              استعراض كافة عمليات النشر، التعديل، تغيير حالات الطلبات، وتسجيلات الدخول.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-semibold text-ink group-hover:text-gold-ink">
+            <span>سجل العمليات</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Recent Audit Activities */}
+      <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-4">
+        <h2 className="font-heading-ar font-bold text-lg text-ink">
+          آخر العمليات المسجلة (Recent Audit Logs)
+        </h2>
+        <div className="divide-y divide-border/60">
+          {recentAudits.map((a) => (
+            <div key={a.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-mono bg-canvas px-2 py-0.5 rounded text-gold-ink border border-border">
+                  {a.action}
+                </span>
+                <span className="text-ink font-medium">{a.actorEmail}</span>
+              </div>
+              <span className="text-muted" dir="ltr">
+                {new Date(a.createdAt).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

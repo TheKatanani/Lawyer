@@ -1,0 +1,17 @@
+:root {
+  --color-canvas: #F6F2EA;
+  --color-surface: #FFFDFA;
+  --color-ink: #202522;
+  --color-muted: #555C56;
+  --color-gold: #A28248;
+  --color-gold-ink: #725821;
+  --color-border: #DAD5CB;
+  --color-signature: #17241F;
+  --color-on-dark: #FAF7F0;
+  --color-danger: #A12F2F;
+  --color-success: #23613D;
+
+  --font-noto-naskh: 'Noto Naskh Arabic', serif;
+  --font-ibm-plex: 'IBM Plex Sans Arabic', sans-serif;
+  --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+}

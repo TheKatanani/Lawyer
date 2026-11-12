@@ -1,0 +1,11 @@
+sourceHost,sourcePath,significantQueryParams,oldStatus,trafficEvidence,destinationPath,action,owner,testResult
+rma-law.sa,/,none,200,HighOrganicHome,/ar,308_PERMANENT,TechnicalPM,VERIFIED
+rma-law.sa,/index.php,none,200,LegacyHome,/ar,301_PERMANENT,TechnicalPM,VERIFIED
+rma-law.sa,/about-us,none,200,MediumTraffic,/ar/about,301_PERMANENT,ContentLead,VERIFIED
+rma-law.sa,/services,none,200,HighTraffic,/ar/services,301_PERMANENT,TechnicalPM,VERIFIED
+rma-law.sa,/services.php,id=1,200,HistoricalCorporate,/ar/services/corporate-governance,301_PERMANENT,TechnicalPM,VERIFIED
+rma-law.sa,/services.php,id=2,200,HistoricalLitigation,/ar/services/commercial-litigation,301_PERMANENT,TechnicalPM,VERIFIED
+rma-law.sa,/team,none,200,MediumTraffic,/ar/team,301_PERMANENT,HRLead,VERIFIED
+rma-law.sa,/contact-us,none,200,HighInquiry,/ar/contact,301_PERMANENT,OperationsLead,VERIFIED
+rma-law.sa,/privacy-policy,none,200,LowTraffic,/ar/privacy,301_PERMANENT,LegalCounsel,VERIFIED
+rma-law.sa,/old-promotions-2022,none,404,None,,410_GONE,SEOLead,VERIFIED

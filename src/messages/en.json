@@ -1,0 +1,116 @@
+{
+  "common": {
+    "brandName": "Riyadh Mohammed Alzahrani Legal Company",
+    "brandShort": "Alzahrani Law",
+    "tagline": "A clear legal perspective, grounded in knowledge",
+    "allRightsReserved": "All rights reserved",
+    "exploreServices": "Explore Our Services",
+    "contactUs": "Contact Us",
+    "readMore": "Read More",
+    "viewAll": "View All",
+    "back": "Back",
+    "loading": "Loading...",
+    "language": "العربية",
+    "languageSwitch": "ar",
+    "skipToContent": "Skip to main content",
+    "whatsappLabel": "Contact via WhatsApp",
+    "callLabel": "Telephone Call"
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About Firm",
+    "services": "Practice Areas",
+    "team": "Our Team",
+    "insights": "Legal Insights",
+    "contact": "Contact"
+  },
+  "hero": {
+    "eyebrow": "Licensed Saudi Law Practice & Legal Advisory",
+    "heading": "A clear legal perspective. An approach grounded in knowledge.",
+    "description": "Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives and transparent next steps.",
+    "ctaPrimary": "Explore our services",
+    "ctaSecondary": "Schedule a Consultation",
+    "imageAlt": "Contemporary Saudi architecture reflecting prestige and legal precision"
+  },
+  "aboutPreview": {
+    "eyebrow": "About Us",
+    "heading": "Meet the company and understand its approach",
+    "description": "Riyadh Mohammed Alzahrani Legal Company was founded to serve as a steadfast legal partner to businesses, investors, and private clients, maintaining unwavering adherence to evolving Saudi regulations.",
+    "cta": "Learn More About Us"
+  },
+  "servicesSection": {
+    "eyebrow": "Practice Areas",
+    "heading": "Legal services suited to your needs",
+    "description": "We deliver tailored legal solutions designed to address the specific complexities encountered by enterprises and individuals.",
+    "filters": {
+      "all": "All Services",
+      "individual": "Individuals",
+      "business": "Businesses"
+    },
+    "viewDetails": "View Practice Details"
+  },
+  "valuesSection": {
+    "eyebrow": "Core Pillars",
+    "heading": "Our Core Values & Principles",
+    "value1Title": "Regulatory Depth & Precision",
+    "value1Desc": "Grounded in deep mastery of Saudi laws and evolving judicial precedents to safeguard our clients' strategic interests.",
+    "value2Title": "Integrity & Absolute Clarity",
+    "value2Desc": "Complete transparency from day one regarding risks, realistic outcomes, timelines, and commercial fee structures.",
+    "value3Title": "Confidentiality & Professionalism",
+    "value3Desc": "Uncompromising adherence to professional secrecy, safeguarding private data and enterprise trade secrets."
+  },
+  "journeySection": {
+    "eyebrow": "Engagement Model",
+    "heading": "Clear steps, from first contact to follow-up",
+    "step1Title": "1. Initial Inquiry",
+    "step1Desc": "Submit general information regarding your inquiry via the secure form without transmitting sensitive documents.",
+    "step2Title": "2. Conflict Check & Triage",
+    "step2Desc": "Our team reviews the inquiry to confirm absence of conflicts of interest and determines the suitable practice group.",
+    "step3Title": "3. Consultation & Engagement",
+    "step3Desc": "We outline representation scope and terms through a formal legal engagement agreement defining exact deliverables.",
+    "step4Title": "4. Execution & Regular Updates",
+    "step4Desc": "Regular milestone reports and proactive representation until the required legal matter is fully resolved."
+  },
+  "insightsSection": {
+    "eyebrow": "Analysis & Briefings",
+    "heading": "Latest Legal Insights & Publications",
+    "description": "Authoritative analysis on Saudi commercial regulations, foreign investment, and dispute resolution."
+  },
+  "teamSection": {
+    "eyebrow": "Our Advocates",
+    "heading": "Certified Advocates & Specialized Counsel",
+    "description": "Our team comprises certified advocates and legal researchers admitted before the Saudi commercial and civil courts."
+  },
+  "contactSection": {
+    "eyebrow": "Initiate Contact",
+    "heading": "Contact the company team",
+    "description": "We welcome your inquiry and look forward to coordinating an initial consultation with the specialized legal team.",
+    "audienceLabel": "Client Classification",
+    "audienceIndividual": "Individual",
+    "audienceBusiness": "Commercial / Business",
+    "nameLabel": "Full Name",
+    "phoneLabel": "Phone Number (with country code)",
+    "emailLabel": "Email Address (Optional)",
+    "companyLabel": "Company Name",
+    "serviceLabel": "Requested Practice Area",
+    "generalInquiry": "General Inquiry",
+    "messageLabel": "General Request Description",
+    "helperText": "Give a general description of your request. Please do not include sensitive information or documents at this stage.",
+    "privacyConsent": "I acknowledge that I have read the Privacy Notice and consent to data processing for inquiry coordination.",
+    "submitBtn": "Send a contact request",
+    "submitting": "Submitting...",
+    "disclaimer": "Submitting this request does not establish legal representation, confirm acceptance of a matter, or include a free consultation. The team will explain the relevant next steps and terms.",
+    "successTitle": "Your Request Has Been Received",
+    "successMessage": "Thank you for reaching out. Your request has been assigned a reference number and our intake team will respond during regular business hours.",
+    "refNumber": "Reference Number"
+  },
+  "footer": {
+    "addressTitle": "Headquarters",
+    "addressText": "Riyadh, Kingdom of Saudi Arabia",
+    "contactChannels": "Direct Channels",
+    "quickLinks": "Quick Links",
+    "terms": "Website Terms",
+    "privacy": "Privacy Policy",
+    "licenseNote": "Licensed and certified Saudi law firm and legal consultancy operating under the Ministry of Justice."
+  }
+}

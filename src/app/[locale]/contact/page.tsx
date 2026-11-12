@@ -1,0 +1,142 @@
+import React from 'react';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { ContactForm } from '@/components/forms/ContactForm';
+import { listPublishedProjections } from '@/server/repositories/content';
+import { SupportedLocale } from '@/server/types';
+import { Phone, MessageSquare, MapPin, Clock, ShieldCheck } from 'lucide-react';
+
+export default async function ContactPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  setRequestLocale(locale);
+  const t = await getTranslations();
+  const currentLocale = locale as SupportedLocale;
+  const isAr = locale === 'ar';
+
+  const publishedServices = await listPublishedProjections('service', currentLocale);
+  const serviceOptions = publishedServices.map((s) => ({
+    id: s.entityId,
+    title: s.title,
+  }));
+
+  const formMessages = {
+    eyebrow: t('contactSection.eyebrow'),
+    heading: t('contactSection.heading'),
+    description: t('contactSection.description'),
+    audienceLabel: t('contactSection.audienceLabel'),
+    audienceIndividual: t('contactSection.audienceIndividual'),
+    audienceBusiness: t('contactSection.audienceBusiness'),
+    nameLabel: t('contactSection.nameLabel'),
+    phoneLabel: t('contactSection.phoneLabel'),
+    emailLabel: t('contactSection.emailLabel'),
+    companyLabel: t('contactSection.companyLabel'),
+    serviceLabel: t('contactSection.serviceLabel'),
+    generalInquiry: t('contactSection.generalInquiry'),
+    messageLabel: t('contactSection.messageLabel'),
+    helperText: t('contactSection.helperText'),
+    privacyConsent: t('contactSection.privacyConsent'),
+    submitBtn: t('contactSection.submitBtn'),
+    submitting: t('contactSection.submitting'),
+    disclaimer: t('contactSection.disclaimer'),
+    successTitle: t('contactSection.successTitle'),
+    successMessage: t('contactSection.successMessage'),
+    refNumber: t('contactSection.refNumber'),
+  };
+
+  return (
+    <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <div className="max-w-3xl space-y-4">
+          <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+            {t('contactSection.eyebrow')}
+          </span>
+          <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
+            {t('contactSection.heading')}
+          </h1>
+          <p className="text-muted text-base sm:text-lg leading-relaxed">
+            {t('contactSection.description')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          {/* Main Interactive Contact Form (7 columns) */}
+          <div className="lg:col-span-7">
+            <ContactForm
+              locale={locale}
+              services={serviceOptions}
+              messages={formMessages}
+            />
+          </div>
+
+          {/* Direct Channels & Office Info (5 columns) */}
+          <div className="lg:col-span-5 space-y-8">
+            <div className="p-8 bg-surface rounded-sm border border-border/80 shadow-xs space-y-6">
+              <h2 className="font-heading-ar font-bold text-ink text-xl">
+                {isAr ? 'القنوات المباشرة وساعات العمل' : 'Direct Channels & Hours'}
+              </h2>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-ink block">{isAr ? 'المقر الرئيسي' : 'Headquarters'}</span>
+                    <span className="text-muted">{isAr ? 'مدينة الرياض، المملكة العربية السعودية' : 'Riyadh, Kingdom of Saudi Arabia'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Phone className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-ink block">{isAr ? 'الهاتف المباشر' : 'Telephone'}</span>
+                    <a href="tel:+966110000000" className="text-gold-ink hover:underline font-mono" dir="ltr">
+                      +966 11 000 0000
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-ink block">{isAr ? 'واتساب الرسمي' : 'Official WhatsApp'}</span>
+                    <a
+                      href="https://wa.me/966500000000"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gold-ink hover:underline"
+                    >
+                      {isAr ? 'بدء محادثة واتساب' : 'Start WhatsApp Chat'}
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-ink block">{isAr ? 'ساعات العمل الرسمية' : 'Working Hours'}</span>
+                    <span className="text-muted">
+                      {isAr ? 'الأحد - الخميس: 9:00 ص إلى 5:00 م' : 'Sun - Thu: 9:00 AM to 5:00 PM AST'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy & PDPL Notice Box */}
+            <div className="p-8 bg-signature text-on-dark rounded-sm border border-gold/30 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 text-gold font-heading-ar font-bold text-lg">
+                <ShieldCheck className="w-5 h-5" />
+                <h3>{isAr ? 'حماية البيانات الشخصية' : 'PDPL Data Safeguards'}</h3>
+              </div>
+              <p className="text-on-dark/70 text-xs sm:text-sm leading-relaxed">
+                {isAr
+                  ? 'تُعالج بياناتك وفقاً لأحكام نظام حماية البيانات الشخصية بالمملكة (PDPL) وبسرية مهنية تامة، وتُستخدم حصراً لدراسة طلبك والتواصل بشأن التمثيل القانوني.'
+                  : 'Your information is processed in strict compliance with the Saudi Personal Data Protection Law (PDPL) and dedicated solely to conflict assessment.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
