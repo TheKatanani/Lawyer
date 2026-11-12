@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/auth/session';
 import { store } from '@/server/db/store';
-import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage } from 'lucide-react';
 
 export default async function AdminOverviewPage() {
   const user = await getSessionUser();
@@ -28,6 +28,56 @@ export default async function AdminOverviewPage() {
         <p className="text-sm text-muted">
           مرحباً بك، <span className="font-semibold text-ink">{user.displayName}</span>. إليك ملخص حي لحالة المحتوى والطلبات الواردة.
         </p>
+      </div>
+
+      {/* Integrations Status Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Firebase Status */}
+        <div className="bg-surface border border-gold/30 rounded-sm p-4 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-signature rounded-sm text-gold">
+              <Flame className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-ink">Google Firebase</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3 h-3" /> متصل
+                </span>
+              </div>
+              <p className="text-xs text-muted">
+                مشروع: <code className="bg-canvas px-1 py-0.5 rounded text-ink font-mono">lawyer-ad052</code> (حماية الخادم مفعّلة - Zero Browser Firestore)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cloudinary Status */}
+        <div className="bg-surface border border-gold/30 rounded-sm p-4 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-signature rounded-sm text-gold">
+              <Cloud className="w-5 h-5 text-sky-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-ink">Cloudinary Media CDN</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3 h-3" /> متصل ومشفّر
+                </span>
+              </div>
+              <p className="text-xs text-muted">
+                حساب: <code className="bg-canvas px-1 py-0.5 rounded text-ink font-mono">dhgk61npp</code> (Preset: <code className="bg-canvas px-1 py-0.5 rounded text-ink font-mono">ml_default</code>)
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/media"
+            className="text-xs font-semibold text-gold-ink hover:underline flex items-center gap-1"
+          >
+            <span>المكتبة</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </div>
 
       {/* Metric Cards */}

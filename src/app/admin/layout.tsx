@@ -9,6 +9,7 @@ import {
   Inbox,
   Shield,
   History,
+  Image as LucideImage,
 } from 'lucide-react';
 import { AdminSignoutButton } from '@/components/admin/SignoutButton';
 import '@/app/globals.css';
@@ -79,6 +80,14 @@ export default async function AdminLayout({
                     >
                       <BookOpen className="w-4 h-4 text-gold" />
                       <span>المدونة (Insights)</span>
+                    </Link>
+
+                    <Link
+                      href="/admin/media"
+                      className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium hover:bg-on-dark/10 transition-colors"
+                    >
+                      <LucideImage className="w-4 h-4 text-gold" />
+                      <span>مكتبة الوسائط (Cloudinary Media)</span>
                     </Link>
                   </>
                 )}

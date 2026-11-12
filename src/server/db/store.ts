@@ -13,6 +13,7 @@ import {
   ServiceRevision,
   TeamMemberRevision,
   ArticleRevision,
+  MediaAsset,
 } from '../types';
 
 // Initial Mock Seed Data
@@ -783,6 +784,7 @@ class InMemoryStore {
   articleRevisions: Map<string, ArticleRevision> = new Map();
   publishedContent: Map<string, PublicContentProjection> = new Map();
   inquiries: Map<string, ContactRequest> = new Map();
+  media: Map<string, MediaAsset> = new Map();
   auditLogs: AuditLogEntry[] = [];
   outboxJobs: Map<string, OutboxJob> = new Map();
   idempotencyKeys: Map<string, { result: any; expiresAt: number }> = new Map();

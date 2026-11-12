@@ -195,6 +195,22 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export interface MediaAsset {
+  id: string;
+  publicId: string;
+  secureUrl: string;
+  format: string;
+  width: number;
+  height: number;
+  bytes: number;
+  altText: {
+    ar: string;
+    en: string;
+  };
+  uploadedBy: string;
+  createdAt: string;
+}
+
 export interface OutboxJob {
   id: string;
   type: 'inquiry_notification' | 'cache_invalidation';
