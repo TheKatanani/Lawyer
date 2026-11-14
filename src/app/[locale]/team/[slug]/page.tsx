@@ -90,11 +90,11 @@ export default async function TeamMemberDetailPage({
 
             <div className="pt-4 border-t border-border">
               <Link
-                href={`/${locale}/contact`}
-                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 bg-ink text-on-dark font-semibold text-sm rounded-sm hover:bg-signature transition-all shadow-sm"
+                href={`/${locale}/consultation?lawyer=${member.entityId}`}
+                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 bg-signature text-on-dark font-semibold text-sm rounded-sm hover:bg-signature/90 transition-all shadow-sm border border-gold/30"
               >
-                <span>{isAr ? 'طلب استشارة' : 'Book Consultation'}</span>
-                <ArrowUpRight className="w-4 h-4" />
+                <span>{isAr ? 'طلب استشارة مع المحامي' : 'Request Consultation with Lawyer'}</span>
+                <ArrowUpRight className="w-4 h-4 text-gold" />
               </Link>
             </div>
           </div>

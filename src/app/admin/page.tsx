@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/auth/session';
 import { store } from '@/server/db/store';
-import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage } from 'lucide-react';
+import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage, CalendarCheck } from 'lucide-react';
 
 export default async function AdminOverviewPage() {
   const user = await getSessionUser();
@@ -14,6 +14,8 @@ export default async function AdminOverviewPage() {
   const serviceCount = store.services.size;
   const teamCount = store.teamMembers.size;
   const articleCount = store.articles.size;
+  const consultationList = Array.from(store.consultations.values());
+  const pendingConsultations = consultationList.filter((c) => c.status === 'pending').length;
   const inquiryList = Array.from(store.inquiries.values());
   const newInquiries = inquiryList.filter((i) => i.status === 'new').length;
   const recentAudits = store.auditLogs.slice(0, 5);
@@ -81,7 +83,18 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="p-6 bg-surface rounded-sm border border-gold/40 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase">طلبات الاستشارة</span>
+            <CalendarCheck className="w-5 h-5 text-gold" />
+          </div>
+          <span className="font-heading-ar font-bold text-3xl text-ink block">{consultationList.length}</span>
+          <span className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+            <Clock className="w-3.5 h-3.5 text-amber-500" /> {pendingConsultations} بانتظار التنسيق
+          </span>
+        </div>
+
         <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
           <div className="flex items-center justify-between text-muted">
             <span className="text-xs font-semibold uppercase">مجالات الاختصاص</span>
@@ -89,13 +102,13 @@ export default async function AdminOverviewPage() {
           </div>
           <span className="font-heading-ar font-bold text-3xl text-ink block">{serviceCount}</span>
           <span className="text-xs text-success flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> جميعها منشورة بزوج اللغتين (AR/EN)
+            <CheckCircle2 className="w-3.5 h-3.5" /> زوج اللغتين معتمد
           </span>
         </div>
 
         <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
           <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-semibold uppercase">طلبات التواصل الجديدة</span>
+            <span className="text-xs font-semibold uppercase">استفسارات التواصل</span>
             <Inbox className="w-5 h-5 text-gold-ink" />
           </div>
           <span className="font-heading-ar font-bold text-3xl text-ink block">{newInquiries}</span>
@@ -108,7 +121,7 @@ export default async function AdminOverviewPage() {
             <Users className="w-5 h-5 text-gold-ink" />
           </div>
           <span className="font-heading-ar font-bold text-3xl text-ink block">{teamCount}</span>
-          <span className="text-xs text-muted">محامون ومستشارون مرخصون</span>
+          <span className="text-xs text-muted">محامون ومستشارون</span>
         </div>
 
         <div className="p-6 bg-surface rounded-sm border border-border shadow-xs space-y-2">
@@ -122,7 +135,28 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* Quick Action Navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Link
+          href="/admin/consultations"
+          className="p-6 bg-surface rounded-sm border border-gold/40 hover:border-gold transition-all shadow-xs flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-10 h-10 rounded-sm bg-signature text-gold flex items-center justify-center">
+              <CalendarCheck className="w-5 h-5" />
+            </div>
+            <h3 className="font-heading-ar font-bold text-lg text-ink group-hover:text-gold transition-colors">
+              طلبات الاستشارة والمواعيد
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              متابعة وفرز طلبات الاستشارة، التواصل عبر واتساب، تعيين المحامي، وجدولة الجلسات.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-semibold text-ink group-hover:text-gold">
+            <span>إدارة الاستشارات ({pendingConsultations} جديدة)</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </div>
+        </Link>
+
         <Link
           href="/admin/inquiries"
           className="p-6 bg-surface rounded-sm border border-border hover:border-gold/60 transition-all shadow-xs flex flex-col justify-between group"

@@ -211,6 +211,59 @@ export interface MediaAsset {
   createdAt: string;
 }
 
+export type ConsultationStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+
+export interface ConsultationNote {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface ConsultationHistoryEntry {
+  id: string;
+  actorEmail: string;
+  action: string;
+  fromStatus?: ConsultationStatus;
+  toStatus?: ConsultationStatus;
+  details?: Record<string, any>;
+  timestamp: string;
+}
+
+export interface ConsultationRequest {
+  id: string;
+  reference: string;
+  fullName: string;
+  phone: string;
+  serviceId: string;
+  serviceLabelSnapshot: {
+    ar: string;
+    en: string;
+  };
+  preferredLawyerId?: string | null;
+  preferredLawyerLabelSnapshot?: {
+    ar: string;
+    en: string;
+  } | null;
+  preferredDate?: string | null;
+  assignedLawyerId?: string | null;
+  scheduledAt?: string | null;
+  appointmentTimezone: string;
+  meetingType?: 'online' | 'office' | 'unassigned' | null;
+  meetingLink?: string | null;
+  meetingAddress?: string | null;
+  status: ConsultationStatus;
+  locale: SupportedLocale;
+  sourcePage?: string | null;
+  notes: ConsultationNote[];
+  history: ConsultationHistoryEntry[];
+  idempotencyKey?: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
 export interface OutboxJob {
   id: string;
   type: 'inquiry_notification' | 'cache_invalidation';

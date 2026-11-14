@@ -71,7 +71,9 @@ export default async function LocaleLayout({
     navTeam: (messages.nav as any)?.team || 'فريق العمل',
     navInsights: (messages.nav as any)?.insights || 'المدونة المعرفية',
     navContact: (messages.nav as any)?.contact || 'تواصل معنا',
+    navConsultation: (messages.nav as any)?.consultation || 'طلب استشارة',
     contactUs: (messages.common as any)?.contactUs || 'تواصل معنا',
+    requestConsultation: (messages.nav as any)?.consultation || 'طلب استشارة',
     languageSwitchLabel: (messages.common as any)?.language || 'English',
     targetLocale: isAr ? 'en' : 'ar',
   };

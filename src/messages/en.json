@@ -22,7 +22,8 @@
     "services": "Practice Areas",
     "team": "Our Team",
     "insights": "Legal Insights",
-    "contact": "Contact"
+    "contact": "Contact",
+    "consultation": "Request Consultation"
   },
   "hero": {
     "eyebrow": "Licensed Saudi Law Practice & Legal Advisory",
@@ -112,5 +113,28 @@
     "terms": "Website Terms",
     "privacy": "Privacy Policy",
     "licenseNote": "Licensed and certified Saudi law firm and legal consultancy operating under the Ministry of Justice."
+  },
+  "consultation": {
+    "title": "How can we help?",
+    "explanation": "Send your consultation request, then continue on WhatsApp to arrange a time.",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Enter your full name",
+    "phone": "WhatsApp number",
+    "phonePlaceholder": "55 123 4567",
+    "service": "Service needed",
+    "generalService": "Not sure / General inquiry",
+    "optionalSection": "Optional details",
+    "lawyer": "Preferred lawyer",
+    "defaultLawyer": "No preference — choose a lawyer for me",
+    "preferredDay": "Preferred day",
+    "submit": "Send request & open WhatsApp",
+    "saving": "Sending…",
+    "belowButton": "Your appointment is confirmed only after agreement with our team.",
+    "savedHeading": "Your request was saved",
+    "savedMessage": "Our team will contact you to confirm a time. You can continue on WhatsApp now.",
+    "fallbackAction": "Open WhatsApp",
+    "failure": "We couldn't save your request. Please try again.",
+    "referenceLabel": "Request Reference",
+    "privacyNotice": "Your details are handled with strict legal confidentiality in compliance with Saudi PDPL regulations."
   }
 }

@@ -16,6 +16,7 @@ interface HeaderProps {
     navTeam: string;
     navInsights: string;
     navContact: string;
+    requestConsultation?: string;
     contactUs: string;
     languageSwitchLabel: string;
     targetLocale: string;
@@ -91,12 +92,12 @@ export function Header({ locale, messages }: HeaderProps) {
               <span>{messages.languageSwitchLabel}</span>
             </Link>
 
-            {/* Primary Contact CTA */}
+            {/* Primary Consultation CTA */}
             <Link
-              href={`/${locale}/contact`}
+              href={`/${locale}/consultation`}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm bg-ink text-on-dark text-sm font-semibold hover:bg-signature transition-all duration-150 shadow-sm group"
             >
-              <span>{messages.contactUs}</span>
+              <span>{messages.requestConsultation || (isRTL ? 'طلب استشارة' : 'Request Consultation')}</span>
               <ArrowUpRight className={`w-4 h-4 transition-transform duration-200 ${isRTL ? 'group-hover:-translate-x-0.5 group-hover:-translate-y-0.5' : 'group-hover:translate-x-0.5 group-hover:-translate-y-0.5'}`} />
             </Link>
           </div>
@@ -143,11 +144,11 @@ export function Header({ locale, messages }: HeaderProps) {
             ))}
             <div className="pt-3 border-t border-border">
               <Link
-                href={`/${locale}/contact`}
+                href={`/${locale}/consultation`}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-sm bg-ink text-on-dark text-sm font-semibold"
               >
-                <span>{messages.contactUs}</span>
+                <span>{messages.requestConsultation || (isRTL ? 'طلب استشارة' : 'Request Consultation')}</span>
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>

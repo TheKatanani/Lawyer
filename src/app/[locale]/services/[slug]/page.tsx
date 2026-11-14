@@ -150,11 +150,11 @@ export default async function ServiceDetailPage({
               </div>
 
               <Link
-                href={`/${locale}/contact?service=${service.entityId}`}
-                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-ink text-on-dark font-semibold text-sm rounded-sm hover:bg-signature transition-all shadow-md group"
+                href={`/${locale}/consultation?service=${service.entityId}`}
+                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-signature text-on-dark font-semibold text-sm rounded-sm hover:bg-signature/90 transition-all shadow-md border border-gold/30 group"
               >
-                <span>{isAr ? 'تقديم طلب تواصل' : 'Submit Consultation Request'}</span>
-                <ArrowUpRight className="w-4 h-4" />
+                <span>{isAr ? 'طلب استشارة في هذه الخدمة' : 'Request Consultation for this Service'}</span>
+                <ArrowUpRight className="w-4 h-4 text-gold" />
               </Link>
             </div>
           </div>

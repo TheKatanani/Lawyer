@@ -12,17 +12,33 @@ export interface SessionData {
   createdAt: number;
 }
 
-export async function getSessionUser(): Promise<AdminUser | null> {
-  const cookieStore = cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+export async function getSessionUser(req?: any): Promise<AdminUser | null> {
+  let cookieValue: string | undefined;
 
-  if (!sessionCookie || !sessionCookie.value) {
+  // 1. Check passed request cookies if provided
+  if (req?.cookies?.get) {
+    const c = req.cookies.get(SESSION_COOKIE_NAME);
+    cookieValue = typeof c === 'string' ? c : c?.value;
+  }
+
+  // 2. Check next/headers cookies() store
+  if (!cookieValue) {
+    try {
+      const cookieStore = cookies();
+      const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+      cookieValue = sessionCookie?.value;
+    } catch {
+      // Invariant error outside Next.js server context
+    }
+  }
+
+  if (!cookieValue) {
     return null;
   }
 
   try {
     // Decode base64 session payload
-    const decoded = JSON.parse(Buffer.from(sessionCookie.value, 'base64').toString('utf-8')) as SessionData;
+    const decoded = JSON.parse(Buffer.from(cookieValue, 'base64').toString('utf-8')) as SessionData;
 
     // Verify 8-hour absolute maximum lifespan
     const now = Date.now();

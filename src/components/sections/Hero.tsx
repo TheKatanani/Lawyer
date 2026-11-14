@@ -52,7 +52,7 @@ export function Hero({ locale, messages }: HeroProps) {
                 <ArrowUpRight className={`w-4 h-4 transition-transform duration-200 ${isAr ? 'group-hover:-translate-x-1 group-hover:-translate-y-1' : 'group-hover:translate-x-1 group-hover:-translate-y-1'}`} />
               </Link>
               <Link
-                href={`/${locale}/contact`}
+                href={`/${locale}/consultation`}
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-sm bg-surface border border-border text-ink text-base font-semibold hover:bg-canvas transition-colors duration-200"
               >
                 <span>{messages.ctaSecondary}</span>

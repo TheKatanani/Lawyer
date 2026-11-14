@@ -14,6 +14,7 @@ import {
   TeamMemberRevision,
   ArticleRevision,
   MediaAsset,
+  ConsultationRequest,
 } from '../types';
 
 // Initial Mock Seed Data
@@ -784,6 +785,7 @@ class InMemoryStore {
   articleRevisions: Map<string, ArticleRevision> = new Map();
   publishedContent: Map<string, PublicContentProjection> = new Map();
   inquiries: Map<string, ContactRequest> = new Map();
+  consultations: Map<string, ConsultationRequest> = new Map();
   media: Map<string, MediaAsset> = new Map();
   auditLogs: AuditLogEntry[] = [];
   outboxJobs: Map<string, OutboxJob> = new Map();
@@ -841,6 +843,104 @@ class InMemoryStore {
       updatedAt: '2026-11-12T14:30:00Z',
     };
     this.inquiries.set(sampleInquiry.id, sampleInquiry);
+
+    // Seed realistic consultation requests for triage testing
+    const sampleConsultation1: ConsultationRequest = {
+      id: 'CR-2026-001',
+      reference: 'CR-2026-001',
+      fullName: 'سلطان بن عبدالعزيز التميمي',
+      phone: '+966551234567',
+      serviceId: 'commercial-litigation',
+      serviceLabelSnapshot: {
+        ar: 'التقاضي التجاري وتسوية المنازعات',
+        en: 'Commercial Litigation & Dispute Resolution',
+      },
+      preferredLawyerId: 'riyadh-alzahrani',
+      preferredLawyerLabelSnapshot: {
+        ar: 'أ. رياض محمد الزهراني',
+        en: 'Riyadh M. Alzahrani',
+      },
+      preferredDate: '2026-11-20',
+      assignedLawyerId: null,
+      scheduledAt: null,
+      appointmentTimezone: 'Asia/Riyadh',
+      meetingType: null,
+      meetingLink: null,
+      meetingAddress: null,
+      status: 'pending',
+      locale: 'ar',
+      sourcePage: '/ar/services/commercial-litigation',
+      notes: [],
+      history: [
+        {
+          id: 'H1',
+          actorEmail: 'system',
+          action: 'CONSULTATION_CREATED',
+          toStatus: 'pending',
+          details: { via: 'web_form' },
+          timestamp: '2026-11-13T10:15:00Z',
+        },
+      ],
+      createdAt: '2026-11-13T10:15:00Z',
+      updatedAt: '2026-11-13T10:15:00Z',
+    };
+
+    const sampleConsultation2: ConsultationRequest = {
+      id: 'CR-2026-002',
+      reference: 'CR-2026-002',
+      fullName: 'Sarah Jenkins',
+      phone: '+966559876543',
+      serviceId: 'foreign-investment',
+      serviceLabelSnapshot: {
+        ar: 'الاستثمار الأجنبي وتأسيس الشركات',
+        en: 'Foreign Direct Investment & Market Entry',
+      },
+      preferredLawyerId: null,
+      preferredLawyerLabelSnapshot: null,
+      preferredDate: '2026-11-18',
+      assignedLawyerId: 'senior-counsel',
+      scheduledAt: '2026-11-18T11:00:00Z',
+      appointmentTimezone: 'Asia/Riyadh',
+      meetingType: 'online',
+      meetingLink: 'https://meet.google.com/rma-legal-consult',
+      meetingAddress: null,
+      status: 'confirmed',
+      locale: 'en',
+      sourcePage: '/en/consultation',
+      notes: [
+        {
+          id: 'N1',
+          authorUid: 'admin-rma-01',
+          authorName: 'Riyadh Alzahrani',
+          text: 'Agreed on Google Meet session for Tuesday 2 PM KSA.',
+          createdAt: '2026-11-13T11:00:00Z',
+        },
+      ],
+      history: [
+        {
+          id: 'H2',
+          actorEmail: 'system',
+          action: 'CONSULTATION_CREATED',
+          toStatus: 'pending',
+          timestamp: '2026-11-13T09:00:00Z',
+        },
+        {
+          id: 'H3',
+          actorEmail: 'admin@rma-law.sa',
+          action: 'CONSULTATION_CONFIRMED',
+          fromStatus: 'pending',
+          toStatus: 'confirmed',
+          details: { assignedLawyer: 'senior-counsel', scheduledAt: '2026-11-18T11:00:00Z' },
+          timestamp: '2026-11-13T11:00:00Z',
+        },
+      ],
+      createdAt: '2026-11-13T09:00:00Z',
+      updatedAt: '2026-11-13T11:00:00Z',
+      updatedBy: 'admin@rma-law.sa',
+    };
+
+    this.consultations.set(sampleConsultation1.id, sampleConsultation1);
+    this.consultations.set(sampleConsultation2.id, sampleConsultation2);
   }
 }
 
