@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import {
   AdminUser,
   ServiceEntity,
@@ -17,6 +15,7 @@ import {
   ConsultationRequest,
   SiteSettings,
 } from '../types';
+import { hashPassword } from '../auth/password';
 
 export const INITIAL_SETTINGS: SiteSettings = {
   brandNameAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية',
@@ -42,7 +41,13 @@ export const INITIAL_SETTINGS: SiteSettings = {
   heroDescEn: 'Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives.',
   aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
   aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
+  aboutMissionAr: 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.',
+  aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
+  aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
+  aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
 };
+
+const DEFAULT_ADMIN_PASSWORD_HASH = hashPassword(process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!');
 
 // Initial Mock Seed Data
 const INITIAL_ADMINS: AdminUser[] = [
@@ -53,6 +58,7 @@ const INITIAL_ADMINS: AdminUser[] = [
     role: 'super_admin',
     isActive: true,
     mfaEnrolled: true,
+    passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
     createdAt: '2026-11-12T10:00:00Z',
     updatedAt: '2026-11-12T10:00:00Z',
   },
@@ -63,6 +69,7 @@ const INITIAL_ADMINS: AdminUser[] = [
     role: 'admin',
     isActive: true,
     mfaEnrolled: true,
+    passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
     createdAt: '2026-11-12T11:00:00Z',
     updatedAt: '2026-11-12T11:00:00Z',
   },
@@ -73,6 +80,7 @@ const INITIAL_ADMINS: AdminUser[] = [
     role: 'editor',
     isActive: true,
     mfaEnrolled: true,
+    passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
     createdAt: '2026-11-12T11:30:00Z',
     updatedAt: '2026-11-12T11:30:00Z',
   },
@@ -83,6 +91,7 @@ const INITIAL_ADMINS: AdminUser[] = [
     role: 'inquiry_manager',
     isActive: true,
     mfaEnrolled: true,
+    passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
     createdAt: '2026-11-12T12:00:00Z',
     updatedAt: '2026-11-12T12:00:00Z',
   },

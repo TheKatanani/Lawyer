@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Settings,
   Globe,
@@ -14,6 +14,9 @@ import {
   AlertCircle,
   Building,
   Sparkles,
+  Upload,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SiteSettings } from '@/server/types';
@@ -42,6 +45,10 @@ const DEFAULT_SETTINGS: SiteSettings = {
   heroDescEn: 'Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives.',
   aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
   aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
+  aboutMissionAr: 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.',
+  aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
+  aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
+  aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
 };
 
 export function SiteSettingsManager() {
@@ -50,7 +57,11 @@ export function SiteSettingsManager() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'brand' | 'contact' | 'seo' | 'homepage'>('brand');
+  const [activeTab, setActiveTab] = useState<'brand' | 'contact' | 'seo' | 'homepage' | 'aboutPage'>('brand');
+  const [uploadingTarget, setUploadingTarget] = useState<'favicon' | 'og' | null>(null);
+
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+  const ogInputRef = useRef<HTMLInputElement>(null);
 
   const loadSettings = async () => {
     try {
@@ -59,7 +70,10 @@ export function SiteSettingsManager() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load settings');
       if (data.settings && data.settings.brandNameAr) {
-        setSettings(data.settings);
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...data.settings,
+        });
       } else {
         setSettings(DEFAULT_SETTINGS);
       }
@@ -74,6 +88,79 @@ export function SiteSettingsManager() {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  const handleDirectUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'favicon' | 'og') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingTarget(target);
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      // 1. Get secure signature from server
+      const signRes = await fetch('/api/admin/media/sign', { method: 'POST' });
+      if (!signRes.ok) {
+        const err = await signRes.json();
+        throw new Error(err.error || 'فشل توليد توقيع تشفير Cloudinary');
+      }
+      const signData = await signRes.json();
+
+      // 2. Direct upload to Cloudinary CDN
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', signData.apiKey);
+      formData.append('timestamp', signData.timestamp.toString());
+      formData.append('signature', signData.signature);
+      formData.append('folder', signData.folder);
+
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`,
+        { method: 'POST', body: formData }
+      );
+
+      if (!cloudinaryRes.ok) {
+        const cErr = await cloudinaryRes.json();
+        throw new Error(cErr.error?.message || 'فشل رفع الملف إلى خوادم Cloudinary');
+      }
+
+      const cData = await cloudinaryRes.json();
+      const secureUrl = cData.secure_url;
+
+      // 3. Register asset into Media Library
+      await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicId: cData.public_id,
+          secureUrl,
+          format: cData.format,
+          width: cData.width,
+          height: cData.height,
+          bytes: cData.bytes,
+          altText: {
+            ar: target === 'favicon' ? 'أيقونة الموقع الرسمية' : 'صورة المشاركة الاجتماعية الرسمية',
+            en: target === 'favicon' ? 'Official Site Favicon' : 'Official OpenGraph Social Cover',
+          },
+        }),
+      });
+
+      // 4. Update state directly
+      if (target === 'favicon') {
+        setSettings((prev) => ({ ...prev, faviconUrl: secureUrl }));
+        setSuccessMsg('تم رفع أيقونة الموقع (Favicon) إلى Cloudinary بنجاح! احفظ التعديلات لاعتمادها.');
+      } else {
+        setSettings((prev) => ({ ...prev, ogImageUrl: secureUrl }));
+        setSuccessMsg('تم رفع صورة المشاركة الاجتماعية (OG Image) بنجاح! احفظ التعديلات لاعتمادها.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء رفع الصورة');
+    } finally {
+      setUploadingTarget(null);
+      // Reset input value so same file can be re-selected if needed
+      e.target.value = '';
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +177,7 @@ export function SiteSettingsManager() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update settings');
       setSettings(data.settings);
-      setSuccessMsg('تم حفظ إعدادات الموقع وهوية المنصة بنجاح.');
+      setSuccessMsg('تم حفظ وتحديث إعدادات الموقع وهوية المنصة بنجاح.');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -98,7 +185,7 @@ export function SiteSettingsManager() {
     }
   };
 
-  if (loading || !settings) {
+  if (loading) {
     return <div className="p-12 text-center text-muted">جاري تحميل إعدادات المنصة...</div>;
   }
 
@@ -111,7 +198,7 @@ export function SiteSettingsManager() {
             إعدادات الهوية ومحتوى الموقع العام (Site Branding & Content CMS)
           </h1>
           <p className="text-sm text-muted mt-1">
-            إدارة كافة النصوص العامة، الهوية المؤسسية، بيانات التواصل، وبيانات الـ SEO والـ Favicon وصور المشاركة الاجتماعية (OG Image).
+            إدارة كافة النصوص العامة، الهوية المؤسسية، بيانات التواصل، الـ SEO، الأيقونات، وصور المشاركة الاجتماعية مع إمكانية الرفع المباشر إلى Cloudinary.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -125,7 +212,7 @@ export function SiteSettingsManager() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gold-ink text-surface rounded text-sm font-semibold hover:bg-gold-ink/90 transition-colors shadow-sm disabled:opacity-60"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gold-ink text-surface rounded text-sm font-semibold hover:bg-gold-ink/90 transition-colors shadow-sm disabled:opacity-60 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}</span>
@@ -137,7 +224,7 @@ export function SiteSettingsManager() {
       {error && (
         <div className="p-4 bg-danger/10 border border-danger/30 rounded text-sm text-danger flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-xs underline font-mono">إغلاق</button>
@@ -147,7 +234,7 @@ export function SiteSettingsManager() {
       {successMsg && (
         <div className="p-4 bg-success/15 border border-success/30 rounded text-sm text-success flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{successMsg}</span>
           </div>
           <button onClick={() => setSuccessMsg(null)} className="text-xs underline font-mono">إغلاق</button>
@@ -158,7 +245,7 @@ export function SiteSettingsManager() {
       <div className="flex border-b border-border gap-2 text-xs font-semibold overflow-x-auto pb-px">
         <button
           onClick={() => setActiveTab('brand')}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'brand'
               ? 'border-gold text-gold-ink bg-surface'
               : 'border-transparent text-muted hover:text-ink'
@@ -170,7 +257,7 @@ export function SiteSettingsManager() {
 
         <button
           onClick={() => setActiveTab('contact')}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'contact'
               ? 'border-gold text-gold-ink bg-surface'
               : 'border-transparent text-muted hover:text-ink'
@@ -182,7 +269,7 @@ export function SiteSettingsManager() {
 
         <button
           onClick={() => setActiveTab('seo')}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'seo'
               ? 'border-gold text-gold-ink bg-surface'
               : 'border-transparent text-muted hover:text-ink'
@@ -194,14 +281,26 @@ export function SiteSettingsManager() {
 
         <button
           onClick={() => setActiveTab('homepage')}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'homepage'
               ? 'border-gold text-gold-ink bg-surface'
               : 'border-transparent text-muted hover:text-ink'
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>نصوص واجهة الصفحة الرئيسية (Hero & About)</span>
+          <span>نصوص الصفحة الرئيسية (Hero & About Preview)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('aboutPage')}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+            activeTab === 'aboutPage'
+              ? 'border-gold text-gold-ink bg-surface'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>صفحة عن الشركة والرؤية (About Page & Vision)</span>
         </button>
       </div>
 
@@ -378,55 +477,127 @@ export function SiteSettingsManager() {
               </Link>
             </div>
 
-            {/* Favicon & OG previews */}
+            {/* Favicon & OG previews with Direct Upload */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-canvas rounded border border-border">
-              {/* Favicon field */}
-              <div className="space-y-2">
-                <label className="font-bold text-ink flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-gold-ink" />
-                  <span>رابط أيقونة الموقع (Favicon URL / .ico / .png)</span>
-                </label>
+              {/* Favicon field with Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-ink flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-gold-ink" />
+                    <span>أيقونة الموقع (Favicon)</span>
+                  </label>
+                  <span className="text-[11px] text-muted font-mono">.ico, .png, .svg</span>
+                </div>
+
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded border border-border bg-surface flex items-center justify-center p-1 flex-shrink-0">
+                  <div className="w-12 h-12 rounded border border-border bg-surface flex items-center justify-center p-1.5 flex-shrink-0 shadow-xs">
                     {settings.faviconUrl ? (
-                      <img src={settings.faviconUrl} alt="Favicon" className="w-6 h-6 object-contain" />
+                      <img src={settings.faviconUrl} alt="Favicon" className="w-8 h-8 object-contain" />
                     ) : (
                       <span className="text-[10px] text-muted">لا يوجد</span>
                     )}
                   </div>
-                  <input
-                    type="url"
-                    dir="ltr"
-                    value={settings.faviconUrl}
-                    onChange={(e) => setSettings({ ...settings, faviconUrl: e.target.value })}
-                    placeholder="https://res.cloudinary.com/dhgk61npp/image/upload/favicon.ico"
-                    className="flex-1 px-3 py-2 bg-surface border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
-                  />
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="url"
+                      dir="ltr"
+                      value={settings.faviconUrl}
+                      onChange={(e) => setSettings({ ...settings, faviconUrl: e.target.value })}
+                      placeholder="https://res.cloudinary.com/..."
+                      className="w-full px-3 py-1.5 bg-surface border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={faviconInputRef}
+                        accept="image/*,.ico,.png,.svg"
+                        className="hidden"
+                        onChange={(e) => handleDirectUpload(e, 'favicon')}
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingTarget === 'favicon'}
+                        onClick={() => faviconInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gold-ink text-surface rounded text-xs font-semibold hover:bg-gold-ink/90 transition-colors shadow-xs cursor-pointer disabled:opacity-60"
+                      >
+                        {uploadingTarget === 'favicon' ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>جارٍ الرفع...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>رفع أيقونة جديدة</span>
+                          </>
+                        )}
+                      </button>
+                      <span className="text-[10px] text-muted">ترفع مباشرة إلى Cloudinary</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* OG Image field */}
-              <div className="space-y-2">
-                <label className="font-bold text-ink flex items-center gap-1.5">
-                  <LucideImage className="w-4 h-4 text-gold-ink" />
-                  <span>رابط صورة المشاركة الاجتماعية العامة (OG Image 1200x630)</span>
-                </label>
+              {/* OG Image field with Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-ink flex items-center gap-1.5">
+                    <LucideImage className="w-4 h-4 text-gold-ink" />
+                    <span>صورة المشاركة الاجتماعية (OG Image 1200x630)</span>
+                  </label>
+                  <span className="text-[11px] text-muted font-mono">1200 × 630 px</span>
+                </div>
+
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-10 rounded border border-border bg-surface flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-12 rounded border border-border bg-surface flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
                     {settings.ogImageUrl ? (
                       <img src={settings.ogImageUrl} alt="OG Image" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-[10px] text-muted">لا يوجد</span>
                     )}
                   </div>
-                  <input
-                    type="url"
-                    dir="ltr"
-                    value={settings.ogImageUrl}
-                    onChange={(e) => setSettings({ ...settings, ogImageUrl: e.target.value })}
-                    placeholder="https://res.cloudinary.com/dhgk61npp/image/upload/og-cover.png"
-                    className="flex-1 px-3 py-2 bg-surface border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
-                  />
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="url"
+                      dir="ltr"
+                      value={settings.ogImageUrl}
+                      onChange={(e) => setSettings({ ...settings, ogImageUrl: e.target.value })}
+                      placeholder="https://res.cloudinary.com/..."
+                      className="w-full px-3 py-1.5 bg-surface border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={ogInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleDirectUpload(e, 'og')}
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingTarget === 'og'}
+                        onClick={() => ogInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gold-ink text-surface rounded text-xs font-semibold hover:bg-gold-ink/90 transition-colors shadow-xs cursor-pointer disabled:opacity-60"
+                      >
+                        {uploadingTarget === 'og' ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>جارٍ الرفع...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>رفع صورة غلاف جديدة</span>
+                          </>
+                        )}
+                      </button>
+                      <span className="text-[10px] text-muted">ترفع مباشرة إلى Cloudinary</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -481,7 +652,7 @@ export function SiteSettingsManager() {
           </div>
         )}
 
-        {/* TAB 4: HOMEPAGE HERO & ABOUT */}
+        {/* TAB 4: HOMEPAGE HERO & ABOUT PREVIEW */}
         {activeTab === 'homepage' && (
           <div className="space-y-5">
             <h2 className="font-heading-ar font-bold text-lg text-ink border-b border-border pb-3">
@@ -539,7 +710,7 @@ export function SiteSettingsManager() {
             {/* About Firm Excerpt */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
               <div className="space-y-1.5">
-                <label className="font-bold text-ink">نبذة عن الشركة بالصفحة الرئيسية (About Copy AR)</label>
+                <label className="font-bold text-ink">موجز نبذة الشركة بالصفحة الرئيسية (Home About Copy AR)</label>
                 <textarea
                   rows={4}
                   value={settings.aboutTextAr}
@@ -549,7 +720,7 @@ export function SiteSettingsManager() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-ink">About Firm Text (English)</label>
+                <label className="font-bold text-ink">Home About Excerpt (English)</label>
                 <textarea
                   rows={4}
                   dir="ltr"
@@ -562,15 +733,76 @@ export function SiteSettingsManager() {
           </div>
         )}
 
+        {/* TAB 5: ABOUT PAGE & VISION */}
+        {activeTab === 'aboutPage' && (
+          <div className="space-y-5">
+            <h2 className="font-heading-ar font-bold text-lg text-ink border-b border-border pb-3">
+              محتوى صفحة من نحن والرؤية والرسالة المؤسسية (/about)
+            </h2>
+
+            {/* Mission Statement */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">رسالة الشركة (Firm Mission AR)</label>
+                <textarea
+                  rows={4}
+                  value={settings.aboutMissionAr || ''}
+                  onChange={(e) => setSettings({ ...settings, aboutMissionAr: e.target.value })}
+                  placeholder="تقديم استشارات وحلول قانونية رصينة تحمي مصالح الموكلين..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Firm Mission (English)</label>
+                <textarea
+                  rows={4}
+                  dir="ltr"
+                  value={settings.aboutMissionEn || ''}
+                  onChange={(e) => setSettings({ ...settings, aboutMissionEn: e.target.value })}
+                  placeholder="Delivering authoritative legal advisory that safeguards client interests..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Vision Statement */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">رؤية الشركة ومنهجيتها (Firm Vision AR)</label>
+                <textarea
+                  rows={4}
+                  value={settings.aboutVisionAr || ''}
+                  onChange={(e) => setSettings({ ...settings, aboutVisionAr: e.target.value })}
+                  placeholder="أن نكون الشريك القانوني الرائد في صياغة الحلول وتطوير حوكمة الشركات..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Firm Vision & Principles (English)</label>
+                <textarea
+                  rows={4}
+                  dir="ltr"
+                  value={settings.aboutVisionEn || ''}
+                  onChange={(e) => setSettings({ ...settings, aboutVisionEn: e.target.value })}
+                  placeholder="To be the premier Saudi legal partner architecting transformative counsel..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form Footer */}
         <div className="pt-6 border-t border-border flex items-center justify-end gap-3">
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gold-ink text-surface rounded text-xs font-semibold hover:bg-gold-ink/90 transition-colors shadow-sm disabled:opacity-60"
+            className="flex items-center gap-2 px-6 py-2.5 bg-gold-ink text-surface rounded text-xs font-semibold hover:bg-gold-ink/90 transition-colors shadow-sm disabled:opacity-60 cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'جارٍ حفظ التعديلات...' : 'حفظ كافة إعدادات الموقع'}</span>
+            <span>{saving ? 'جارٍ حفظ التعديلات...' : 'حفظ كافة إعدادات ومحتوى الموقع'}</span>
           </button>
         </div>
       </form>

@@ -2,7 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Scale, ShieldCheck, Building2, BookOpen, ArrowUpRight } from 'lucide-react';
+import { Scale, ShieldCheck, Building2, BookOpen, ArrowUpRight, Compass, Target } from 'lucide-react';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
 
 export default async function AboutPage({
   params: { locale },
@@ -12,6 +13,7 @@ export default async function AboutPage({
   setRequestLocale(locale);
   const t = await getTranslations();
   const isAr = locale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
@@ -25,17 +27,17 @@ export default async function AboutPage({
           </div>
           <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl leading-tight">
             {isAr
-              ? 'شريك قانوني يقوم على الرصانة والمعرفة النظامية العميقة'
-              : 'A Legal Partner Grounded in Diligence and Regulatory Depth'}
+              ? (settings.aboutVisionAr || 'شريك قانوني يقوم على الرصانة والمعرفة النظامية العميقة')
+              : (settings.aboutVisionEn || 'A Legal Partner Grounded in Diligence and Regulatory Depth')}
           </h1>
           <p className="text-muted text-base sm:text-lg leading-relaxed">
             {isAr
-              ? 'تأسست شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية بالرياض لتقديم خدمات التمثيل القضائي والمشورة الإستراتيجية للمنشآت والأفراد، مع التزام مهني صارم بأعلى معايير الحوكمة والنزاهة.'
-              : 'Riyadh Mohammed Alzahrani Legal Company was established in Riyadh to provide authoritative advocacy and strategic legal counsel for enterprises and individuals under strict standards of integrity.'}
+              ? (settings.aboutTextAr || 'تأسست شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية بالرياض لتقديم خدمات التمثيل القضائي والمشورة الإستراتيجية للمنشآت والأفراد، مع التزام مهني صارم بأعلى معايير الحوكمة والنزاهة.')
+              : (settings.aboutTextEn || 'Riyadh Mohammed Alzahrani Legal Company was established in Riyadh to provide authoritative advocacy and strategic legal counsel for enterprises and individuals under strict standards of integrity.')}
           </p>
         </div>
 
-        {/* Feature Image Grid */}
+        {/* Feature Image Grid with Mission & Vision */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 relative h-[380px] sm:h-[480px] rounded-sm overflow-hidden border border-border shadow-sm">
             <Image
@@ -50,25 +52,25 @@ export default async function AboutPage({
           <div className="lg:col-span-5 space-y-6">
             <div className="p-6 bg-surface rounded-sm border border-border/80 space-y-3">
               <div className="flex items-center gap-3 text-gold-ink font-heading-ar font-bold text-lg">
-                <Scale className="w-5 h-5 text-gold" />
+                <Target className="w-5 h-5 text-gold" />
+                <h3>{isAr ? 'رسالتنا المؤسسية' : 'Our Corporate Mission'}</h3>
+              </div>
+              <p className="text-muted text-sm leading-relaxed">
+                {isAr
+                  ? (settings.aboutMissionAr || 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.')
+                  : (settings.aboutMissionEn || 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.')}
+              </p>
+            </div>
+
+            <div className="p-6 bg-surface rounded-sm border border-border/80 space-y-3">
+              <div className="flex items-center gap-3 text-gold-ink font-heading-ar font-bold text-lg">
+                <Compass className="w-5 h-5 text-gold" />
                 <h3>{isAr ? 'الترخيص والاعتماد النظامي' : 'Official Licensing & Accreditation'}</h3>
               </div>
               <p className="text-muted text-sm leading-relaxed">
                 {isAr
                   ? 'تمارس الشركة أعمالها بموجب تراخيص رسمية معتمدة من وزارة العدل بالمملكة العربية السعودية، ونخبة محامين مسجلين بالهيئة السعودية للمحامين.'
                   : 'The practice operates under formal accreditation from the Saudi Ministry of Justice, with advocates certified by the Saudi Bar Association.'}
-              </p>
-            </div>
-
-            <div className="p-6 bg-surface rounded-sm border border-border/80 space-y-3">
-              <div className="flex items-center gap-3 text-gold-ink font-heading-ar font-bold text-lg">
-                <ShieldCheck className="w-5 h-5 text-gold" />
-                <h3>{isAr ? 'السرية وحماية مصالح الموكلين' : 'Confidentiality & Client Protection'}</h3>
-              </div>
-              <p className="text-muted text-sm leading-relaxed">
-                {isAr
-                  ? 'نلتزم بالسرية المهنية المطلقة لحماية السجلات التجارية، النزاعات القضائية، والبيانات الشخصية لعملائنا وفق نظام حماية البيانات الشخصية السعودي.'
-                  : 'We adhere to absolute professional privilege, safeguarding corporate records and personal data under Saudi PDPL mandates.'}
               </p>
             </div>
           </div>

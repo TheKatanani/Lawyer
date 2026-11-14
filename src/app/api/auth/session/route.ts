@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { store } from '@/server/db/store';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
+import { verifyPassword } from '@/server/auth/password';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,11 +23,35 @@ export async function POST(req: NextRequest) {
     }
 
     if (!matchedUser) {
-      return NextResponse.json({ error: 'Invalid administrative credentials or unapproved account.' }, { status: 401 });
+      return NextResponse.json({ error: 'البريد الإلكتروني غير مسجل ضمن مسؤولي النظام المصرح لهم.' }, { status: 401 });
     }
 
     if (!matchedUser.isActive) {
-      return NextResponse.json({ error: 'This administrative account has been deactivated.' }, { status: 403 });
+      return NextResponse.json({ error: 'هذا الحساب الإداري معطل حالياً من قِبل الإدارة.' }, { status: 403 });
+    }
+
+    if (!password) {
+      return NextResponse.json({ error: 'كلمة المرور مطلوبة لإتمام تسجيل الدخول.' }, { status: 400 });
+    }
+
+    // Verify Password against stored salted hash or master password
+    const defaultExpectedPassword = process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!';
+    const isValidPassword = matchedUser.passwordHash
+      ? verifyPassword(password, matchedUser.passwordHash)
+      : password === defaultExpectedPassword;
+
+    if (!isValidPassword) {
+      store.auditLogs.unshift({
+        id: `AUDIT-${Date.now()}`,
+        actorUid: matchedUser.uid,
+        actorEmail: matchedUser.email,
+        action: 'ADMIN_LOGIN_FAILED_INVALID_PASSWORD',
+        targetType: 'adminUser',
+        targetId: matchedUser.uid,
+        details: { reason: 'incorrect_password' },
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ error: 'كلمة المرور غير صحيحة. يرجى إدخال كلمة المرور المعتمدة.' }, { status: 401 });
     }
 
     // Issue Session Cookie

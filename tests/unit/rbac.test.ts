@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { hasCapability, assertCapability, ROLE_CAPABILITIES } from '../../src/server/permissions/rbac';
 import { protectLastSuperAdmin } from '../../src/server/auth/session';
+import { hashPassword, verifyPassword } from '../../src/server/auth/password';
 import { store } from '../../src/server/db/store';
 
 describe('RBAC & Authority Matrix Verification (A11, A12)', () => {
@@ -56,5 +57,14 @@ describe('RBAC & Authority Matrix Verification (A11, A12)', () => {
     expect(() => protectLastSuperAdmin('admin-rma-01')).toThrow(
       /Cannot delete, demote, or deactivate the last remaining active Super Admin/
     );
+  });
+
+  it('securely hashes and strictly verifies administrative passwords using scrypt', () => {
+    const rawSecret = 'RMA@Legal2026!';
+    const hashed = hashPassword(rawSecret);
+    expect(hashed).toContain(':');
+    expect(verifyPassword(rawSecret, hashed)).toBe(true);
+    expect(verifyPassword('WrongPassword123!', hashed)).toBe(false);
+    expect(verifyPassword('rma@legal2026!', hashed)).toBe(false); // Case-sensitive
   });
 });

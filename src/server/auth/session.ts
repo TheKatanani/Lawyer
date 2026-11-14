@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import crypto from 'crypto';
 import { store } from '../db/store';
 import { AdminUser } from '../types';
 
@@ -81,3 +82,5 @@ export function protectLastSuperAdmin(targetUid: string): void {
     throw new Error('Operation blocked: Cannot delete, demote, or deactivate the last remaining active Super Admin.');
   }
 }
+
+export { hashPassword, verifyPassword } from './password';

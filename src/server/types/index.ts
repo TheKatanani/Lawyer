@@ -29,6 +29,7 @@ export interface AdminUser {
   role: Role;
   isActive: boolean;
   mfaEnrolled: boolean;
+  passwordHash?: string;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
@@ -289,6 +290,10 @@ export interface SiteSettings {
   heroDescEn: string;
   aboutTextAr: string;
   aboutTextEn: string;
+  aboutMissionAr?: string;
+  aboutMissionEn?: string;
+  aboutVisionAr?: string;
+  aboutVisionEn?: string;
 }
 
 export interface OutboxJob {
