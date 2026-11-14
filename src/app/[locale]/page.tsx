@@ -9,7 +9,7 @@ import { ValuesSection } from '@/components/sections/ValuesSection';
 import { JourneySection } from '@/components/sections/JourneySection';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { store } from '@/server/db/store';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
 
 export default async function HomePage({
   params: { locale },
@@ -24,7 +24,7 @@ export default async function HomePage({
   const publishedServices = await listPublishedProjections('service', currentLocale);
   const publishedTeam = await listPublishedProjections('teamMember', currentLocale);
   const publishedInsights = await listPublishedProjections('article', currentLocale);
-  const settings = store.siteSettings;
+  const settings = store.siteSettings || INITIAL_SETTINGS;
 
   const heroMessages = {
     eyebrow: t('hero.eyebrow'),

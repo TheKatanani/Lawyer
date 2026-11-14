@@ -18,8 +18,34 @@ import {
 import Link from 'next/link';
 import { SiteSettings } from '@/server/types';
 
+const DEFAULT_SETTINGS: SiteSettings = {
+  brandNameAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية',
+  brandNameEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations',
+  brandShortAr: 'رياض الزهراني للمحاماة',
+  brandShortEn: 'Alzahrani Law Firm',
+  taglineAr: 'رؤية قانونية واثقة، وحلول تقوم على المعرفة',
+  taglineEn: 'A clear legal perspective. An approach grounded in knowledge.',
+  phone: '+966 55 777 5504',
+  whatsapp: '+966 55 777 5504',
+  email: 'riyadh@riyadhalzahrani.com',
+  addressAr: 'المملكة العربية السعودية، الرياض',
+  addressEn: 'Riyadh, Kingdom of Saudi Arabia',
+  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | الرياض',
+  seoTitleEn: 'Riyadh Mohammed Alzahrani Saudi Legal Company | Riyadh',
+  seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للشركات والأفراد.',
+  seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
+  ogImageUrl: '',
+  faviconUrl: '/favicon.ico',
+  heroHeadlineAr: 'رؤية قانونية واثقة. وحلول تقوم على المعرفة.',
+  heroHeadlineEn: 'A clear legal perspective. An approach grounded in knowledge.',
+  heroDescAr: 'خدمات قانونية متكاملة للأفراد والمنشآت في المملكة العربية السعودية، تبدأ بفهم عميق لاحتياجاتك وتوضيح دقيق للخطوات والحلول المناسبة.',
+  heroDescEn: 'Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives.',
+  aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
+  aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
+};
+
 export function SiteSettingsManager() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +58,14 @@ export function SiteSettingsManager() {
       const res = await fetch('/api/admin/settings');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load settings');
-      setSettings(data.settings);
+      if (data.settings && data.settings.brandNameAr) {
+        setSettings(data.settings);
+      } else {
+        setSettings(DEFAULT_SETTINGS);
+      }
     } catch (err: any) {
       setError(err.message);
+      setSettings(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
     }

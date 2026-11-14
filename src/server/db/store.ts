@@ -18,7 +18,7 @@ import {
   SiteSettings,
 } from '../types';
 
-const INITIAL_SETTINGS: SiteSettings = {
+export const INITIAL_SETTINGS: SiteSettings = {
   brandNameAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية',
   brandNameEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations',
   brandShortAr: 'رياض الزهراني للمحاماة',
@@ -978,6 +978,8 @@ const globalAny = global as any;
 
 if (!globalAny[globalStoreKey]) {
   globalAny[globalStoreKey] = new InMemoryStore();
+} else if (!globalAny[globalStoreKey].siteSettings) {
+  globalAny[globalStoreKey].siteSettings = { ...INITIAL_SETTINGS };
 }
 
 export const store: InMemoryStore = globalAny[globalStoreKey];

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { SiteSettings } from '@/server/types';
 
 export async function GET(req: NextRequest) {
@@ -11,6 +11,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
     assertCapability(user.role, 'content.edit');
+
+    if (!store.siteSettings) {
+      store.siteSettings = { ...INITIAL_SETTINGS };
+    }
 
     return NextResponse.json({ settings: store.siteSettings });
   } catch (err: any) {

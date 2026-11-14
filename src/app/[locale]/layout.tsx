@@ -6,7 +6,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { routing, type Locale } from '@/i18n/routing';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { store } from '@/server/db/store';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import '@/app/globals.css';
 
 export function generateStaticParams() {
@@ -20,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const isAr = locale === 'ar';
   const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
-  const settings = store.siteSettings;
+  const settings = store.siteSettings || INITIAL_SETTINGS;
 
   return {
     title: {
