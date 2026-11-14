@@ -3,6 +3,7 @@ export type WorkflowState = 'draft' | 'inReview' | 'approved' | 'archived';
 export type AudienceTag = 'individual' | 'business';
 
 export type Role = 'super_admin' | 'admin' | 'editor' | 'inquiry_manager';
+export type AdminRole = Role;
 
 export type Capability =
   | 'content.edit'
@@ -262,6 +263,32 @@ export interface ConsultationRequest {
   createdAt: string;
   updatedAt: string;
   updatedBy?: string;
+}
+
+export interface SiteSettings {
+  brandNameAr: string;
+  brandNameEn: string;
+  brandShortAr: string;
+  brandShortEn: string;
+  taglineAr: string;
+  taglineEn: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  addressAr: string;
+  addressEn: string;
+  seoTitleAr: string;
+  seoTitleEn: string;
+  seoDescAr: string;
+  seoDescEn: string;
+  ogImageUrl: string;
+  faviconUrl: string;
+  heroHeadlineAr: string;
+  heroHeadlineEn: string;
+  heroDescAr: string;
+  heroDescEn: string;
+  aboutTextAr: string;
+  aboutTextEn: string;
 }
 
 export interface OutboxJob {

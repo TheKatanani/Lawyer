@@ -11,6 +11,7 @@ import {
   History,
   Image as LucideImage,
   CalendarCheck,
+  Settings,
 } from 'lucide-react';
 import { AdminSignoutButton } from '@/components/admin/SignoutButton';
 import '@/app/globals.css';
@@ -124,13 +125,23 @@ export default async function AdminLayout({
                 )}
 
                 {user.role === 'super_admin' && (
-                  <Link
-                    href="/admin/administrators"
-                    className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium hover:bg-on-dark/10 transition-colors"
-                  >
-                    <Shield className="w-4 h-4 text-gold" />
-                    <span>المسؤولون (Admins)</span>
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin/settings"
+                      className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium hover:bg-on-dark/10 transition-colors"
+                    >
+                      <Settings className="w-4 h-4 text-gold" />
+                      <span>إعدادات الهوية والـ SEO</span>
+                    </Link>
+
+                    <Link
+                      href="/admin/administrators"
+                      className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium hover:bg-on-dark/10 transition-colors"
+                    >
+                      <Shield className="w-4 h-4 text-gold" />
+                      <span>المسؤولون (Admins)</span>
+                    </Link>
+                  </>
                 )}
               </nav>
             </div>

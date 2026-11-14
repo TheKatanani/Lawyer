@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { routing, type Locale } from '@/i18n/routing';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { store } from '@/server/db/store';
 import '@/app/globals.css';
 
 export function generateStaticParams() {
@@ -19,17 +20,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const isAr = locale === 'ar';
   const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
+  const settings = store.siteSettings;
 
   return {
     title: {
-      template: isAr ? '%s | شركة رياض محمد الزهراني للمحاماة' : '%s | Riyadh Alzahrani Law Company',
-      default: isAr
-        ? 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | الرياض'
-        : 'Riyadh Mohammed Alzahrani Legal Company | Law Firm Riyadh',
+      template: isAr ? `%s | ${settings.brandNameAr}` : `%s | ${settings.brandNameEn}`,
+      default: isAr ? settings.seoTitleAr : settings.seoTitleEn,
     },
-    description: isAr
-      ? 'شركة محاماة سعودية تقدم خدمات واستشارات قانونية رصينة للأفراد والمنشآت التجارية في المملكة العربية السعودية.'
-      : 'Authoritative Saudi law practice delivering specialized corporate, commercial litigation, and private client legal advisory in Riyadh.',
+    description: isAr ? settings.seoDescAr : settings.seoDescEn,
+    icons: settings.faviconUrl ? [{ rel: 'icon', url: settings.faviconUrl }] : undefined,
+    openGraph: {
+      title: isAr ? settings.seoTitleAr : settings.seoTitleEn,
+      description: isAr ? settings.seoDescAr : settings.seoDescEn,
+      images: settings.ogImageUrl ? [{ url: settings.ogImageUrl, width: 1200, height: 630 }] : undefined,
+    },
     metadataBase: new URL(origin),
     alternates: {
       canonical: `/${locale}`,

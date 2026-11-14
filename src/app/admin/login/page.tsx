@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Shield, Lock, Mail, KeyRound, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('admin@rma-law.sa');
-  const [password, setPassword] = useState('••••••••••••');
-  const [mfaCode, setMfaCode] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
       router.push('/admin');
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check credentials.');
+      setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات ورمز التحقق.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export default function AdminLoginPage() {
                 dir="ltr"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@rma-law.sa"
+                placeholder="name@rma-law.sa"
                 className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-sm text-ink placeholder-muted/50 focus:outline-none focus:border-gold"
               />
               <Mail className="w-4 h-4 text-muted absolute end-3 top-3" />
@@ -92,7 +92,8 @@ export default function AdminLoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-sm text-ink focus:outline-none focus:border-gold"
+                placeholder="••••••••••••"
+                className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-sm text-ink placeholder-muted/50 focus:outline-none focus:border-gold"
               />
               <Lock className="w-4 h-4 text-muted absolute end-3 top-3" />
             </div>
@@ -113,7 +114,7 @@ export default function AdminLoginPage() {
                 dir="ltr"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
-                placeholder="123456"
+                placeholder="000000"
                 className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-sm text-ink font-mono tracking-widest text-center focus:outline-none focus:border-gold"
               />
               <KeyRound className="w-4 h-4 text-muted absolute end-3 top-3" />
@@ -123,46 +124,19 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-sm bg-ink text-on-dark text-sm font-semibold hover:bg-signature transition-colors shadow-sm disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-sm bg-ink text-on-dark text-sm font-semibold hover:bg-signature transition-colors shadow-sm disabled:opacity-60 cursor-pointer"
           >
             <span>{loading ? 'جاري التحقق...' : 'تسجيل الدخول'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Development Quick Role Switcher */}
-        <div className="p-4 bg-canvas rounded-sm border border-border/70 space-y-2 text-xs">
-          <span className="font-bold text-ink block">حسابات الاختبار التجريبية (RBAC Roles):</span>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <button
-              type="button"
-              onClick={() => { setEmail('admin@rma-law.sa'); }}
-              className="p-1.5 bg-surface border border-border rounded text-start hover:border-gold"
-            >
-              👑 Super Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail('counsel@rma-law.sa'); }}
-              className="p-1.5 bg-surface border border-border rounded text-start hover:border-gold"
-            >
-              ⚖️ Admin (Lawyer)
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail('editor@rma-law.sa'); }}
-              className="p-1.5 bg-surface border border-border rounded text-start hover:border-gold"
-            >
-              ✍️ Editor
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail('intake@rma-law.sa'); }}
-              className="p-1.5 bg-surface border border-border rounded text-start hover:border-gold"
-            >
-              📥 Inquiry Manager
-            </button>
-          </div>
+        <div className="p-3 bg-canvas/60 rounded border border-border/60 text-[11px] text-muted text-center space-y-1">
+          <p className="flex items-center justify-center gap-1.5 font-medium text-ink">
+            <Shield className="w-3.5 h-3.5 text-gold-ink" />
+            <span>بوابة محصنة ومراقبة أمنياً وفق ضوابط الهيئة الوطنية للأمن السيبراني</span>
+          </p>
+          <p>الدخول مخصص حصراً لمنسوبي ومسؤولي الشركة المصرح لهم.</p>
         </div>
       </div>
     </div>

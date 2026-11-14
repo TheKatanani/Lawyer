@@ -9,6 +9,7 @@ import { ValuesSection } from '@/components/sections/ValuesSection';
 import { JourneySection } from '@/components/sections/JourneySection';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
+import { store } from '@/server/db/store';
 
 export default async function HomePage({
   params: { locale },
@@ -23,11 +24,12 @@ export default async function HomePage({
   const publishedServices = await listPublishedProjections('service', currentLocale);
   const publishedTeam = await listPublishedProjections('teamMember', currentLocale);
   const publishedInsights = await listPublishedProjections('article', currentLocale);
+  const settings = store.siteSettings;
 
   const heroMessages = {
     eyebrow: t('hero.eyebrow'),
-    heading: t('hero.heading'),
-    description: t('hero.description'),
+    heading: isAr ? (settings.heroHeadlineAr || t('hero.heading')) : (settings.heroHeadlineEn || t('hero.heading')),
+    description: isAr ? (settings.heroDescAr || t('hero.description')) : (settings.heroDescEn || t('hero.description')),
     ctaPrimary: t('hero.ctaPrimary'),
     ctaSecondary: t('hero.ctaSecondary'),
     imageAlt: t('hero.imageAlt'),
@@ -95,7 +97,7 @@ export default async function HomePage({
                 {t('aboutPreview.heading')}
               </h2>
               <p className="text-muted text-base leading-relaxed">
-                {t('aboutPreview.description')}
+                {isAr ? (settings.aboutTextAr || t('aboutPreview.description')) : (settings.aboutTextEn || t('aboutPreview.description'))}
               </p>
               <div className="pt-2">
                 <Link
