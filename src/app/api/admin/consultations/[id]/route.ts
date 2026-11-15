@@ -147,6 +147,8 @@ export async function PATCH(
       createdAt: nowIso,
     });
 
+    store.persistToDisk?.();
+
     return NextResponse.json({
       success: true,
       consultation,

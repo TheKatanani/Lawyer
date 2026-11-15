@@ -5,6 +5,9 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { ConsultationsManager } from '@/components/admin/ConsultationsManager';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata = {
   title: 'إدارة طلبات الاستشارة | لوحة التحكم',
 };

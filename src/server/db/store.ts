@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import {
   AdminUser,
   ServiceEntity,
@@ -978,6 +980,52 @@ class InMemoryStore {
 
     this.consultations.set(sampleConsultation1.id, sampleConsultation1);
     this.consultations.set(sampleConsultation2.id, sampleConsultation2);
+
+    this.loadFromDisk();
+  }
+
+  loadFromDisk() {
+    try {
+      const dataDir = path.join(process.cwd(), '.data');
+      const filePath = path.join(dataDir, 'store_state.json');
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.consultations)) {
+          for (const c of data.consultations) {
+            this.consultations.set(c.id, c);
+          }
+        }
+        if (Array.isArray(data.inquiries)) {
+          for (const req of data.inquiries) {
+            this.inquiries.set(req.id, req);
+          }
+        }
+        if (data.siteSettings) {
+          this.siteSettings = { ...this.siteSettings, ...data.siteSettings };
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load persistent store state from disk:', err);
+    }
+  }
+
+  persistToDisk() {
+    try {
+      const dataDir = path.join(process.cwd(), '.data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const filePath = path.join(dataDir, 'store_state.json');
+      const payload = {
+        consultations: Array.from(this.consultations.values()),
+        inquiries: Array.from(this.inquiries.values()),
+        siteSettings: this.siteSettings,
+      };
+      fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('Could not persist store state to disk:', err);
+    }
   }
 }
 

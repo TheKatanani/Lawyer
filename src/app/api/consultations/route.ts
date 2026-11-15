@@ -184,6 +184,7 @@ export async function POST(req: NextRequest) {
     };
 
     store.consultations.set(consultation.id, consultation);
+    store.persistToDisk?.();
 
     // Audit log
     store.auditLogs.unshift({

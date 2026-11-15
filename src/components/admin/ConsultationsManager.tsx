@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Loader2,
   Save,
+  RefreshCw,
 } from 'lucide-react';
 import { ConsultationRequest, ConsultationStatus } from '@/server/types';
 
@@ -90,6 +91,7 @@ export function ConsultationsManager({
 
   // Processing state
   const [saving, setSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -108,9 +110,17 @@ export function ConsultationsManager({
     }
   }, [selectedItem]);
 
-  const refreshList = async () => {
+  // Keep state updated if server props change
+  useEffect(() => {
+    if (initialConsultations && initialConsultations.length > 0) {
+      setConsultations(initialConsultations);
+    }
+  }, [initialConsultations]);
+
+  const refreshList = async (showLoading = false) => {
+    if (showLoading) setIsRefreshing(true);
     try {
-      const res = await fetch('/api/admin/consultations');
+      const res = await fetch('/api/admin/consultations', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setConsultations(data.consultations || []);
@@ -124,8 +134,19 @@ export function ConsultationsManager({
       }
     } catch (err) {
       console.error('Failed to reload consultations', err);
+    } finally {
+      if (showLoading) setIsRefreshing(false);
     }
   };
+
+  // Live polling every 10 seconds and on initial mount
+  useEffect(() => {
+    refreshList();
+    const interval = setInterval(() => {
+      refreshList();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSave = async (targetStatus?: ConsultationStatus) => {
     if (!selectedItem) return;
@@ -286,6 +307,17 @@ export function ConsultationsManager({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refreshList(true)}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface hover:bg-canvas border border-border rounded-sm text-xs font-semibold text-ink transition-colors disabled:opacity-50"
+            title="تحديث البيانات"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-gold ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">تحديث</span>
+          </button>
+
           <Filter className="w-4 h-4 text-muted flex-shrink-0" />
           <select
             value={lawyerFilter}

@@ -353,20 +353,21 @@ export function ConsultationForm({
           </label>
           <div className="flex gap-2" dir="ltr">
             {/* Country Calling Code Selector */}
-            <div className="relative w-36 flex-shrink-0">
+            <div className="relative w-36 sm:w-44 flex-shrink-0">
               <select
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className="w-full h-full px-3 py-3 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold appearance-none cursor-pointer"
+                className="w-full h-full ps-3 pe-8 py-3 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold appearance-none cursor-pointer"
                 aria-label="Country Calling Code"
+                dir="ltr"
               >
                 {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.code} ({isAr ? c.nameAr : c.nameEn})
+                  <option key={c.code} value={c.code} dir="ltr">
+                    {c.flag} {c.code} · {isAr ? c.nameAr : c.nameEn}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-muted absolute end-2 top-4 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-muted absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
             {/* National Digits */}
@@ -484,9 +485,8 @@ export function ConsultationForm({
                     min={minDate}
                     value={preferredDate}
                     onChange={(e) => setPreferredDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold"
+                    className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold cursor-pointer"
                   />
-                  <Calendar className="w-4 h-4 text-muted absolute end-3 top-3 pointer-events-none" />
                 </div>
                 <span className="text-[11px] text-muted block">
                   {isAr ? 'تفضيل اليوم فقط، ولا يُعد حجزاً نهائياً حتى يتم الاتفاق مع فريق العمل.' : 'Date preference only; exact appointment time is agreed with staff.'}
