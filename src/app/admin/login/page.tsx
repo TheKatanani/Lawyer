@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { auth } from '@/lib/firebase-client';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -18,15 +20,26 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      let idToken: string | undefined = undefined;
+
+      // 1. Attempt Client-side Firebase Authentication if user is registered in Firebase Console
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        idToken = await userCred.user.getIdToken();
+      } catch (fbErr: any) {
+        // Firebase client sign-in failed (or user only in server DB) - fallback to server verification
+      }
+
+      // 2. Authenticate session with the secure backend
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password, idToken }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || 'فشل تسجيل الدخول. يرجى التحقق من صحة البريد الإلكتروني وكلمة المرور.');
       }
 
       router.push('/admin');
