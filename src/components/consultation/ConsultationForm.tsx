@@ -194,9 +194,11 @@ export function ConsultationForm({
         whatsappUrl: data.whatsappUrl,
       });
 
-      // Attempt immediate WhatsApp navigation (non-blocking fallback is visible)
+      // Open WhatsApp in a new tab so user sees the on-site confirmation receipt
       try {
-        window.location.href = data.whatsappUrl;
+        if (!window.location.search.includes('no_wa_redirect')) {
+          window.open(data.whatsappUrl, '_blank');
+        }
       } catch (navErr) {
         // Handled gracefully by persistent fallback state
       }

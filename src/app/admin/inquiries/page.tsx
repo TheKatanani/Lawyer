@@ -5,6 +5,9 @@ import { listInquiries } from '@/server/repositories/inquiries';
 import { hasCapability } from '@/server/permissions/rbac';
 import { InquiryTable } from '@/components/admin/InquiryTable';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminInquiriesPage() {
   const user = await getSessionUser();
   if (!user) redirect('/admin/login');

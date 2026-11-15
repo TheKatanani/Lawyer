@@ -405,24 +405,19 @@ export function ConsultationsManager({
                       </td>
                       <td className="px-4 py-3.5">
                         {item.scheduledAt ? (
-                          <span className="font-bold text-emerald-800" dir="ltr">
-                            {new Date(item.scheduledAt).toLocaleDateString('ar-SA', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                          <span className="font-bold text-emerald-800 font-mono text-xs" dir="ltr">
+                            {item.scheduledAt.slice(0, 16).replace('T', ' ')}
                           </span>
                         ) : item.preferredDate ? (
-                          <span className="text-muted" dir="ltr">
+                          <span className="text-muted font-mono text-xs" dir="ltr">
                             تفضيل: {item.preferredDate}
                           </span>
                         ) : (
                           <span className="text-muted/50">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-muted" dir="ltr">
-                        {new Date(item.createdAt).toLocaleDateString()}
+                      <td className="px-4 py-3.5 text-muted font-mono text-xs" dir="ltr">
+                        {item.createdAt ? item.createdAt.slice(0, 10) : '—'}
                       </td>
                       <td className="px-4 py-3.5 text-end">
                         <button
@@ -713,7 +708,7 @@ export function ConsultationsManager({
                       <div key={n.id} className="p-2.5 bg-canvas rounded border border-border/60 text-xs space-y-1">
                         <div className="flex items-center justify-between text-[11px] text-muted">
                           <span className="font-semibold text-ink">{n.authorName}</span>
-                          <span dir="ltr">{new Date(n.createdAt).toLocaleString()}</span>
+                          <span dir="ltr">{n.createdAt ? n.createdAt.slice(0, 16).replace('T', ' ') : ''}</span>
                         </div>
                         <p className="text-ink">{n.text}</p>
                       </div>
@@ -754,7 +749,7 @@ export function ConsultationsManager({
                           <span className="font-mono text-ink font-semibold">{h.action}</span>
                           <span className="text-muted ms-1">({h.actorEmail})</span>
                         </div>
-                        <span dir="ltr">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span dir="ltr">{h.timestamp ? h.timestamp.slice(11, 16) : ''}</span>
                       </div>
                     ))}
                   </div>
@@ -765,7 +760,7 @@ export function ConsultationsManager({
             {/* Drawer Footer */}
             <div className="p-4 border-t border-border bg-canvas flex items-center justify-between">
               <span className="text-[11px] text-muted">
-                آخر تحديث: {new Date(selectedItem.updatedAt).toLocaleString()}
+                آخر تحديث: {selectedItem.updatedAt ? selectedItem.updatedAt.slice(0, 16).replace('T', ' ') : ''}
               </span>
               <button
                 type="button"

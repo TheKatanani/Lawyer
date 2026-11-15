@@ -5,6 +5,9 @@ import { getSessionUser } from '@/server/auth/session';
 import { store } from '@/server/db/store';
 import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage, CalendarCheck } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminOverviewPage() {
   const user = await getSessionUser();
   if (!user) {

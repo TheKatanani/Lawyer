@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { store } from '@/server/db/store';
 import { ConsultationRequest, ConsultationStatus, SupportedLocale } from '@/server/types';
 import { normalizePhoneE164, buildWhatsAppMessage } from '@/server/utils/consultation';
@@ -185,6 +186,13 @@ export async function POST(req: NextRequest) {
 
     store.consultations.set(consultation.id, consultation);
     store.persistToDisk?.();
+
+    try {
+      revalidatePath('/admin/consultations');
+      revalidatePath('/admin');
+    } catch (e) {
+      // Ignore in non-request contexts
+    }
 
     // Audit log
     store.auditLogs.unshift({
