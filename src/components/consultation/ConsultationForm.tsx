@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle,
@@ -102,6 +102,41 @@ export function ConsultationForm({
     whatsappUrl: string;
   } | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
+
+  // Custom Country Code dropdown state & date input ref
+  const [countryOpen, setCountryOpen] = useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  // Close country dropdown on outside click or Escape
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        countryDropdownRef.current &&
+        !countryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setCountryOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setCountryOpen(false);
+      }
+    }
+
+    if (countryOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [countryOpen]);
+
+  const activeCountry =
+    COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
 
   // Today in YYYY-MM-DD for date-picker min constraint
   const [minDate, setMinDate] = useState('');
@@ -354,22 +389,64 @@ export function ConsultationForm({
             {messages.phone} <span className="text-danger">*</span>
           </label>
           <div className="flex gap-2" dir="ltr">
-            {/* Country Calling Code Selector */}
-            <div className="relative w-36 sm:w-44 flex-shrink-0">
-              <select
-                value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                className="w-full h-full ps-3 pe-8 py-3 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold appearance-none cursor-pointer"
+            {/* Custom Country Calling Code Selector */}
+            <div className="relative flex-shrink-0" ref={countryDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setCountryOpen(!countryOpen)}
+                className="h-full px-3.5 py-3 bg-canvas border border-border rounded-sm text-xs font-mono text-ink flex items-center justify-between gap-2 hover:border-gold transition-colors focus:outline-none focus:border-gold min-w-[108px] sm:min-w-[120px]"
+                aria-haspopup="listbox"
+                aria-expanded={countryOpen}
                 aria-label="Country Calling Code"
-                dir="ltr"
               >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code} dir="ltr">
-                    {c.flag} {c.code} · {isAr ? c.nameAr : c.nameEn}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-muted absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <span className="flex items-center gap-1.5" dir="ltr">
+                  <span className="text-base leading-none select-none">{activeCountry.flag}</span>
+                  <span className="font-semibold text-ink text-xs">{activeCountry.code}</span>
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${
+                    countryOpen ? 'rotate-180 text-gold' : ''
+                  }`}
+                />
+              </button>
+
+              <input type="hidden" name="countryCode" value={countryCode} />
+
+              {countryOpen && (
+                <div
+                  className="absolute top-full start-0 mt-1.5 w-60 sm:w-64 max-h-60 overflow-y-auto bg-surface border border-border rounded-sm shadow-xl z-50 py-1 divide-y divide-border/40"
+                  role="listbox"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      role="option"
+                      aria-selected={c.code === countryCode}
+                      onClick={() => {
+                        setCountryCode(c.code);
+                        setCountryOpen(false);
+                      }}
+                      className={`w-full px-3.5 py-2.5 text-xs flex items-center justify-between hover:bg-canvas text-start transition-colors ${
+                        c.code === countryCode
+                          ? 'bg-gold/10 font-bold text-gold-ink'
+                          : 'text-ink'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base select-none">{c.flag}</span>
+                        <span className="truncate">{isAr ? c.nameAr : c.nameEn}</span>
+                      </span>
+                      <span
+                        className="font-mono text-muted text-[11px] ps-2 flex-shrink-0"
+                        dir="ltr"
+                      >
+                        {c.code}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* National Digits */}
@@ -479,16 +556,28 @@ export function ConsultationForm({
                 <label htmlFor="preferredDay" className="block text-xs font-semibold text-ink">
                   {messages.preferredDay}
                 </label>
-                <div className="relative">
+                <div
+                  className="relative flex items-center cursor-pointer"
+                  dir="ltr"
+                  onClick={() => {
+                    try {
+                      dateInputRef.current?.showPicker();
+                    } catch {
+                      dateInputRef.current?.focus();
+                    }
+                  }}
+                >
                   <input
+                    ref={dateInputRef}
                     id="preferredDay"
                     name="preferredDay"
                     type="date"
                     min={minDate}
                     value={preferredDate}
                     onChange={(e) => setPreferredDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold cursor-pointer"
+                    className="w-full ps-3.5 pe-10 py-2.5 bg-canvas border border-border rounded-sm text-xs font-mono text-ink focus:outline-none focus:border-gold cursor-pointer"
                   />
+                  <Calendar className="w-4 h-4 text-gold absolute end-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
                 <span className="text-[11px] text-muted block">
                   {isAr ? 'تفضيل اليوم فقط، ولا يُعد حجزاً نهائياً حتى يتم الاتفاق مع فريق العمل.' : 'Date preference only; exact appointment time is agreed with staff.'}

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ArrowUpRight, Scale, Shield, Building2, User, Phone, MessageSquare } from 'lucide-react';
 import { Hero } from '@/components/sections/Hero';
+import { StatsBanner } from '@/components/sections/StatsBanner';
 import { ServicesPreview } from '@/components/sections/ServicesPreview';
 import { ValuesSection } from '@/components/sections/ValuesSection';
 import { JourneySection } from '@/components/sections/JourneySection';
@@ -75,6 +76,9 @@ export default async function HomePage({
     <div className="flex flex-col">
       {/* 1. Hero Section */}
       <Hero locale={locale} messages={heroMessages} />
+
+      {/* 1.5 Legal Stature & Metric Counters Banner */}
+      <StatsBanner locale={locale} />
 
       {/* 2. Company Introduction (Asymmetric Image/Text) */}
       <section className="py-20 lg:py-24 bg-surface border-b border-border/50">
