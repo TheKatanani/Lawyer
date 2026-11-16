@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Loader2,
 } from 'lucide-react';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 interface ServiceOption {
   id: string;
@@ -329,14 +330,16 @@ export function ConsultationForm({
   return (
     <div className="max-w-xl mx-auto space-y-8">
       {/* Title & Introduction (No large hero) */}
-      <div className="space-y-2 text-start">
-        <h1 className="font-heading-ar font-bold text-3xl sm:text-4xl text-ink tracking-tight">
-          {messages.title}
-        </h1>
-        <p className="text-sm sm:text-base text-muted leading-relaxed">
-          {messages.explanation}
-        </p>
-      </div>
+      <ScrollReveal direction="up">
+        <div className="space-y-2 text-start">
+          <h1 className="font-heading-ar font-bold text-3xl sm:text-4xl text-ink tracking-tight">
+            {messages.title}
+          </h1>
+          <p className="text-sm sm:text-base text-muted leading-relaxed">
+            {messages.explanation}
+          </p>
+        </div>
+      </ScrollReveal>
 
       {/* Inline Error Notice */}
       {error && (
@@ -350,17 +353,18 @@ export function ConsultationForm({
       )}
 
       {/* Form Container */}
-      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-sm p-6 sm:p-8 shadow-xs space-y-6">
-        {/* Anti-spam honeypot (hidden from human visitors) */}
-        <div className="hidden" aria-hidden="true">
-          <input
-            type="text"
-            tabIndex={-1}
-            autoComplete="off"
-            value={botField}
-            onChange={(e) => setBotField(e.target.value)}
-          />
-        </div>
+      <ScrollReveal direction="up" delay={150}>
+        <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-sm p-6 sm:p-8 shadow-xs hover:border-gold/50 transition-colors space-y-6">
+          {/* Anti-spam honeypot (hidden from human visitors) */}
+          <div className="hidden" aria-hidden="true">
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={botField}
+              onChange={(e) => setBotField(e.target.value)}
+            />
+          </div>
 
         {/* 1. Full Name (Required) */}
         <div className="space-y-2">
@@ -618,6 +622,7 @@ export function ConsultationForm({
           <span>{messages.privacyNotice}</span>
         </div>
       </form>
+      </ScrollReveal>
     </div>
   );
 }

@@ -61,7 +61,7 @@ export function Hero({ locale, messages }: HeroProps) {
                   className="relative inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-sm bg-ink text-on-dark text-base font-semibold hover:bg-signature transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 group overflow-hidden"
                 >
                   <span className="relative z-10">{messages.ctaPrimary}</span>
-                  <ArrowUpRight className={`w-4 h-4 relative z-10 transition-transform duration-300 ${isAr ? 'group-hover:-translate-x-1 group-hover:-translate-y-1' : 'group-hover:translate-x-1 group-hover:-translate-y-1'}`} />
+                  <ArrowUpRight className="w-4 h-4 relative z-10 transition-transform duration-300 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                 </Link>
                 <Link

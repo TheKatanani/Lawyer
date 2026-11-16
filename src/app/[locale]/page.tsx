@@ -8,6 +8,7 @@ import { StatsBanner } from '@/components/sections/StatsBanner';
 import { ServicesPreview } from '@/components/sections/ServicesPreview';
 import { ValuesSection } from '@/components/sections/ValuesSection';
 import { JourneySection } from '@/components/sections/JourneySection';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
@@ -84,34 +85,43 @@ export default async function HomePage({
       <section className="py-20 lg:py-24 bg-surface border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-5 relative h-[360px] sm:h-[420px] rounded-sm overflow-hidden border border-border shadow-sm">
-              <Image
-                src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80"
-                alt="Saudi Corporate Architecture"
-                fill
-                sizes="(max-width: 1024px) 100vw, 40vw"
-                className="object-cover object-center"
-              />
+            <div className="lg:col-span-5">
+              <ScrollReveal direction={isAr ? 'left' : 'right'} delay={100}>
+                <div className="relative h-[360px] sm:h-[420px] rounded-sm overflow-hidden border border-border shadow-sm group">
+                  <Image
+                    src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80"
+                    alt="Saudi Corporate Architecture"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 40vw"
+                    className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-signature/10 pointer-events-none group-hover:bg-transparent transition-colors duration-500" />
+                </div>
+              </ScrollReveal>
             </div>
-            <div className="lg:col-span-7 space-y-6">
-              <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-                {t('aboutPreview.eyebrow')}
-              </span>
-              <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl leading-tight">
-                {t('aboutPreview.heading')}
-              </h2>
-              <p className="text-muted text-base leading-relaxed">
-                {isAr ? (settings.aboutTextAr || t('aboutPreview.description')) : (settings.aboutTextEn || t('aboutPreview.description'))}
-              </p>
-              <div className="pt-2">
-                <Link
-                  href={`/${locale}/about`}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-gold-ink border-b-2 border-gold pb-1 transition-colors"
-                >
-                  <span>{t('aboutPreview.cta')}</span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </Link>
-              </div>
+            <div className="lg:col-span-7">
+              <ScrollReveal direction={isAr ? 'right' : 'left'} delay={200}>
+                <div className="space-y-6">
+                  <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                    {t('aboutPreview.eyebrow')}
+                  </span>
+                  <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl leading-tight">
+                    {t('aboutPreview.heading')}
+                  </h2>
+                  <p className="text-muted text-base leading-relaxed">
+                    {isAr ? (settings.aboutTextAr || t('aboutPreview.description')) : (settings.aboutTextEn || t('aboutPreview.description'))}
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      href={`/${locale}/about`}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-gold-ink border-b-2 border-gold pb-1 transition-colors group"
+                    >
+                      <span>{t('aboutPreview.cta')}</span>
+                      <ArrowUpRight className="w-4 h-4 text-gold-ink group-hover:scale-110 transition-transform duration-300" />
+                    </Link>
+                  </div>
+                </div>
+              </ScrollReveal>
             </div>
           </div>
         </div>
@@ -134,50 +144,53 @@ export default async function HomePage({
       {publishedInsights.length > 0 && (
         <section className="py-20 lg:py-24 bg-canvas border-b border-border/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-                  {t('insightsSection.eyebrow')}
-                </span>
-                <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl">
-                  {t('insightsSection.heading')}
-                </h2>
+            <ScrollReveal direction="up">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                    {t('insightsSection.eyebrow')}
+                  </span>
+                  <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl">
+                    {t('insightsSection.heading')}
+                  </h2>
+                </div>
+                <Link
+                  href={`/${locale}/insights`}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink hover:text-gold-ink transition-colors group"
+                >
+                  <span>{t('common.viewAll')}</span>
+                  <ArrowUpRight className="w-4 h-4 text-gold-ink group-hover:scale-110 transition-transform duration-300" />
+                </Link>
               </div>
-              <Link
-                href={`/${locale}/insights`}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink hover:text-gold-ink transition-colors"
-              >
-                <span>{t('common.viewAll')}</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </Link>
-            </div>
+            </ScrollReveal>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {publishedInsights.map((article) => (
-                <Link
-                  key={article.projectionId}
-                  href={`/${locale}/insights/${article.slug}`}
-                  className="group block p-6 bg-surface rounded-sm border border-border/80 hover:border-gold/50 shadow-xs hover:shadow-sm transition-all duration-200"
-                >
-                  <div className="space-y-3">
-                    <span className="inline-block px-2.5 py-1 text-[11px] font-semibold bg-canvas text-gold-ink rounded-xs border border-border/70">
-                      {isAr ? 'تحليل نظامي' : 'Legal Analysis'}
-                    </span>
-                    <h3 className="font-heading-ar font-bold text-ink text-xl group-hover:text-gold-ink transition-colors leading-snug">
-                      {article.title}
-                    </h3>
-                    <p className="text-muted text-sm leading-relaxed line-clamp-3">
-                      {article.summary}
-                    </p>
-                    <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted">
-                      <span>{isAr ? 'قراءة في 5 دقائق' : '5 min read'}</span>
-                      <span className="text-ink font-semibold flex items-center gap-1 group-hover:text-gold-ink">
-                        {t('common.readMore')}
-                        <ArrowUpRight className="w-3.5 h-3.5" />
+              {publishedInsights.map((article, idx) => (
+                <ScrollReveal key={article.projectionId} direction="up" delay={idx * 120}>
+                  <Link
+                    href={`/${locale}/insights/${article.slug}`}
+                    className="group block p-6 bg-surface rounded-sm border border-border/80 hover:border-gold/60 shadow-xs hover:shadow-md hover:-translate-y-1.5 transition-all duration-300 h-full"
+                  >
+                    <div className="space-y-3">
+                      <span className="inline-block px-2.5 py-1 text-[11px] font-semibold bg-canvas text-gold-ink rounded-xs border border-border/70">
+                        {isAr ? 'تحليل نظامي' : 'Legal Analysis'}
                       </span>
+                      <h3 className="font-heading-ar font-bold text-ink text-xl group-hover:text-gold-ink transition-colors leading-snug">
+                        {article.title}
+                      </h3>
+                      <p className="text-muted text-sm leading-relaxed line-clamp-3">
+                        {article.summary}
+                      </p>
+                      <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted">
+                        <span>{isAr ? 'قراءة في 5 دقائق' : '5 min read'}</span>
+                        <span className="text-ink font-semibold flex items-center gap-1 group-hover:text-gold-ink">
+                          {t('common.readMore')}
+                          <ArrowUpRight className="w-3.5 h-3.5 text-gold-ink group-hover:scale-110 transition-transform duration-300" />
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -188,55 +201,58 @@ export default async function HomePage({
       {publishedTeam.length > 0 && (
         <section className="py-20 lg:py-24 bg-surface border-b border-border/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-              <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-                {t('teamSection.eyebrow')}
-              </span>
-              <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl">
-                {t('teamSection.heading')}
-              </h2>
-              <p className="text-muted text-base">
-                {t('teamSection.description')}
-              </p>
-            </div>
+            <ScrollReveal direction="up">
+              <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+                <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                  {t('teamSection.eyebrow')}
+                </span>
+                <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl">
+                  {t('teamSection.heading')}
+                </h2>
+                <p className="text-muted text-base">
+                  {t('teamSection.description')}
+                </p>
+              </div>
+            </ScrollReveal>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {publishedTeam.map((member) => (
-                <Link
-                  key={member.projectionId}
-                  href={`/${locale}/team/${member.slug}`}
-                  className="group block p-8 bg-canvas rounded-sm border border-border hover:border-gold/60 transition-all duration-200"
-                >
-                  <div className="space-y-4">
-                    <div className="w-14 h-14 rounded-full bg-ink text-on-dark flex items-center justify-center font-heading-ar font-bold text-xl border border-gold/40">
-                      {member.metadata?.fullName?.charAt(0) || 'م'}
-                    </div>
-                    <div>
-                      <h3 className="font-heading-ar font-bold text-ink text-xl group-hover:text-gold-ink transition-colors">
-                        {member.metadata?.fullName || member.title}
-                      </h3>
-                      <p className="text-gold-ink text-sm font-medium mt-1">
-                        {member.metadata?.positionTitle}
-                      </p>
-                    </div>
-                    <p className="text-muted text-sm leading-relaxed">
-                      {member.summary}
-                    </p>
-                    {member.metadata?.verifiedCredentials && (
-                      <div className="pt-3 border-t border-border/60 flex flex-wrap gap-2">
-                        {member.metadata.verifiedCredentials.map((cred: string, cIdx: number) => (
-                          <span
-                            key={cIdx}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-ink bg-surface px-2.5 py-1 rounded-xs border border-border"
-                          >
-                            <Scale className="w-3 h-3 text-gold-ink" />
-                            <span>{cred}</span>
-                          </span>
-                        ))}
+              {publishedTeam.map((member, idx) => (
+                <ScrollReveal key={member.projectionId} direction="up" delay={idx * 150}>
+                  <Link
+                    href={`/${locale}/team/${member.slug}`}
+                    className="group block p-8 bg-canvas rounded-sm border border-border hover:border-gold/70 hover:-translate-y-1.5 hover:shadow-md transition-all duration-300 h-full"
+                  >
+                    <div className="space-y-4">
+                      <div className="w-14 h-14 rounded-full bg-ink text-on-dark flex items-center justify-center font-heading-ar font-bold text-xl border border-gold/40 group-hover:border-gold group-hover:scale-105 transition-all duration-300">
+                        {member.metadata?.fullName?.charAt(0) || 'م'}
                       </div>
-                    )}
-                  </div>
-                </Link>
+                      <div>
+                        <h3 className="font-heading-ar font-bold text-ink text-xl group-hover:text-gold-ink transition-colors">
+                          {member.metadata?.fullName || member.title}
+                        </h3>
+                        <p className="text-gold-ink text-sm font-medium mt-1">
+                          {member.metadata?.positionTitle}
+                        </p>
+                      </div>
+                      <p className="text-muted text-sm leading-relaxed">
+                        {member.summary}
+                      </p>
+                      {member.metadata?.verifiedCredentials && (
+                        <div className="pt-3 border-t border-border/60 flex flex-wrap gap-2">
+                          {member.metadata.verifiedCredentials.map((cred: string, cIdx: number) => (
+                            <span
+                              key={cIdx}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-ink bg-surface px-2.5 py-1 rounded-xs border border-border"
+                            >
+                              <Scale className="w-3 h-3 text-gold-ink" />
+                              <span>{cred}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -245,38 +261,40 @@ export default async function HomePage({
 
       {/* 8. Final Contact Call to Action Banner */}
       <section className="py-20 bg-canvas">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-          <div className="space-y-4">
-            <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              {t('contactSection.eyebrow')}
-            </span>
-            <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-              {t('contactSection.heading')}
-            </h2>
-            <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto">
-              {t('contactSection.description')}
-            </p>
-          </div>
+        <ScrollReveal direction="up">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+            <div className="space-y-4">
+              <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                {t('contactSection.eyebrow')}
+              </span>
+              <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
+                {t('contactSection.heading')}
+              </h2>
+              <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto">
+                {t('contactSection.description')}
+              </p>
+            </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <Link
-              href={`/${locale}/contact`}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-sm bg-ink text-on-dark text-base font-semibold hover:bg-signature transition-all duration-200 shadow-md group"
-            >
-              <span>{t('contactSection.submitBtn')}</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-            <a
-              href="https://wa.me/966500000000"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-sm bg-surface border border-border text-ink text-base font-semibold hover:bg-canvas transition-colors duration-200"
-            >
-              <MessageSquare className="w-4 h-4 text-gold-ink" />
-              <span>{t('common.whatsappLabel')}</span>
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <Link
+                href={`/${locale}/contact`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-sm bg-ink text-on-dark text-base font-semibold hover:bg-signature transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 group"
+              >
+                <span>{t('contactSection.submitBtn')}</span>
+                <ArrowUpRight className="w-4 h-4 text-gold group-hover:scale-110 transition-transform duration-300" />
+              </Link>
+              <a
+                href="https://wa.me/966500000000"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-sm bg-surface border border-border text-ink text-base font-semibold hover:border-gold hover:bg-canvas transition-all duration-300 hover:-translate-y-0.5 shadow-xs"
+              >
+                <MessageSquare className="w-4 h-4 text-gold-ink" />
+                <span>{t('common.whatsappLabel')}</span>
+              </a>
+            </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </div>
   );

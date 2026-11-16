@@ -129,13 +129,7 @@ export function Header({ locale, messages }: HeaderProps) {
               <span className="relative z-10">
                 {messages.requestConsultation || (isRTL ? 'طلب استشارة' : 'Request Consultation')}
               </span>
-              <ArrowUpRight
-                className={`w-4 h-4 relative z-10 transition-transform duration-300 ${
-                  isRTL
-                    ? 'group-hover:-translate-x-1 group-hover:-translate-y-1'
-                    : 'group-hover:translate-x-1 group-hover:-translate-y-1'
-                }`}
-              />
+              <ArrowUpRight className="w-4 h-4 relative z-10 transition-transform duration-300 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
             </Link>
           </div>

@@ -153,8 +153,8 @@ export function ServicesPreview({ locale, initialServices, messages }: ServicesP
 
                     {/* Action Arrow */}
                     <div className="md:col-span-1 flex justify-end">
-                      <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-ink group-hover:bg-signature group-hover:text-gold group-hover:border-gold/60 group-hover:scale-110 transition-all duration-300 shadow-xs">
-                        <ArrowUpRight className={`w-4 h-4 transition-transform duration-300 ${isAr ? 'group-hover:-translate-x-1 group-hover:-translate-y-1' : 'group-hover:translate-x-1 group-hover:-translate-y-1'}`} />
+                      <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-ink group-hover:bg-signature group-hover:text-gold group-hover:border-gold/60 group-hover:scale-105 transition-all duration-300 shadow-xs">
+                        <ArrowUpRight className="w-4 h-4 transition-colors duration-300" />
                       </div>
                     </div>
                   </div>
