@@ -2,9 +2,10 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getPublishedProjection, listPublishedProjections } from '@/server/repositories/content';
+import { getPublishedProjection } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { Scale, CheckCircle, ArrowUpRight, ShieldCheck, User } from 'lucide-react';
+import { getPracticeAreaBySlug } from '@/data/practice-areas';
+import { CheckCircle2, ArrowUpRight, ShieldCheck, Quote, Compass, AlertCircle } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
@@ -51,7 +52,21 @@ export default async function ServiceDetailPage({
     notFound();
   }
 
-  const allTeam = await listPublishedProjections('teamMember', currentLocale);
+  const area = getPracticeAreaBySlug(slug);
+
+  const scopeItems = area
+    ? (isAr ? area.scopeOfServicesAr : area.scopeOfServicesEn)
+    : (service.metadata?.deliverables || []);
+
+  const problemsItems = area
+    ? (isAr ? area.problemsAddressedAr : area.problemsAddressedEn)
+    : [];
+
+  const steps = area?.methodologySteps || [];
+
+  const valueQuote = area
+    ? (isAr ? area.valueToClientAr : area.valueToClientEn)
+    : null;
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
@@ -61,7 +76,7 @@ export default async function ServiceDetailPage({
           <div className="max-w-4xl space-y-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-gold-ink uppercase tracking-wider">
               <Link href={`/${locale}/services`} className="hover:underline">
-                {isAr ? 'الخدمات' : 'Practice Areas'}
+                {isAr ? 'مجالات الممارسة' : 'Practice Areas'}
               </Link>
               <span>/</span>
               <span>{service.title}</span>
@@ -93,20 +108,24 @@ export default async function ServiceDetailPage({
           </div>
         </ScrollReveal>
 
-        {/* Deliverables & Scope Grid */}
+        {/* Deliverables, Problems, Methodology & Sidebar Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Main Content & Scope */}
-          <div className="lg:col-span-8 space-y-10">
-            {service.metadata?.deliverables && service.metadata.deliverables.length > 0 && (
+          {/* Main Content Area (8 columns) */}
+          <div className="lg:col-span-8 space-y-12">
+            {/* 1. Scope of Services */}
+            {scopeItems.length > 0 && (
               <ScrollReveal direction="up" delay={100}>
                 <div className="p-8 bg-surface rounded-sm border border-border/80 shadow-xs hover:border-gold/60 transition-all duration-300 space-y-6">
                   <h2 className="font-heading-ar font-bold text-ink text-2xl">
-                    {isAr ? 'نطاق الخدمة والمخرجات الرئيسية' : 'Deliverables & Advisory Scope'}
+                    {isAr ? 'نطاق الخدمات والتمثيل النظامي' : 'Scope of Services'}
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {service.metadata.deliverables.map((item: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-canvas rounded-xs border border-border/60 hover:border-gold/40 transition-colors">
-                        <CheckCircle className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
+                    {scopeItems.map((item: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3.5 bg-canvas rounded-xs border border-border/60 hover:border-gold/40 transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
                         <span className="text-sm font-medium text-ink leading-relaxed">{item}</span>
                       </div>
                     ))}
@@ -115,19 +134,88 @@ export default async function ServiceDetailPage({
               </ScrollReveal>
             )}
 
-            {/* Editorial Blocks */}
-            <div className="space-y-6 text-muted text-base leading-relaxed">
-              {service.blocks?.map((b, bIdx) => (
-                <ScrollReveal key={b.id} direction="up" delay={150 + bIdx * 80}>
-                  <div className="p-6 bg-surface rounded-sm border border-border/60 hover:border-gold/50 transition-colors">
-                    <p>{b.data?.text}</p>
+            {/* 2. Problems We Address */}
+            {problemsItems.length > 0 && (
+              <ScrollReveal direction="up" delay={150}>
+                <div className="p-8 bg-surface rounded-sm border border-border/80 shadow-xs hover:border-gold/60 transition-all duration-300 space-y-6">
+                  <h2 className="font-heading-ar font-bold text-ink text-2xl flex items-center gap-2.5">
+                    <AlertCircle className="w-5 h-5 text-gold" />
+                    <span>{isAr ? 'طبيعة المشكلات التي نعالجها' : 'Problems We Address'}</span>
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {problemsItems.map((item: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2.5 p-3 bg-canvas/80 rounded-xs border border-border/50 text-sm text-ink font-medium"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-gold-ink mt-2 flex-shrink-0" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
                   </div>
-                </ScrollReveal>
-              ))}
-            </div>
+                </div>
+              </ScrollReveal>
+            )}
+
+            {/* 3. Methodology Steps */}
+            {steps.length > 0 && (
+              <ScrollReveal direction="up" delay={200}>
+                <div className="p-8 bg-surface rounded-sm border border-border/80 shadow-xs hover:border-gold/60 transition-all duration-300 space-y-6">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                      {isAr ? 'المسار الإجرائي' : 'Procedural Workflow'}
+                    </span>
+                    <h2 className="font-heading-ar font-bold text-ink text-2xl flex items-center gap-2.5">
+                      <Compass className="w-5 h-5 text-gold" />
+                      <span>{isAr ? 'منهجية التعامل مع الملف' : 'How We Handle the Matter'}</span>
+                    </h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                    {steps.map((s) => (
+                      <div
+                        key={s.step}
+                        className="p-5 bg-canvas rounded-sm border border-border/70 hover:border-gold/50 transition-all duration-300 space-y-2.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-signature text-on-dark flex items-center justify-center font-mono font-bold text-xs border border-gold/40">
+                            {s.step}
+                          </span>
+                          <h3 className="font-heading-ar font-bold text-ink text-base">
+                            {isAr ? s.titleAr : s.titleEn}
+                          </h3>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed font-normal">
+                          {isAr ? s.descriptionAr : s.descriptionEn}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ScrollReveal>
+            )}
+
+            {/* 4. Value to the Client Callout */}
+            {valueQuote && (
+              <ScrollReveal direction="up" delay={250}>
+                <div className="p-6 bg-signature text-on-dark rounded-sm border border-gold/40 shadow-sm relative overflow-hidden">
+                  <div className="flex items-start gap-4">
+                    <Quote className="w-8 h-8 text-gold flex-shrink-0 opacity-80" />
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-semibold text-gold uppercase tracking-wider block">
+                        {isAr ? 'القيمة للعميل' : 'Value to the Client'}
+                      </span>
+                      <p className="font-heading-ar font-bold text-base sm:text-lg leading-relaxed text-on-dark">
+                        {valueQuote}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
+            )}
 
             {/* Regulatory Disclaimer Notice */}
-            <ScrollReveal direction="up" delay={200}>
+            <ScrollReveal direction="up" delay={300}>
               <div className="p-6 bg-canvas rounded-sm border-l-4 rtl:border-r-4 rtl:border-l-0 border-gold space-y-2">
                 <h3 className="font-heading-ar font-bold text-sm text-ink">
                   {isAr ? 'ضوابط تقديم الخدمة وفق الأنظمة السعودية' : 'Regulatory Engagement Notice'}
@@ -141,7 +229,7 @@ export default async function ServiceDetailPage({
             </ScrollReveal>
           </div>
 
-          {/* Sticky Sidebar: Intake CTA & Team Link */}
+          {/* Sticky Sidebar: Intake CTA (4 columns) */}
           <div className="lg:col-span-4 space-y-6">
             <ScrollReveal direction={isAr ? 'left' : 'right'} delay={250}>
               <div className="p-8 bg-surface rounded-sm border border-border/80 shadow-sm hover:border-gold/60 transition-all duration-300 space-y-6 sticky top-28">

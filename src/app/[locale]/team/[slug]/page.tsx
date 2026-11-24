@@ -7,12 +7,20 @@ import { SupportedLocale } from '@/server/types';
 import { Scale, CheckCircle2, ArrowUpRight, Globe, Languages } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 export async function generateMetadata({
   params: { locale, slug },
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
+  if (
+    !UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers &&
+    (slug === 'senior-counsel' || slug === 'abdulrahman-alotaibi')
+  ) {
+    return { title: 'Lawyer Not Found' };
+  }
+
   const currentLocale = locale as SupportedLocale;
   const projection = await getPublishedProjection('teamMember', slug, currentLocale);
 
@@ -40,6 +48,13 @@ export default async function TeamMemberDetailPage({
   params: { locale: string; slug: string };
 }) {
   setRequestLocale(locale);
+  if (
+    !UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers &&
+    (slug === 'senior-counsel' || slug === 'abdulrahman-alotaibi')
+  ) {
+    notFound();
+  }
+
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
 

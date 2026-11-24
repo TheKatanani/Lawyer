@@ -7,6 +7,7 @@ import { routing, type Locale } from '@/i18n/routing';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { FIRM_DETAILS } from '@/config/compliance';
 import '@/app/globals.css';
 
 export function generateStaticParams() {
@@ -96,6 +97,28 @@ export default async function LocaleLayout({
           </main>
           <Footer locale={locale} />
         </NextIntlClientProvider>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'LegalService',
+              name: isAr ? FIRM_DETAILS.nameAr : FIRM_DETAILS.nameEn,
+              alternateName: isAr ? FIRM_DETAILS.shortNameAr : FIRM_DETAILS.shortNameEn,
+              description: isAr ? FIRM_DETAILS.taglineAr : FIRM_DETAILS.taglineEn,
+              url: FIRM_DETAILS.websiteUrl,
+              telephone: FIRM_DETAILS.phone,
+              email: FIRM_DETAILS.email,
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn,
+                addressLocality: isAr ? FIRM_DETAILS.cityAr : FIRM_DETAILS.cityEn,
+                addressCountry: 'SA',
+              },
+            }),
+          }}
+        />
       </body>
     </html>
   );

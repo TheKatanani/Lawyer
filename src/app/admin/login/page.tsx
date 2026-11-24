@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/firebase-client';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -55,9 +56,15 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-md p-8 sm:p-10 bg-surface rounded-sm border border-border shadow-lg space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-sm bg-signature text-gold mx-auto flex items-center justify-center font-heading-ar font-bold text-xl border border-gold/40 shadow-xs">
-            ر
+        <div className="text-center space-y-3">
+          <div className="relative w-16 h-16 mx-auto mb-1">
+            <Image
+              src="/logo-gold-emblem.png"
+              alt="RMA Legal"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
           <h1 className="font-heading-ar font-bold text-2xl text-ink">
             تسجيل دخول لوحة التحكم
@@ -87,7 +94,7 @@ export default function AdminLoginPage() {
                 dir="ltr"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@rma-law.sa"
+                placeholder="counsel@example.sa"
                 className="w-full pl-4 pr-10 py-2.5 bg-canvas border border-border rounded-sm text-sm text-ink placeholder-muted/50 focus:outline-none focus:border-gold"
               />
               <Mail className="w-4 h-4 text-muted absolute right-3 top-3 pointer-events-none" />

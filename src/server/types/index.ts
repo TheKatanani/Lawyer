@@ -233,6 +233,8 @@ export interface ConsultationHistoryEntry {
   timestamp: string;
 }
 
+export type ConsultationPaymentStatus = 'unpaid' | 'paid' | 'waived' | 'refunded' | 'pending';
+
 export interface ConsultationRequest {
   id: string;
   reference: string;
@@ -264,7 +266,17 @@ export interface ConsultationRequest {
   createdAt: string;
   updatedAt: string;
   updatedBy?: string;
+
+  // Payment Tracking
+  paymentStatus?: ConsultationPaymentStatus;
+  paymentMethod?: 'moyasar' | 'mada' | 'creditcard' | 'applepay' | 'office_cash' | 'office_transfer' | 'waived' | 'none';
+  paymentId?: string | null;
+  amountMinor?: number; // In Halalas (e.g. 50000 = 500 SAR)
+  currency?: string;
+  paidAt?: string | null;
 }
+
+export type PaymentRequirementMode = 'mandatory' | 'optional' | 'disabled';
 
 export interface SiteSettings {
   brandNameAr: string;
@@ -294,6 +306,17 @@ export interface SiteSettings {
   aboutMissionEn?: string;
   aboutVisionAr?: string;
   aboutVisionEn?: string;
+
+  // Payment Gateway Settings (Moyasar)
+  paymentEnabled: boolean;
+  paymentRequirement: PaymentRequirementMode;
+  consultationFee: number; // In SAR (e.g. 500)
+  consultationCurrency: string; // 'SAR'
+  moyasarPublishableKey?: string;
+  moyasarSecretKey?: string;
+  applePayEnabled: boolean;
+  paymentNoticeAr?: string;
+  paymentNoticeEn?: string;
 }
 
 export interface OutboxJob {
@@ -308,3 +331,5 @@ export interface OutboxJob {
   createdAt: string;
   updatedAt: string;
 }
+
+export * from './invoice';

@@ -4,16 +4,31 @@ import { store } from '@/server/db/store';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
 import { verifyPassword } from '@/server/auth/password';
 import { Role, AdminUser } from '@/server/types';
+import { getClientIp, checkRateLimit } from '@/server/security/rate-limit';
+
+const GENERIC_LOGIN_ERROR = 'بيانات الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
 
 export async function POST(req: NextRequest) {
   try {
     const { email, password, idToken } = await req.json();
 
     if (!email || !email.includes('@')) {
-      return NextResponse.json({ error: 'Valid email is required.' }, { status: 400 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    const clientIp = getClientIp(req);
+
+    // Rate limiting: 10 attempts / 15 minutes per IP, 5 attempts / 15 minutes per email
+    const ipRate = checkRateLimit(`login:ip:${clientIp}`, 10, 900);
+    const emailRate = checkRateLimit(`login:email:${normalizedEmail}`, 5, 900);
+
+    if (!ipRate.allowed || !emailRate.allowed) {
+      return NextResponse.json(
+        { error: 'تم تجاوز الحد المسموح من محاولات الدخول. يرجى الانتظار 15 دقيقة قبل المحاولة مجدداً.' },
+        { status: 429 }
+      );
+    }
 
     // Lookup staff user in store
     let matchedUser = Array.from(store.admins.values()).find(
@@ -50,16 +65,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Generic error: do not reveal if user does not exist
     if (!matchedUser) {
-      return NextResponse.json({ error: 'البريد الإلكتروني غير مسجل ضمن مسؤولي النظام المصرح لهم.' }, { status: 401 });
+      store.auditLogs.unshift({
+        id: `AUDIT-${Date.now()}`,
+        actorUid: 'anonymous',
+        actorEmail: normalizedEmail,
+        action: 'ADMIN_LOGIN_FAILED_UNKNOWN_USER',
+        targetType: 'adminUser',
+        targetId: normalizedEmail,
+        details: { ip: clientIp },
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
+    // Generic error: do not reveal account inactive status
     if (!matchedUser.isActive) {
-      return NextResponse.json({ error: 'هذا الحساب الإداري معطل حالياً من قِبل الإدارة.' }, { status: 403 });
+      store.auditLogs.unshift({
+        id: `AUDIT-${Date.now()}`,
+        actorUid: matchedUser.uid,
+        actorEmail: matchedUser.email,
+        action: 'ADMIN_LOGIN_FAILED_INACTIVE',
+        targetType: 'adminUser',
+        targetId: matchedUser.uid,
+        details: { ip: clientIp },
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     if (!password && !idToken) {
-      return NextResponse.json({ error: 'كلمة المرور مطلوبة لإتمام تسجيل الدخول.' }, { status: 400 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     // If idToken is present, Firebase client has already verified the password
@@ -77,10 +114,10 @@ export async function POST(req: NextRequest) {
           action: 'ADMIN_LOGIN_FAILED_INVALID_PASSWORD',
           targetType: 'adminUser',
           targetId: matchedUser.uid,
-          details: { reason: 'incorrect_password' },
+          details: { ip: clientIp },
           createdAt: new Date().toISOString(),
         });
-        return NextResponse.json({ error: 'كلمة المرور غير صحيحة. يرجى إدخال كلمة المرور المعتمدة.' }, { status: 401 });
+        return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
       }
     }
 

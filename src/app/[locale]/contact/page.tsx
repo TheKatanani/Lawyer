@@ -3,8 +3,9 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ContactForm } from '@/components/forms/ContactForm';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { Phone, MessageSquare, MapPin, Clock, ShieldCheck } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, Clock, ShieldCheck, Mail, Globe } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 export default async function ContactPage({
   params: { locale },
@@ -86,17 +87,17 @@ export default async function ContactPage({
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold text-ink block">{isAr ? 'المقر الرئيسي' : 'Headquarters'}</span>
-                      <span className="text-muted">{isAr ? 'مدينة الرياض، المملكة العربية السعودية' : 'Riyadh, Kingdom of Saudi Arabia'}</span>
+                      <span className="font-semibold text-ink block">{isAr ? 'المقر الرئيسي (جدة)' : 'Headquarters (Jeddah)'}</span>
+                      <span className="text-muted leading-relaxed block">{isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn}</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <Phone className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold text-ink block">{isAr ? 'الهاتف المباشر' : 'Telephone'}</span>
-                      <a href="tel:+966110000000" className="text-gold-ink hover:underline font-mono" dir="ltr">
-                        +966 11 000 0000
+                      <span className="font-semibold text-ink block">{isAr ? 'الجوال والاتصال' : 'Mobile & Telephone'}</span>
+                      <a href={`tel:${FIRM_DETAILS.phoneRaw}`} className="text-gold-ink hover:underline font-mono">
+                        <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
                       </a>
                     </div>
                   </div>
@@ -106,25 +107,47 @@ export default async function ContactPage({
                     <div>
                       <span className="font-semibold text-ink block">{isAr ? 'واتساب الرسمي' : 'Official WhatsApp'}</span>
                       <a
-                        href="https://wa.me/966500000000"
+                        href={FIRM_DETAILS.whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gold-ink hover:underline"
+                        className="text-gold-ink hover:underline font-mono"
                       >
-                        {isAr ? 'بدء محادثة واتساب' : 'Start WhatsApp Chat'}
+                        <bdi dir="ltr">{FIRM_DETAILS.whatsapp}</bdi>
                       </a>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                    <Mail className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold text-ink block">{isAr ? 'ساعات العمل الرسمية' : 'Working Hours'}</span>
-                      <span className="text-muted">
-                        {isAr ? 'الأحد - الخميس: 9:00 ص إلى 5:00 م' : 'Sun - Thu: 9:00 AM to 5:00 PM AST'}
-                      </span>
+                      <span className="font-semibold text-ink block">{isAr ? 'البريد الإلكتروني' : 'Email Address'}</span>
+                      <a href={`mailto:${FIRM_DETAILS.email}`} className="text-gold-ink hover:underline">
+                        {FIRM_DETAILS.email}
+                      </a>
                     </div>
                   </div>
+
+                  <div className="flex items-start gap-3">
+                    <Globe className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold text-ink block">{isAr ? 'الموقع الإلكتروني' : 'Website'}</span>
+                      <a href={FIRM_DETAILS.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-gold-ink hover:underline">
+                        {FIRM_DETAILS.website}
+                      </a>
+                    </div>
+                  </div>
+
+                  {UNVERIFIED_CLAIMS_CONFIG.enableOfficialWorkingHours && (
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold text-ink block">{isAr ? 'ساعات العمل الرسمية' : 'Working Hours'}</span>
+                        <span className="text-muted">
+                          {isAr ? UNVERIFIED_CLAIMS_CONFIG.workingHoursAr : UNVERIFIED_CLAIMS_CONFIG.workingHoursEn}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </ScrollReveal>

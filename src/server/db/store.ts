@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import {
   AdminUser,
   ServiceEntity,
@@ -16,37 +17,51 @@ import {
   MediaAsset,
   ConsultationRequest,
   SiteSettings,
+  PaymentRequest,
 } from '../types';
 import { hashPassword } from '../auth/password';
+import { UNVERIFIED_CLAIMS_CONFIG, FIRM_DETAILS } from '../../config/compliance';
+import {
+  PRACTICE_AREAS_SERVICES,
+  PRACTICE_AREAS_SERVICE_REVISIONS,
+} from './practice-areas-seed';
 
 export const INITIAL_SETTINGS: SiteSettings = {
   brandNameAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية',
   brandNameEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations',
-  brandShortAr: 'رياض الزهراني للمحاماة',
-  brandShortEn: 'Alzahrani Law Firm',
-  taglineAr: 'رؤية قانونية واثقة، وحلول تقوم على المعرفة',
-  taglineEn: 'A clear legal perspective. An approach grounded in knowledge.',
-  phone: '+966 55 777 5504',
-  whatsapp: '+966 55 777 5504',
-  email: 'riyadh@riyadhalzahrani.com',
-  addressAr: 'المملكة العربية السعودية، الرياض',
-  addressEn: 'Riyadh, Kingdom of Saudi Arabia',
-  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | الرياض',
-  seoTitleEn: 'Riyadh Mohammed Alzahrani Saudi Legal Company | Riyadh',
-  seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للشركات والأفراد.',
+  brandShortAr: 'شركة رياض الزهراني للمحاماة',
+  brandShortEn: 'RMA Legal',
+  taglineAr: 'نقرأ النزاع قبل أن يصل إلى المحكمة، ونقرأ أدلته قبل أن تتحول إلى مرافعة',
+  taglineEn: 'We read the dispute before it reaches court — and its evidence before it becomes a pleading.',
+  phone: FIRM_DETAILS.phone,
+  whatsapp: FIRM_DETAILS.whatsapp,
+  email: FIRM_DETAILS.email,
+  addressAr: FIRM_DETAILS.addressAr,
+  addressEn: FIRM_DETAILS.addressEn,
+  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | جدة',
+  seoTitleEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations | Jeddah',
+  seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للأفراد والشركات والجهات الاستثمارية.',
   seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
-  ogImageUrl: '',
+  ogImageUrl: '/logo-gold-full.png',
   faviconUrl: '/favicon.ico',
-  heroHeadlineAr: 'رؤية قانونية واثقة. وحلول تقوم على المعرفة.',
-  heroHeadlineEn: 'A clear legal perspective. An approach grounded in knowledge.',
-  heroDescAr: 'خدمات قانونية متكاملة للأفراد والمنشآت في المملكة العربية السعودية، تبدأ بفهم عميق لاحتياجاتك وتوضيح دقيق للخطوات والحلول المناسبة.',
-  heroDescEn: 'Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives.',
-  aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
-  aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
-  aboutMissionAr: 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.',
-  aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
-  aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
-  aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
+  heroHeadlineAr: 'نقرأ النزاع قبل أن يصل إلى المحكمة، ونقرأ أدلته قبل أن تتحول إلى مرافعة',
+  heroHeadlineEn: 'We read the dispute before it reaches court — and its evidence before it becomes a pleading.',
+  heroDescAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
+  heroDescEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.',
+  aboutTextAr: 'القضية لا تُقاس بحجم مستنداتها، بل بقوة مركزها القانوني وسلامة بنائها الإجرائي. شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
+  aboutTextEn: 'A case is measured not by the volume of its documents, but by the strength of its legal position and the soundness of its procedure. Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities.',
+  aboutMissionAr: 'تقديم خدمات قانونية دقيقة وعملية تحمي مصالح الموكل وتمنحه وضوحًا كاملًا في كل مرحلة، مع الالتزام بأعلى معايير النزاهة والسرية.',
+  aboutMissionEn: 'To deliver precise, practical legal services that safeguard the client’s interests and afford complete clarity at every stage, adhering to the highest standards of integrity and confidentiality.',
+  aboutVisionAr: 'أن نكون المرجع القانوني الموثوق للأفراد والأسر والشركات في المملكة، بمنهج يجمع العمق النظامي والرؤية الاستراتيجية والالتزام المهني.',
+  aboutVisionEn: 'To be the trusted legal reference for individuals, families and companies in the Kingdom — with a method that unites legal depth, strategic vision and professional commitment.',
+  // Payment Gateway Settings (Moyasar)
+  paymentEnabled: true,
+  paymentRequirement: 'optional',
+  consultationFee: 500,
+  consultationCurrency: 'SAR',
+  applePayEnabled: false,
+  paymentNoticeAr: 'رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي.',
+  paymentNoticeEn: 'The initial consultation fee is deductible from overall legal representation fees upon retainer engagement.',
 };
 
 const DEFAULT_ADMIN_PASSWORD_HASH = hashPassword(process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!');
@@ -55,7 +70,7 @@ const DEFAULT_ADMIN_PASSWORD_HASH = hashPassword(process.env.ADMIN_INITIAL_PASSW
 const INITIAL_ADMINS: AdminUser[] = [
   {
     uid: 'admin-rma-01',
-    email: 'admin@rma-law.sa',
+    email: FIRM_DETAILS.email,
     displayName: 'Riyadh Alzahrani',
     role: 'super_admin',
     isActive: true,
@@ -66,7 +81,7 @@ const INITIAL_ADMINS: AdminUser[] = [
   },
   {
     uid: 'admin-rma-02',
-    email: 'counsel@rma-law.sa',
+    email: FIRM_DETAILS.email,
     displayName: 'Associate Counsel',
     role: 'admin',
     isActive: true,
@@ -77,7 +92,7 @@ const INITIAL_ADMINS: AdminUser[] = [
   },
   {
     uid: 'admin-rma-03',
-    email: 'editor@rma-law.sa',
+    email: FIRM_DETAILS.email,
     displayName: 'Legal Editor',
     role: 'editor',
     isActive: true,
@@ -88,7 +103,7 @@ const INITIAL_ADMINS: AdminUser[] = [
   },
   {
     uid: 'admin-rma-04',
-    email: 'intake@rma-law.sa',
+    email: FIRM_DETAILS.email,
     displayName: 'Intake Officer',
     role: 'inquiry_manager',
     isActive: true,
@@ -499,26 +514,51 @@ const INITIAL_TEAM_REVISIONS: Record<string, TeamMemberRevision> = {
     entityId: 'riyadh-alzahrani',
     schemaVersion: 1,
     locale: 'ar',
-    title: 'أ. رياض بن محمد الزهراني',
+    title: 'المستشار رياض بن محمد الزهراني',
     slug: 'riyadh-alzahrani',
-    summary: 'الشريك المؤسس والمدير العام لشركة رياض محمد الزهراني للمحاماة والاستشارات القانونية.',
-    fullName: 'أ. رياض بن محمد الزهراني',
+    summary: 'الشريك المؤسس والمدير العام - محامٍ ومستشار قانوني بخبرة تتجاوز 20 عاماً في التقاضي والتحكيم والصياغة النظامية.',
+    fullName: 'المستشار رياض بن محمد الزهراني',
     positionTitle: 'الشريك المؤسس والمدير العام',
-    practiceAreas: ['حوكمة الشركات', 'التقاضي التجاري', 'الاستثمار الأجنبي'],
+    practiceAreas: ['التقاضي والتحكيم التجاري الدولي', 'صياغة العقود والاتفاقيات', 'حوكمة الشركات', 'الأوقاف والتركات والتمويل الإسلامي'],
     spokenLanguages: ['العربية', 'الإنجليزية'],
-    verifiedCredentials: ['محامٍ مرخص من وزارة العدل بالمملكة العربية السعودية', 'عضو الهيئة السعودية للمحامين'],
+    verifiedCredentials: [
+      'محامٍ ومستشار مرخص من وزارة العدل بالمملكة العربية السعودية',
+      'عضو الهيئة السعودية للمحامين',
+      'عضو المجمع الملكي البريطاني للمحكمين (CIArb, UK)',
+      'محكم تجاري دولي معتمد',
+      'مؤلف كتاب "القانون التجاري"',
+      'الزمالة الدولية في التحكيم التجاري',
+      'زمالة المستشار الشرعي في فقه المعاملات المالية الإسلامية',
+      'زمالة مستشار الأوقاف لدى الهيئة العامة للأوقاف',
+      'مستشار الصياغة التشريعية',
+      'مدرب قانوني معتمد من المؤسسة العامة للتدريب التقني والمهني (TVTC)',
+      'الزمالة المهنية في الإدارة القانونية',
+    ],
     blocks: [
       {
-        id: 'b1',
+        id: 'b-quote-leadership',
+        type: 'quote',
+        data: {
+          text: 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة. على مدى أكثر من عشرين عامًا في التقاضي والتحكيم والصياغة النظامية، تعلّمنا أن النزاع لا يُكسب برفع الصوت، بل بقوة الحجة وسلامة الإجراء.',
+          attribution: 'المستشار رياض محمد الزهراني',
+        },
+      },
+      {
+        id: 'b-exp-heading',
+        type: 'heading',
+        data: { text: 'الخبرة والمسيرة المهنية', level: 2 },
+      },
+      {
+        id: 'b-exp-para',
         type: 'paragraph',
-        data: { text: 'يتمتع الأستاذ رياض الزهراني بخبرة قانونية ممتدة في قيادة الاستشارات الإستراتيجية للمنشآت الكبرى وتأسيس الاستثمارات الدولية في المملكة.' },
+        data: { text: 'يمتلك المستشار رياض الزهراني خبرة رصينة تمتد لأكثر من عقدين في قيادة مذكرات التقاضي التجاري المعقد، وإدارة ملفات التحكيم المؤسسي والحر، وصياغة العقود الاستثمارية وحوكمة الكيانات التجارية العائلية في المملكة العربية السعودية.' },
       },
     ],
     seo: {
-      title: 'أ. رياض بن محمد الزهراني | شركة رياض محمد الزهراني للمحاماة',
-      description: 'السيرة الذاتية للمحامي رياض بن محمد الزهراني الشريك المؤسس.',
+      title: 'المستشار رياض بن محمد الزهراني | شركة رياض محمد الزهراني للمحاماة',
+      description: 'السيرة المهنية للمستشار رياض الزهراني الشريك المؤسس والمدير العام.',
     },
-    approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED'],
+    approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED', 'AUTH-BOOK-COMMERCIAL-LAW'],
     createdBy: 'admin-rma-01',
     createdAt: '2026-11-12T10:00:00Z',
   },
@@ -527,26 +567,51 @@ const INITIAL_TEAM_REVISIONS: Record<string, TeamMemberRevision> = {
     entityId: 'riyadh-alzahrani',
     schemaVersion: 1,
     locale: 'en',
-    title: 'Riyadh M. Alzahrani',
+    title: 'Counselor Riyadh M. Alzahrani',
     slug: 'riyadh-alzahrani',
-    summary: 'Founding & Managing Partner of Riyadh Mohammed Alzahrani Legal Company.',
-    fullName: 'Riyadh M. Alzahrani',
+    summary: 'Founding & Managing Partner - Advocate & Legal Consultant with 20+ years of experience in litigation, arbitration and legislative drafting.',
+    fullName: 'Counselor Riyadh M. Alzahrani',
     positionTitle: 'Founding & Managing Partner',
-    practiceAreas: ['Corporate Governance', 'Commercial Litigation', 'Foreign Direct Investment'],
+    practiceAreas: ['International Commercial Arbitration', 'Contract Drafting', 'Corporate Governance', 'Waqf, Estates & Islamic Finance'],
     spokenLanguages: ['Arabic', 'English'],
-    verifiedCredentials: ['Licensed Advocate - Saudi Ministry of Justice', 'Member - Saudi Bar Association'],
+    verifiedCredentials: [
+      'Licensed Advocate - Saudi Ministry of Justice',
+      'Member - Saudi Bar Association',
+      'Member - Chartered Institute of Arbitrators (CIArb, UK)',
+      'Certified International Commercial Arbitrator',
+      'Author of "Commercial Law" (القانون التجاري)',
+      'International Fellowship in Commercial Arbitration',
+      'Fellowship as Sharia Adviser in Islamic Financial Transactions',
+      'Waqf Adviser Fellowship, General Authority for Awqaf',
+      'Legislative Drafting Adviser',
+      'Certified Legal Trainer, Technical and Vocational Training Corporation (TVTC)',
+      'Professional Fellowship in Legal Administration',
+    ],
     blocks: [
       {
-        id: 'b1',
+        id: 'b-quote-leadership-en',
+        type: 'quote',
+        data: {
+          text: 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential. Over more than twenty years in litigation, arbitration and legislative drafting, we have learned that a dispute is not won by volume, but by the strength of the argument and the integrity of the procedure.',
+          attribution: 'Counselor Riyadh M. Alzahrani',
+        },
+      },
+      {
+        id: 'b-exp-heading-en',
+        type: 'heading',
+        data: { text: 'Professional Background & Focus', level: 2 },
+      },
+      {
+        id: 'b-exp-para-en',
         type: 'paragraph',
-        data: { text: 'Riyadh Alzahrani leads the firm with a clear focus on corporate advisory, cross-border investment structuring, and dispute settlement.' },
+        data: { text: 'Counselor Riyadh Alzahrani brings over two decades of authoritative experience advising corporate boards, handling complex commercial disputes, conducting arbitral proceedings, and establishing sound governance structures across Saudi Arabia.' },
       },
     ],
     seo: {
-      title: 'Riyadh M. Alzahrani | Alzahrani Law Firm',
-      description: 'Profile of Founding & Managing Partner Riyadh M. Alzahrani.',
+      title: 'Counselor Riyadh M. Alzahrani | RMA Legal',
+      description: 'Professional profile of Founding & Managing Partner Counselor Riyadh M. Alzahrani.',
     },
-    approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED'],
+    approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED', 'AUTH-BOOK-COMMERCIAL-LAW'],
     createdBy: 'admin-rma-01',
     createdAt: '2026-11-12T10:00:00Z',
   },
@@ -695,12 +760,15 @@ const INITIAL_ARTICLE_REVISIONS: Record<string, ArticleRevision> = {
 function generateInitialProjections(): PublicContentProjection[] {
   const projections: PublicContentProjection[] = [];
 
+  const allServices = PRACTICE_AREAS_SERVICES;
+  const allRevisions = PRACTICE_AREAS_SERVICE_REVISIONS;
+
   // Services projections
-  for (const s of INITIAL_SERVICES) {
+  for (const s of allServices) {
     for (const locale of ['ar', 'en'] as const) {
       const revId = s.locales[locale].publishedRevisionId;
       if (!revId) continue;
-      const rev = INITIAL_SERVICE_REVISIONS[revId];
+      const rev = allRevisions[revId];
       if (!rev) continue;
 
       projections.push({
@@ -735,6 +803,7 @@ function generateInitialProjections(): PublicContentProjection[] {
 
   // Team projections
   for (const t of INITIAL_TEAM) {
+    if (!UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers && t.id !== 'riyadh-alzahrani') continue;
     for (const locale of ['ar', 'en'] as const) {
       const revId = t.locales[locale].publishedRevisionId;
       if (!revId) continue;
@@ -824,6 +893,7 @@ class InMemoryStore {
   publishedContent: Map<string, PublicContentProjection> = new Map();
   inquiries: Map<string, ContactRequest> = new Map();
   consultations: Map<string, ConsultationRequest> = new Map();
+  paymentRequests: Map<string, PaymentRequest> = new Map();
   media: Map<string, MediaAsset> = new Map();
   siteSettings: SiteSettings = { ...INITIAL_SETTINGS };
   auditLogs: AuditLogEntry[] = [];
@@ -836,15 +906,17 @@ class InMemoryStore {
     for (const admin of INITIAL_ADMINS) {
       this.admins.set(admin.uid, admin);
     }
-    // Populate Services
-    for (const s of INITIAL_SERVICES) {
+    // Populate Services: 16 Official Practice Areas from the approved PDF Corporate Profile
+    for (const s of PRACTICE_AREAS_SERVICES) {
       this.services.set(s.id, s);
     }
-    for (const [id, rev] of Object.entries(INITIAL_SERVICE_REVISIONS)) {
+    for (const [id, rev] of Object.entries(PRACTICE_AREAS_SERVICE_REVISIONS)) {
       this.serviceRevisions.set(id, rev);
     }
+// Prior legacy duplicate services removed to preserve exact 16 practice areas from official PDF.
     // Populate Team
     for (const t of INITIAL_TEAM) {
+    if (!UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers && t.id !== 'riyadh-alzahrani') continue;
       this.teamMembers.set(t.id, t);
     }
     for (const [id, rev] of Object.entries(INITIAL_TEAM_REVISIONS)) {
@@ -869,7 +941,7 @@ class InMemoryStore {
       name: 'عبدالله السعدون',
       companyName: 'شركة السعدون القابضة',
       phoneE164: '+966501234567',
-      email: 'a.saadoun@saadoun-holding.com',
+      email: FIRM_DETAILS.email,
       serviceId: 'corporate-governance',
       message: 'نود مراجعة لوائح الحوكمة وإعادة هيكلة الشركات التابعة لمجموعتنا وفق نظام الشركات الجديد.',
       locale: 'ar',
@@ -888,7 +960,7 @@ class InMemoryStore {
       id: 'CR-2026-001',
       reference: 'CR-2026-001',
       fullName: 'سلطان بن عبدالعزيز التميمي',
-      phone: '+966551234567',
+      phone: FIRM_DETAILS.phone,
       serviceId: 'commercial-litigation',
       serviceLabelSnapshot: {
         ar: 'التقاضي التجاري وتسوية المنازعات',
@@ -928,7 +1000,7 @@ class InMemoryStore {
       id: 'CR-2026-002',
       reference: 'CR-2026-002',
       fullName: 'Sarah Jenkins',
-      phone: '+966559876543',
+      phone: FIRM_DETAILS.phone,
       serviceId: 'foreign-investment',
       serviceLabelSnapshot: {
         ar: 'الاستثمار الأجنبي وتأسيس الشركات',
@@ -981,16 +1053,82 @@ class InMemoryStore {
     this.consultations.set(sampleConsultation1.id, sampleConsultation1);
     this.consultations.set(sampleConsultation2.id, sampleConsultation2);
 
+    // Initial sample payment requests if none loaded
+    const sampleToken1 = crypto.randomBytes(24).toString('base64url');
+    const sampleToken2 = crypto.randomBytes(24).toString('base64url');
+    const samplePaymentRequest1: PaymentRequest = {
+      id: 'PR-2026-0001',
+      token: sampleToken1,
+      clientName: 'شركة الأفق للاستثمار العقاري',
+      clientPhone: '+966501234567',
+      serviceCategory: 'دراسة نزاع عقاري وإعداد مذكرة دفاع',
+      amountSar: 3500,
+      amountMinor: 350000,
+      description: 'أتعاب دراسة ملف النزاع العقاري وتجهيز المذكرة الإجرائية',
+      status: 'unpaid',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: 'عميل محال من الإدارة - نزاع مشروع شمال جدة',
+    };
+    const samplePaymentRequest2: PaymentRequest = {
+      id: 'PR-2026-0002',
+      token: sampleToken2,
+      clientName: 'مؤسسة التوريدات الخليجية',
+      clientPhone: '+966559876543',
+      serviceCategory: 'مراجعة وتدقيق اتفاقية امتياز تجاري',
+      amountSar: 2000,
+      amountMinor: 200000,
+      description: 'أتعاب التدقيق النظامي لاتفاقية الامتياز واللوائح التنفيذية',
+      status: 'paid',
+      moyasarPaymentId: 'pay_sample_test_998124',
+      paymentMethod: 'mada',
+      paidAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+      notes: 'تم السداد بنجاح عبر بوابة ميسّر (مدى)',
+    };
+    this.paymentRequests.set(samplePaymentRequest1.id, samplePaymentRequest1);
+    this.paymentRequests.set(samplePaymentRequest2.id, samplePaymentRequest2);
+
     this.loadFromDisk();
   }
 
+  getPaymentRequestById(id: string): PaymentRequest | undefined {
+    return this.paymentRequests.get(id);
+  }
+
+  getPaymentRequestByToken(token: string): PaymentRequest | undefined {
+    for (const req of this.paymentRequests.values()) {
+      if (req.token === token) return req;
+    }
+    return undefined;
+  }
+
+  getNextPaymentRequestId(): string {
+    const year = new Date().getFullYear();
+    const existingNums = Array.from(this.paymentRequests.keys())
+      .map(id => {
+        const m = id.match(/^PR-\d{4}-(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+      });
+    const nextNum = (existingNums.length > 0 ? Math.max(...existingNums) : 0) + 1;
+    return `PR-${year}-${String(nextNum).padStart(4, '0')}`;
+  }
+
+  generatePaymentRequestToken(): string {
+    return crypto.randomBytes(24).toString('base64url');
+  }
+
   loadFromDisk() {
-    try {
-      const dataDir = path.join(process.cwd(), '.data');
-      const filePath = path.join(dataDir, 'store_state.json');
-      if (fs.existsSync(filePath)) {
-        const raw = fs.readFileSync(filePath, 'utf-8');
+    const dataDir = path.join(process.cwd(), '.data');
+    const filePath = path.join(dataDir, 'store_state.json');
+    const backupPath = path.join(dataDir, 'store_state.json.bak');
+
+    const tryParseAndLoad = (targetPath: string, isBackup = false): boolean => {
+      try {
+        if (!fs.existsSync(targetPath)) return false;
+        const raw = fs.readFileSync(targetPath, 'utf-8');
         const data = JSON.parse(raw);
+
         if (Array.isArray(data.consultations)) {
           for (const c of data.consultations) {
             this.consultations.set(c.id, c);
@@ -1001,12 +1139,28 @@ class InMemoryStore {
             this.inquiries.set(req.id, req);
           }
         }
+        if (Array.isArray(data.paymentRequests)) {
+          for (const pr of data.paymentRequests) {
+            this.paymentRequests.set(pr.id, pr);
+          }
+        }
         if (data.siteSettings) {
           this.siteSettings = { ...this.siteSettings, ...data.siteSettings };
         }
+        if (isBackup) {
+          console.warn('[STORE_RECOVERY] Successfully recovered store state from backup store_state.json.bak');
+        }
+        return true;
+      } catch (err) {
+        console.error(`[STORE_LOAD_ERROR] Failed to load store from ${targetPath}:`, err);
+        return false;
       }
-    } catch (err) {
-      console.warn('Could not load persistent store state from disk:', err);
+    };
+
+    const loadedPrimary = tryParseAndLoad(filePath, false);
+    if (!loadedPrimary && fs.existsSync(backupPath)) {
+      console.warn('[STORE_RECOVERY] Primary store file failed or missing. Attempting backup recovery...');
+      tryParseAndLoad(backupPath, true);
     }
   }
 
@@ -1017,14 +1171,31 @@ class InMemoryStore {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       const filePath = path.join(dataDir, 'store_state.json');
+      const backupPath = path.join(dataDir, 'store_state.json.bak');
+      const tempPath = path.join(dataDir, `store_state.json.tmp.${process.pid}_${Date.now()}`);
+
+      // 1. Maintain backup copy of last known good store state
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.copyFileSync(filePath, backupPath);
+        } catch (backupErr) {
+          console.warn('[STORE_PERSIST] Warning: Failed to create store backup snapshot:', backupErr);
+        }
+      }
+
+      // 2. Atomic write: Write serialized JSON to a temporary file
       const payload = {
         consultations: Array.from(this.consultations.values()),
         inquiries: Array.from(this.inquiries.values()),
+        paymentRequests: Array.from(this.paymentRequests.values()),
         siteSettings: this.siteSettings,
       };
-      fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+      fs.writeFileSync(tempPath, JSON.stringify(payload, null, 2), 'utf-8');
+
+      // 3. Atomically replace the destination file
+      fs.renameSync(tempPath, filePath);
     } catch (err) {
-      console.warn('Could not persist store state to disk:', err);
+      console.error('[STORE_PERSIST_ERROR] Could not persist store state atomically to disk:', err);
     }
   }
 }

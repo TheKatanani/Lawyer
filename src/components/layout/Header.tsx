@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Globe, ArrowUpRight } from 'lucide-react';
 
@@ -70,8 +71,14 @@ export function Header({ locale, messages }: HeaderProps) {
             href={`/${locale}`}
             className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
           >
-            <div className="w-10 h-10 rounded-sm bg-signature text-on-dark flex items-center justify-center font-heading-ar font-bold text-lg border border-gold/40 shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:border-gold">
-              {locale === 'ar' ? 'ر' : 'R'}
+            <div className="relative w-11 h-11 flex-shrink-0 transition-transform duration-300 group-hover:scale-105">
+              <Image
+                src="/logo-gold-emblem.png"
+                alt={messages.brandShort || 'RMA Legal'}
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-heading-ar font-bold text-base sm:text-lg text-ink tracking-tight leading-tight group-hover:text-gold-ink transition-colors duration-200">

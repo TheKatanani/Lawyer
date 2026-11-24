@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Award, ShieldCheck, Scale, Clock } from 'lucide-react';
+import { Award, ShieldCheck, Scale, Compass, CheckCircle } from 'lucide-react';
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface StatsBannerProps {
   locale: string;
@@ -14,37 +15,64 @@ export function StatsBanner({ locale }: StatsBannerProps) {
 
   const stats = [
     {
-      target: 12,
+      target: 20,
       prefix: '+',
-      suffix: '',
-      title: isAr ? 'عاماً من الخبرة المتراكمة' : 'Years of Legal Practice',
-      desc: isAr ? 'في القضاء التجاري، الحوكمة، والاستشارات' : 'In commercial litigation, FDI & governance',
+      suffix: isAr ? ' عاماً' : ' Yrs',
+      title: isAr ? 'خبرة رصينة متراكمة' : 'Years of Experience',
+      desc: isAr ? 'في التقاضي، التحكيم، والصياغة النظامية' : 'In litigation, arbitration & legislative drafting',
       icon: <Award className="w-5 h-5 text-gold" />,
     },
-    {
-      target: 950,
-      prefix: '+',
-      suffix: '',
-      title: isAr ? 'قضية واستشارة منجزة' : 'Matters Successfully Advised',
-      desc: isAr ? 'للشركات والمستثمرين والأفراد في المملكة' : 'For corporate entities, investors & individuals',
-      icon: <ShieldCheck className="w-5 h-5 text-gold" />,
-    },
-    {
-      target: 100,
-      prefix: '',
-      suffix: '%',
-      title: isAr ? 'امتثال وتراخيص معتمدة' : 'MOJ Licensed & SBA Verified',
-      desc: isAr ? 'ترخيص وزارة العدل وهيئة المحامين' : 'Ministry of Justice & Saudi Bar Association',
-      icon: <Scale className="w-5 h-5 text-gold" />,
-    },
-    {
-      target: 24,
-      prefix: '',
-      suffix: isAr ? ' ساعة' : 'h',
-      title: isAr ? 'استجابة ومتابعة سريعة' : 'Client Response Turnaround',
-      desc: isAr ? 'تنسيق المواعيد المباشرة عبر واتساب' : 'Direct appointment triage via WhatsApp',
-      icon: <Clock className="w-5 h-5 text-gold" />,
-    },
+    UNVERIFIED_CLAIMS_CONFIG.enableCompletedCasesCounter
+      ? {
+          target: 950,
+          prefix: '+',
+          suffix: '',
+          title: isAr ? 'قضية واستشارة منجزة' : 'Matters Successfully Advised',
+          desc: isAr ? 'للشركات والمستثمرين والأفراد في المملكة' : 'For corporate entities, investors & individuals',
+          icon: <ShieldCheck className="w-5 h-5 text-gold" />,
+        }
+      : {
+          target: 16,
+          prefix: '',
+          suffix: isAr ? ' مجالاً' : ' Areas',
+          title: isAr ? 'مجال ممارسة متخصص' : 'Specialised Practice Areas',
+          desc: isAr ? 'تغطية شاملة للنزاعات والمعاملات النظامية' : 'Comprehensive coverage of statutory disciplines',
+          icon: <Scale className="w-5 h-5 text-gold" />,
+        },
+    UNVERIFIED_CLAIMS_CONFIG.enable100PercentComplianceClaim
+      ? {
+          target: 100,
+          prefix: '',
+          suffix: '%',
+          title: isAr ? 'امتثال وتراخيص معتمدة' : 'MOJ Licensed & SBA Verified',
+          desc: isAr ? 'ترخيص وزارة العدل وهيئة المحامين' : 'Ministry of Justice & Saudi Bar Association',
+          icon: <Scale className="w-5 h-5 text-gold" />,
+        }
+      : {
+          target: 5,
+          prefix: '',
+          suffix: isAr ? ' خطوات' : ' Steps',
+          title: isAr ? 'منهجية العمل المعتمدة' : 'Structured Method Stages',
+          desc: isAr ? 'التشخيص، الإثبات، الإجراء، الخيارات، الوقاية' : 'Diagnosis, proof, procedure, options, prevention',
+          icon: <Compass className="w-5 h-5 text-gold" />,
+        },
+    UNVERIFIED_CLAIMS_CONFIG.enable24HoursResponseClaim
+      ? {
+          target: 24,
+          prefix: '',
+          suffix: isAr ? ' ساعة' : 'h',
+          title: isAr ? 'استجابة ومتابعة سريعة' : 'Client Response Turnaround',
+          desc: isAr ? 'تنسيق المواعيد المباشرة عبر واتساب' : 'Direct appointment triage via WhatsApp',
+          icon: <ShieldCheck className="w-5 h-5 text-gold" />,
+        }
+      : {
+          target: 100,
+          prefix: '',
+          suffix: '%',
+          title: isAr ? 'سرية وحماية بيانات' : 'Confidentiality & PDPL',
+          desc: isAr ? 'سر مهني صارم ونظام حماية البيانات الشخصية' : 'Strict professional secrecy and PDPL adherence',
+          icon: <CheckCircle className="w-5 h-5 text-gold" />,
+        },
   ];
 
   return (

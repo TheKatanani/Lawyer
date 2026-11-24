@@ -17,6 +17,8 @@ import {
   Upload,
   FileText,
   Loader2,
+  CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SiteSettings } from '@/server/types';
@@ -30,11 +32,11 @@ const DEFAULT_SETTINGS: SiteSettings = {
   taglineEn: 'A clear legal perspective. An approach grounded in knowledge.',
   phone: '+966 55 777 5504',
   whatsapp: '+966 55 777 5504',
-  email: 'riyadh@riyadhalzahrani.com',
-  addressAr: 'المملكة العربية السعودية، الرياض',
-  addressEn: 'Riyadh, Kingdom of Saudi Arabia',
-  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | الرياض',
-  seoTitleEn: 'Riyadh Mohammed Alzahrani Saudi Legal Company | Riyadh',
+  email: 'info@riyadhalzahrani.com',
+  addressAr: 'برج هيدكوارترز، الدور 46، مكتب 4602، شارع الكورنيش، حي الشاطئ، جدة',
+  addressEn: 'Headquarters Tower, Floor 46, Office 4602, Corniche Road, Al Shati District, Jeddah',
+  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | جدة',
+  seoTitleEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations | Jeddah',
   seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للشركات والأفراد.',
   seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
   ogImageUrl: '',
@@ -49,6 +51,15 @@ const DEFAULT_SETTINGS: SiteSettings = {
   aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
   aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
   aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
+  paymentEnabled: true,
+  paymentRequirement: 'optional',
+  consultationFee: 500,
+  consultationCurrency: 'SAR',
+  applePayEnabled: false,
+  moyasarPublishableKey: 'pk_test_QzcZrt1FfrrBDYEBccN5WGh9SDYnQ9UgayfNUW2N',
+  moyasarSecretKey: 'sk_test_GfpmFMBFHGtcnDEn4GExRQT9pnK2GWzTB3NzGenP',
+  paymentNoticeAr: 'رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي.',
+  paymentNoticeEn: 'The initial consultation fee is deductible from overall legal representation fees upon retainer engagement.',
 };
 
 export function SiteSettingsManager() {
@@ -57,7 +68,7 @@ export function SiteSettingsManager() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'brand' | 'contact' | 'seo' | 'homepage' | 'aboutPage'>('brand');
+  const [activeTab, setActiveTab] = useState<'brand' | 'contact' | 'seo' | 'homepage' | 'aboutPage' | 'payment'>('brand');
   const [uploadingTarget, setUploadingTarget] = useState<'favicon' | 'og' | null>(null);
 
   const faviconInputRef = useRef<HTMLInputElement>(null);
@@ -301,6 +312,18 @@ export function SiteSettingsManager() {
         >
           <FileText className="w-4 h-4" />
           <span>صفحة عن الشركة والرؤية (About Page & Vision)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('payment')}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+            activeTab === 'payment'
+              ? 'border-gold text-gold-ink bg-surface'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span className="font-bold">بوابة الدفع الإلكتروني (Moyasar)</span>
         </button>
       </div>
 
@@ -787,6 +810,193 @@ export function SiteSettingsManager() {
                   value={settings.aboutVisionEn || ''}
                   onChange={(e) => setSettings({ ...settings, aboutVisionEn: e.target.value })}
                   placeholder="To be the premier Saudi legal partner architecting transformative counsel..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: PAYMENT GATEWAY (MOYASAR) */}
+        {activeTab === 'payment' && (
+          <div className="space-y-6">
+            <div className="border-b border-border pb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-heading-ar font-bold text-lg text-ink flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-gold-ink" />
+                  <span>بوابة الدفع الإلكتروني ميسّر (Moyasar Payment Gateway)</span>
+                </h2>
+                <p className="text-muted text-[11px] mt-1">
+                  التحكم الكامل في رسوم الاستشارات القانونية، طرق السداد، تفعيل مدى و Apple Pay، ومفاتيح الربط.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>معتمد بالسعودية (Mada & SAMA)</span>
+              </span>
+            </div>
+
+            {/* General Gateway Activation */}
+            <div className="p-4 bg-canvas border border-border rounded-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="font-bold text-ink text-xs block">
+                    تفعيل استقبال المدفوعات الإلكترونية للاستشارات
+                  </label>
+                  <p className="text-muted text-[11px] mt-0.5">
+                    عند التعطيل، يتحول نموذج الاستشارة تلقائياً إلى الحجز المباشر دون المرور بخطوة الدفع.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Boolean(settings.paymentEnabled)}
+                  onChange={(e) => setSettings({ ...settings, paymentEnabled: e.target.checked })}
+                  className="w-5 h-5 text-gold accent-gold-ink rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Requirement Mode & Fee Amount */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">شرط وسياسة السداد (Payment Requirement)</label>
+                <select
+                  value={settings.paymentRequirement || 'optional'}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      paymentRequirement: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                >
+                  <option value="optional">
+                    اختياري (إتاحة الدفع الإلكتروني الفوري أو السداد لاحقاً في المكتب)
+                  </option>
+                  <option value="mandatory">
+                    إلزامي (لا يتم تأكيد الموعد إلا بعد السداد بالبطاقة / مدى / Apple Pay)
+                  </option>
+                  <option value="disabled">
+                    معطّل مؤقتاً (حجز استشارة بدون مطالبة مالية مسبقة)
+                  </option>
+                </select>
+                <p className="text-[10px] text-muted">
+                  في الوضع الاختياري يُمنح العميل خيار الدفع الإلكتروني المباشر أو السداد في مقر الشركة.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">قيمة رسوم الاستشارة القانونية (بالريال السعودي)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={settings.consultationFee ?? 500}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        consultationFee: Math.max(1, Number(e.target.value) || 0),
+                      })
+                    }
+                    placeholder="500"
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold pl-14 font-mono font-bold"
+                  />
+                  <span className="absolute left-3 top-2.5 text-muted text-[11px] font-bold pointer-events-none">
+                    ر.س / SAR
+                  </span>
+                </div>
+                <p className="text-[10px] text-muted">
+                  المبلغ الفعلي الذي سيتم خصمه عبر بوابة ميسر عند حجز العميل.
+                </p>
+              </div>
+            </div>
+
+            {/* Apple Pay Activation */}
+            <div className="p-4 bg-canvas border border-border rounded-sm flex items-center justify-between">
+              <div>
+                <label className="font-bold text-ink text-xs block">
+                  تفعيل خيار Apple Pay
+                </label>
+                <p className="text-muted text-[11px] mt-0.5">
+                  يتيح السداد السريع بنقرة واحدة عبر أجهزة iPhone و Mac و Safari عند إعداد شهادة النطاق في ميسر.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(settings.applePayEnabled)}
+                onChange={(e) => setSettings({ ...settings, applePayEnabled: e.target.checked })}
+                className="w-5 h-5 text-gold accent-gold-ink rounded cursor-pointer"
+              />
+            </div>
+
+            {/* Moyasar API Keys (Configurable from Control Panel) */}
+            <div className="space-y-3 pt-2">
+              <h3 className="font-bold text-ink text-xs border-b border-border pb-1">
+                مفاتيح الربط البرمجي مع ميسّر (Moyasar API Keys)
+              </h3>
+              <p className="text-muted text-[11px]">
+                يمكنك إدخال مفاتيح بيئة الاختبار (pk_test_ / sk_test_) أو التبديل لمفاتيح الحساب الحي (pk_live_ / sk_live_).
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink">مفتاح النشر العام (Publishable Key)</label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={settings.moyasarPublishableKey || ''}
+                    onChange={(e) =>
+                      setSettings({ ...settings, moyasarPublishableKey: e.target.value })
+                    }
+                    placeholder="pk_test_... أو pk_live_..."
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
+                  />
+                  <p className="text-[10px] text-muted">
+                    يُستخدم في واجهة الدفع (Client-safe).
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink">المفتاح السري للخادم (Secret Key)</label>
+                  <input
+                    type="password"
+                    dir="ltr"
+                    value={settings.moyasarSecretKey || ''}
+                    onChange={(e) =>
+                      setSettings({ ...settings, moyasarSecretKey: e.target.value })
+                    }
+                    placeholder="sk_test_... أو sk_live_..."
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold font-mono"
+                  />
+                  <p className="text-[10px] text-muted">
+                    يُستخدم للتحقق الخادمي الآمن ولا يظهر للعميل إطلاقاً.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Client Payment Notices */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">ملاحظة وسياسة السداد في نموذج الحجز (عربي)</label>
+                <textarea
+                  rows={3}
+                  value={settings.paymentNoticeAr || ''}
+                  onChange={(e) => setSettings({ ...settings, paymentNoticeAr: e.target.value })}
+                  placeholder="رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي..."
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Payment Policy Notice (English)</label>
+                <textarea
+                  rows={3}
+                  dir="ltr"
+                  value={settings.paymentNoticeEn || ''}
+                  onChange={(e) => setSettings({ ...settings, paymentNoticeEn: e.target.value })}
+                  placeholder="Consultation booking fee is deductible from overall legal representation fees upon retainer engagement..."
                   className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
                 />
               </div>

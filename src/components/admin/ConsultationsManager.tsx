@@ -23,6 +23,8 @@ import {
   Loader2,
   Save,
   RefreshCw,
+  CreditCard,
+  Building,
 } from 'lucide-react';
 import { ConsultationRequest, ConsultationStatus } from '@/server/types';
 
@@ -88,6 +90,8 @@ export function ConsultationsManager({
   const [editMeetingLink, setEditMeetingLink] = useState('');
   const [editMeetingAddress, setEditMeetingAddress] = useState('');
   const [newNoteText, setNewNoteText] = useState('');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<string>('unpaid');
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>('none');
 
   // Processing state
   const [saving, setSaving] = useState(false);
@@ -104,6 +108,8 @@ export function ConsultationsManager({
       setEditMeetingType(selectedItem.meetingType || 'unassigned');
       setEditMeetingLink(selectedItem.meetingLink || '');
       setEditMeetingAddress(selectedItem.meetingAddress || '');
+      setEditPaymentStatus(selectedItem.paymentStatus || 'unpaid');
+      setEditPaymentMethod(selectedItem.paymentMethod || 'none');
       setNewNoteText('');
       setErrorMsg(null);
       setSuccessMsg(null);
@@ -185,6 +191,8 @@ export function ConsultationsManager({
           meetingLink: editMeetingType === 'online' ? editMeetingLink.trim() : null,
           meetingAddress: editMeetingType === 'office' ? editMeetingAddress.trim() : null,
           noteText: newNoteText.trim() || undefined,
+          paymentStatus: editPaymentStatus,
+          paymentMethod: editPaymentMethod !== 'none' ? editPaymentMethod : undefined,
         }),
       });
 
@@ -352,6 +360,7 @@ export function ConsultationsManager({
                   <th className="px-4 py-3 text-start">الخدمة المطلوبة</th>
                   <th className="px-4 py-3 text-start">المحامي المفضّل / المعيّن</th>
                   <th className="px-4 py-3 text-start">الحالة</th>
+                  <th className="px-4 py-3 text-start">سداد الرسوم</th>
                   <th className="px-4 py-3 text-start">تاريخ الموعد</th>
                   <th className="px-4 py-3 text-start">تاريخ الطلب</th>
                   <th className="px-4 py-3 text-end">الإجراء</th>
@@ -402,6 +411,27 @@ export function ConsultationsManager({
                         >
                           {badge.labelAr}
                         </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {item.paymentStatus === 'paid' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CreditCard className="w-3 h-3 text-emerald-600" />
+                            <span>مدفوع ({item.amountMinor ? item.amountMinor / 100 : 500} ر.س)</span>
+                          </span>
+                        ) : item.paymentMethod === 'office_cash' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Building className="w-3 h-3 text-amber-600" />
+                            <span>بالمكتب ({item.amountMinor ? item.amountMinor / 100 : 500} ر.س)</span>
+                          </span>
+                        ) : item.paymentStatus === 'waived' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                            <span>معفى</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-50 text-zinc-500 border border-zinc-200">
+                            <span>غير مدفوع</span>
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
                         {item.scheduledAt ? (
@@ -548,6 +578,66 @@ export function ConsultationsManager({
                     <span className="font-semibold text-ink uppercase">{selectedItem.locale}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Payment Management Card */}
+              <div className="p-4 bg-surface border border-border rounded-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-border pb-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-gold-ink" />
+                    <span className="text-xs font-bold text-ink">سجل وسداد رسوم الاستشارة (Payment Record)</span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-gold-ink">
+                    {selectedItem.amountMinor ? selectedItem.amountMinor / 100 : 500} ر.س
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted block">حالة الدفع:</label>
+                    <select
+                      value={editPaymentStatus}
+                      onChange={(e) => setEditPaymentStatus(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-canvas border border-border rounded text-xs text-ink focus:border-gold"
+                    >
+                      <option value="unpaid">غير مدفوع (Unpaid)</option>
+                      <option value="paid">مدفوع ومسدد (Paid)</option>
+                      <option value="waived">معفى من الرسوم (Waived)</option>
+                      <option value="refunded">مسترجع (Refunded)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted block">طريقة السداد:</label>
+                    <select
+                      value={editPaymentMethod}
+                      onChange={(e) => setEditPaymentMethod(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-canvas border border-border rounded text-xs text-ink focus:border-gold"
+                    >
+                      <option value="none">-- غير محدد --</option>
+                      <option value="mada">مدى إلكتروني (Mada)</option>
+                      <option value="creditcard">بطاقة ائتمانية (Visa/MC)</option>
+                      <option value="applepay">Apple Pay</option>
+                      <option value="office_cash">نقداً بمقر الشركة</option>
+                      <option value="office_transfer">تحويل بنكي</option>
+                      <option value="waived">إعفاء رسمي</option>
+                    </select>
+                  </div>
+                </div>
+
+                {selectedItem.paymentId && (
+                  <div className="p-2.5 bg-canvas border border-border rounded text-[11px] font-mono flex items-center justify-between">
+                    <span className="text-muted">Moyasar Transaction ID:</span>
+                    <span className="font-bold text-ink" dir="ltr">{selectedItem.paymentId}</span>
+                  </div>
+                )}
+
+                {selectedItem.paidAt && (
+                  <div className="text-[11px] text-muted flex items-center justify-between">
+                    <span>تاريخ السداد المسجل:</span>
+                    <span className="font-mono" dir="ltr">{selectedItem.paidAt.slice(0, 16).replace('T', ' ')}</span>
+                  </div>
+                )}
               </div>
 
               {/* Appointment Scheduling & Assignment */}

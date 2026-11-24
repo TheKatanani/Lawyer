@@ -12,6 +12,7 @@ import {
   Image as LucideImage,
   CalendarCheck,
   Settings,
+  Receipt,
 } from 'lucide-react';
 import { AdminSignoutButton } from '@/components/admin/SignoutButton';
 import '@/app/globals.css';
@@ -102,6 +103,14 @@ export default async function AdminLayout({
                     >
                       <CalendarCheck className="w-4 h-4 text-gold" />
                       <span>طلبات الاستشارة (Consultations)</span>
+                    </Link>
+
+                    <Link
+                      href="/admin/invoices"
+                      className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium hover:bg-on-dark/10 transition-colors"
+                    >
+                      <Receipt className="w-4 h-4 text-gold" />
+                      <span>طلبات السداد والإيصالات (Invoices)</span>
                     </Link>
 
                     <Link

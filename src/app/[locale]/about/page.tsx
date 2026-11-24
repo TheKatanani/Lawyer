@@ -5,6 +5,9 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Scale, ShieldCheck, Building2, BookOpen, ArrowUpRight, Compass, Target } from 'lucide-react';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { LeadershipMessage } from '@/components/sections/LeadershipMessage';
+import { MethodologySection } from '@/components/sections/MethodologySection';
+import { InstitutionalExcellence } from '@/components/sections/InstitutionalExcellence';
 
 export default async function AboutPage({
   params: { locale },
@@ -34,8 +37,8 @@ export default async function AboutPage({
             </h1>
             <p className="text-muted text-base sm:text-lg leading-relaxed">
               {isAr
-                ? (settings.aboutTextAr || 'تأسست شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية بالرياض لتقديم خدمات التمثيل القضائي والمشورة الإستراتيجية للمنشآت والأفراد، مع التزام مهني صارم بأعلى معايير الحوكمة والنزاهة.')
-                : (settings.aboutTextEn || 'Riyadh Mohammed Alzahrani Legal Company was established in Riyadh to provide authoritative advocacy and strategic legal counsel for enterprises and individuals under strict standards of integrity.')}
+                ? (settings.aboutTextAr || 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون وفق أعلى معايير الحوكمة والنزاهة.')
+                : (settings.aboutTextEn || 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.')}
             </p>
           </div>
         </ScrollReveal>
@@ -141,6 +144,15 @@ export default async function AboutPage({
             </ScrollReveal>
           </div>
         </div>
+
+        {/* Leadership Message (PDF p. 6-7) */}
+        <LeadershipMessage locale={locale} />
+
+        {/* 5-Step Methodology (PDF p. 10-11) */}
+        <MethodologySection locale={locale} />
+
+        {/* Institutional Excellence (PDF p. 52-53) */}
+        <InstitutionalExcellence locale={locale} />
 
         {/* CTA Banner */}
         <ScrollReveal direction="up" delay={150}>

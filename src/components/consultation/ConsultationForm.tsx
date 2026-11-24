@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Script from 'next/script';
 import {
   MessageCircle,
   Calendar,
@@ -17,8 +18,19 @@ import {
   Clock,
   ShieldCheck,
   Loader2,
+  CreditCard,
+  Building,
+  Lock,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+
+declare global {
+  interface Window {
+    Moyasar?: {
+      init(options: Record<string, unknown>): void;
+    };
+  }
+}
 
 interface ServiceOption {
   id: string;
@@ -101,8 +113,24 @@ export function ConsultationForm({
   const [savedData, setSavedData] = useState<{
     reference: string;
     whatsappUrl: string;
+    paid?: boolean;
+    payAtOffice?: boolean;
+    paymentId?: string;
+    amountSar?: number;
+    method?: string;
   } | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
+
+  // Moyasar Payment Step State
+  const [paymentStep, setPaymentStep] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  const [consultationResult, setConsultationResult] = useState<any>(null);
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState<'online' | 'office'>('online');
+  const [moyasarScriptReady, setMoyasarScriptReady] = useState(false);
+  const [moyasarMounted, setMoyasarMounted] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const paymentElementRef = useRef<HTMLDivElement>(null);
 
   // Custom Country Code dropdown state & date input ref
   const [countryOpen, setCountryOpen] = useState(false);
@@ -224,24 +252,148 @@ export function ConsultationForm({
         throw new Error(data.error || messages.failure);
       }
 
-      // Save persistent success state
-      setSavedData({
-        reference: data.reference,
-        whatsappUrl: data.whatsappUrl,
-      });
+      if (data.payment && data.payment.enabled && data.payment.requirement !== 'disabled') {
+        setConsultationResult(data);
+        setPaymentData(data.payment);
+        setPaymentStep(true);
+      } else {
+        // Save persistent success state
+        setSavedData({
+          reference: data.reference,
+          whatsappUrl: data.whatsappUrl,
+        });
 
-      // Open WhatsApp in a new tab so user sees the on-site confirmation receipt
-      try {
-        if (!window.location.search.includes('no_wa_redirect')) {
-          window.open(data.whatsappUrl, '_blank');
+        // Open WhatsApp in a new tab so user sees the on-site confirmation receipt
+        try {
+          if (!window.location.search.includes('no_wa_redirect')) {
+            window.open(data.whatsappUrl, '_blank');
+          }
+        } catch (navErr) {
+          // Handled gracefully by persistent fallback state
         }
-      } catch (navErr) {
-        // Handled gracefully by persistent fallback state
       }
     } catch (err: any) {
       setError(err.message || messages.failure);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Mount Moyasar Form when in Payment Step
+  useEffect(() => {
+    if (
+      !paymentStep ||
+      !moyasarScriptReady ||
+      !window.Moyasar ||
+      !paymentElementRef.current ||
+      moyasarMounted ||
+      selectedPaymentMode !== 'online' ||
+      !paymentData ||
+      !consultationResult
+    ) {
+      return;
+    }
+
+    setMoyasarMounted(true);
+    setPaymentError(null);
+
+    try {
+      window.Moyasar.init({
+        element: paymentElementRef.current,
+        amount: paymentData.amountMinor,
+        currency: paymentData.currency || 'SAR',
+        language: locale,
+        fixed_width: false,
+        description: `RMA Legal Consultation ${consultationResult.reference}`,
+        publishable_api_key: paymentData.publishableKey,
+        callback_url: `${window.location.origin}/${locale}/consultation/callback?consultation=${consultationResult.consultationId}`,
+        metadata: {
+          consultationId: consultationResult.consultationId,
+          reference: consultationResult.reference,
+        },
+        methods: paymentData.applePayEnabled ? ['creditcard', 'applepay'] : ['creditcard'],
+        supported_networks: ['mada', 'visa', 'mastercard'],
+        apple_pay: {
+          country: 'SA',
+          label: 'Riyadh Alzahrani Law Firm',
+          validate_merchant_url: 'https://api.moyasar.com/v1/applepay/initiate',
+        },
+        on_completed: async (payment: { id: string }) => {
+          setPaymentProcessing(true);
+          try {
+            const verifyRes = await fetch(
+              `/api/consultations/${consultationResult.consultationId}/verify-payment`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId: payment.id }),
+              }
+            );
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.error || (isAr ? 'فشل تأكيد السداد لدى ميسر' : 'Verification failed'));
+            }
+
+            setSavedData({
+              reference: consultationResult.reference,
+              whatsappUrl: consultationResult.whatsappUrl,
+              paid: true,
+              paymentId: payment.id,
+              amountSar: paymentData.amountSar,
+              method: verifyData.receipt?.method || 'Mada/Card',
+            });
+            setPaymentStep(false);
+          } catch (err: any) {
+            setPaymentError(err.message || (isAr ? 'فشل تأكيد العملية.' : 'Verification error.'));
+          } finally {
+            setPaymentProcessing(false);
+          }
+        },
+      });
+    } catch (err: any) {
+      setPaymentError(err.message || (isAr ? 'تعذر تحميل نموذج ميسّر للدفع.' : 'Failed to mount Moyasar.'));
+    }
+  }, [
+    paymentStep,
+    moyasarScriptReady,
+    moyasarMounted,
+    selectedPaymentMode,
+    paymentData,
+    consultationResult,
+    locale,
+    isAr,
+  ]);
+
+  const handleChooseOffice = async () => {
+    if (!consultationResult) return;
+    setPaymentProcessing(true);
+    setPaymentError(null);
+    try {
+      const res = await fetch(
+        `/api/consultations/${consultationResult.consultationId}/verify-payment`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chosenMethod: 'office' }),
+        }
+      );
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to select office payment');
+      }
+
+      setSavedData({
+        reference: consultationResult.reference,
+        whatsappUrl: consultationResult.whatsappUrl,
+        paid: false,
+        payAtOffice: true,
+        amountSar: paymentData.amountSar,
+      });
+      setPaymentStep(false);
+    } catch (err: any) {
+      setPaymentError(err.message || (isAr ? 'تعذر تسجيل خيار الدفع بالمكتب.' : 'Error recording preference.'));
+    } finally {
+      setPaymentProcessing(false);
     }
   };
 
@@ -301,6 +453,42 @@ export function ConsultationForm({
           </button>
         </div>
 
+        {/* Payment Confirmation Badge if paid */}
+        {savedData.paid && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-sm text-start space-y-1.5 text-xs text-emerald-950">
+            <div className="flex items-center justify-between font-bold">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                <span>{isAr ? 'تم سداد رسوم الاستشارة إلكترونياً' : 'Consultation Fee Paid Online'}</span>
+              </span>
+              <span className="font-mono text-sm">{savedData.amountSar} ر.س</span>
+            </div>
+            {savedData.paymentId && (
+              <div className="text-[11px] text-emerald-800/80 font-mono" dir="ltr">
+                Moyasar ID: {savedData.paymentId} ({savedData.method || 'Mada/Card'})
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pay at office badge */}
+        {savedData.payAtOffice && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm text-start space-y-1 text-xs text-amber-950">
+            <div className="flex items-center justify-between font-bold">
+              <span className="flex items-center gap-1.5">
+                <Building className="w-4 h-4 text-amber-700" />
+                <span>{isAr ? 'طريقة السداد المحددة: في مقر الشركة' : 'Payment Method: At Firm Office'}</span>
+              </span>
+              <span className="font-mono text-sm">{savedData.amountSar} ر.س</span>
+            </div>
+            <p className="text-[11px] text-amber-800">
+              {isAr
+                ? 'يتم سداد رسوم الاستشارة عند حضورك لمقر الشركة نقداً أو عبر جهاز نقاط البيع (مدى).'
+                : 'Consultation fee will be settled upon arrival at the office via Mada POS or cash.'}
+            </p>
+          </div>
+        )}
+
         {/* Direct WhatsApp Call to Action Button */}
         <div className="pt-2 space-y-3">
           <a
@@ -322,6 +510,216 @@ export function ConsultationForm({
           <ShieldCheck className="w-4 h-4 text-gold flex-shrink-0" />
           <span>{messages.privacyNotice}</span>
         </div>
+      </div>
+    );
+  }
+
+  // Render Step 2: Moyasar Payment Screen
+  if (paymentStep && paymentData && consultationResult) {
+    const isOptional = paymentData.requirement === 'optional';
+
+    return (
+      <div className="max-w-xl mx-auto space-y-6 animate-fade-in text-start">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-ink">
+            <span className="w-6 h-6 rounded-full bg-gold-ink text-surface flex items-center justify-center text-[11px]">
+              2
+            </span>
+            <span>{isAr ? 'الخطوة 2: سداد رسوم الاستشارة وتأكيد الموعد' : 'Step 2: Settle Consultation Fee'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPaymentStep(false);
+              setMoyasarMounted(false);
+            }}
+            className="text-[11px] text-muted hover:text-ink underline"
+          >
+            {isAr ? 'تعديل البيانات' : 'Edit details'}
+          </button>
+        </div>
+
+        {/* Consultation Summary Card */}
+        <div className="bg-surface border border-border rounded-sm p-5 space-y-3 shadow-xs text-xs">
+          <div className="flex items-center justify-between border-b border-border pb-2.5">
+            <div>
+              <span className="text-[11px] text-muted block">{isAr ? 'صاحب الطلب' : 'Client Name'}</span>
+              <span className="font-bold text-ink text-sm">{fullName}</span>
+            </div>
+            <div className="text-end">
+              <span className="text-[11px] text-muted block">{isAr ? 'رقم المرجع' : 'Reference'}</span>
+              <span className="font-mono font-bold text-ink text-sm" dir="ltr">
+                {consultationResult.reference}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-start pt-1">
+            <div>
+              <span className="text-[11px] text-muted block">{isAr ? 'الخدمة القانونية' : 'Legal Service'}</span>
+              <span className="font-semibold text-ink">
+                {services.find((s) => s.id === selectedService)?.title || (isAr ? 'استشارة عامة' : 'General')}
+              </span>
+            </div>
+            <div>
+              <span className="text-[11px] text-muted block">{isAr ? 'الموعد المفضل' : 'Preferred Date'}</span>
+              <span className="font-semibold text-ink">
+                {preferredDate || (isAr ? 'حسب التنسيق' : 'To be arranged')}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2 p-3 bg-canvas border border-border rounded flex items-center justify-between">
+            <span className="font-bold text-ink">{isAr ? 'رسوم الاستشارة القانونية' : 'Consultation Fee'}</span>
+            <div className="text-end">
+              <span className="font-mono font-extrabold text-base text-gold-ink">
+                {paymentData.amountSar} {paymentData.currency || 'SAR'}
+              </span>
+            </div>
+          </div>
+
+          {paymentData.notice && (
+            <p className="text-[11px] text-muted leading-relaxed pt-1">
+              {paymentData.notice}
+            </p>
+          )}
+        </div>
+
+        {/* Payment Error if any */}
+        {paymentError && (
+          <div className="p-4 bg-danger/10 border border-danger/30 rounded-sm flex items-start gap-2 text-xs text-danger">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{paymentError}</span>
+          </div>
+        )}
+
+        {/* Mode Selector if Optional */}
+        {isOptional && (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPaymentMode('online');
+                setMoyasarMounted(false);
+              }}
+              className={`p-3.5 rounded border text-start transition-all cursor-pointer ${
+                selectedPaymentMode === 'online'
+                  ? 'border-gold bg-signature text-gold-ink font-bold shadow-xs'
+                  : 'border-border bg-surface text-muted hover:border-gold/50'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <CreditCard className="w-4 h-4 text-gold-ink" />
+                <span className="text-xs">{isAr ? 'سداد إلكتروني فوري' : 'Pay Online Now'}</span>
+              </div>
+              <span className="text-[11px] block font-normal text-muted">
+                {isAr ? 'مدى، فيزا، ماستركارد، Apple Pay' : 'Mada, Cards, Apple Pay'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedPaymentMode('office')}
+              className={`p-3.5 rounded border text-start transition-all cursor-pointer ${
+                selectedPaymentMode === 'office'
+                  ? 'border-gold bg-signature text-gold-ink font-bold shadow-xs'
+                  : 'border-border bg-surface text-muted hover:border-gold/50'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Building className="w-4 h-4 text-gold-ink" />
+                <span className="text-xs">{isAr ? 'السداد بمقر الشركة' : 'Pay at Office'}</span>
+              </div>
+              <span className="text-[11px] block font-normal text-muted">
+                {isAr ? 'نقداً أو عبر نقاط البيع (مدى)' : 'Cash or Mada POS at appointment'}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Online Payment Container (Moyasar Form) */}
+        {selectedPaymentMode === 'online' && (
+          <div className="bg-surface border border-border rounded-sm p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <span className="font-bold text-xs text-ink flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-gold-ink" />
+                <span>{isAr ? 'بوابة سداد ميسّر الآمنة (Moyasar)' : 'Secure Moyasar Payment'}</span>
+              </span>
+              <span className="text-[10px] text-muted">Mada / Visa / Mastercard / Apple Pay</span>
+            </div>
+
+            {/* Stylesheet & Script for Moyasar */}
+            <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.15.0/moyasar.css" />
+            <Script
+              src="https://cdn.moyasar.com/mpf/1.15.0/moyasar.js"
+              strategy="afterInteractive"
+              onReady={() => setMoyasarScriptReady(true)}
+              onError={() => setPaymentError('Failed to load Moyasar script from CDN')}
+            />
+
+            {!moyasarScriptReady && (
+              <div className="p-8 text-center text-xs text-muted flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-gold-ink" />
+                <span>{isAr ? 'جارٍ تحميل بوابة الدفع الآمنة...' : 'Loading secure payment form...'}</span>
+              </div>
+            )}
+
+            {paymentProcessing && (
+              <div className="p-4 bg-signature border border-gold/30 rounded text-center text-xs text-gold-ink flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{isAr ? 'جارٍ تأكيد السداد وإصدار الإيصال...' : 'Settling payment & generating receipt...'}</span>
+              </div>
+            )}
+
+            {/* Mount element */}
+            <div ref={paymentElementRef} className="mysr-form-container min-h-[140px]" />
+
+            <div className="pt-3 border-t border-border flex items-center justify-center gap-2 text-[10px] text-muted">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>
+                {isAr
+                  ? 'سداد مشفر وآمن 256-bit متوافق مع معايير البنك المركزي السعودي SAMA'
+                  : '256-bit encrypted secure transaction conforming to SAMA & PCI-DSS'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Office Payment Confirmation */}
+        {selectedPaymentMode === 'office' && (
+          <div className="bg-surface border border-border rounded-sm p-6 shadow-xs space-y-4 text-center">
+            <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-full flex items-center justify-center mx-auto">
+              <Building className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-ink">
+                {isAr ? 'تأكيد الحجز والدفع عند الحضور' : 'Confirm Booking & Pay at Office'}
+              </h3>
+              <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+                {isAr
+                  ? `سيتم تسجيل طلبك وحجز موعد الاستشارة فوراً، على أن يتم سداد الرسوم (${paymentData.amountSar} ر.س) عند الحضور لمقر الشركة.`
+                  : `Your consultation request will be confirmed immediately. The fee (${paymentData.amountSar} SAR) will be settled at the office.`}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={paymentProcessing}
+              onClick={handleChooseOffice}
+              className="w-full py-3 bg-gold-ink text-surface rounded text-xs font-bold hover:bg-gold-ink/90 transition-colors shadow-xs disabled:opacity-60 cursor-pointer"
+            >
+              {paymentProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{isAr ? 'جارٍ تسجيل الطلب...' : 'Recording booking...'}</span>
+                </span>
+              ) : (
+                <span>{isAr ? 'تأكيد حجز الاستشارة والسداد بالمكتب' : 'Confirm Booking & Pay Later'}</span>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     );
   }

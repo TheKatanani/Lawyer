@@ -51,6 +51,9 @@ export async function PATCH(
       meetingLink,
       meetingAddress,
       noteText,
+      paymentStatus,
+      paymentMethod,
+      paymentId,
     } = body;
 
     const previousStatus = consultation.status;
@@ -117,7 +120,34 @@ export async function PATCH(
       consultation.meetingAddress = meetingAddress || null;
     }
 
-    // 4. Internal Note Addition
+    // 4. Payment Management
+    if (paymentStatus !== undefined && paymentStatus !== consultation.paymentStatus) {
+      const prevPaymentStatus = consultation.paymentStatus || 'unpaid';
+      consultation.paymentStatus = paymentStatus;
+      if (paymentStatus === 'paid' && !consultation.paidAt) {
+        consultation.paidAt = nowIso;
+      }
+      if (paymentMethod !== undefined) {
+        consultation.paymentMethod = paymentMethod;
+      }
+      if (paymentId !== undefined) {
+        consultation.paymentId = paymentId;
+      }
+
+      consultation.history.push({
+        id: `H-${Date.now()}`,
+        actorEmail: user.email,
+        action: `PAYMENT_STATUS_CHANGED_TO_${String(paymentStatus).toUpperCase()}`,
+        details: {
+          fromPaymentStatus: prevPaymentStatus,
+          toPaymentStatus: paymentStatus,
+          method: paymentMethod || consultation.paymentMethod,
+        },
+        timestamp: nowIso,
+      });
+    }
+
+    // 5. Internal Note Addition
     if (noteText && typeof noteText === 'string' && noteText.trim()) {
       consultation.notes.push({
         id: `NOTE-${Date.now()}`,

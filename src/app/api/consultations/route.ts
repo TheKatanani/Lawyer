@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { store } from '@/server/db/store';
 import { ConsultationRequest, ConsultationStatus, SupportedLocale } from '@/server/types';
 import { normalizePhoneE164, buildWhatsAppMessage } from '@/server/utils/consultation';
+import { getMoyasarPublishableKey } from '@/server/payments/moyasar';
 
 // Rate limiting sliding window helper
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -137,6 +138,13 @@ export async function POST(req: NextRequest) {
     const id = `consultation-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const nowIso = new Date().toISOString();
 
+    const settings = store.siteSettings;
+    const paymentEnabled = Boolean(settings?.paymentEnabled ?? true);
+    const paymentRequirement = settings?.paymentRequirement ?? 'optional';
+    const consultationFee = Number(settings?.consultationFee ?? 500);
+    const consultationCurrency = settings?.consultationCurrency || 'SAR';
+    const amountMinor = Math.round(consultationFee * 100);
+
     const consultation: ConsultationRequest = {
       id,
       reference: refNum,
@@ -175,6 +183,7 @@ export async function POST(req: NextRequest) {
             service: effectiveServiceId,
             lawyer: validLawyerId || 'no_preference',
             date: cleanDate,
+            paymentRequirement,
           },
           timestamp: nowIso,
         },
@@ -182,6 +191,13 @@ export async function POST(req: NextRequest) {
       idempotencyKey: idempotencyKey || undefined,
       createdAt: nowIso,
       updatedAt: nowIso,
+
+      // Payment Tracking Fields
+      paymentStatus: paymentEnabled ? 'unpaid' : 'waived',
+      paymentMethod: paymentEnabled ? undefined : 'waived',
+      amountMinor: paymentEnabled ? amountMinor : 0,
+      currency: consultationCurrency,
+      paidAt: null,
     };
 
     store.consultations.set(consultation.id, consultation);
@@ -206,6 +222,7 @@ export async function POST(req: NextRequest) {
         reference: refNum,
         serviceId: effectiveServiceId,
         preferredLawyerId: validLawyerId,
+        paymentStatus: consultation.paymentStatus,
       },
       createdAt: nowIso,
     });
@@ -231,10 +248,26 @@ export async function POST(req: NextRequest) {
 
     const whatsappUrl = `https://wa.me/${cleanDestination}?text=${encodeURIComponent(messageText)}`;
 
+    const publishableKey = getMoyasarPublishableKey();
+
     const responsePayload = {
       success: true,
+      consultationId: consultation.id,
       reference: refNum,
       whatsappUrl,
+      payment: {
+        enabled: paymentEnabled && paymentRequirement !== 'disabled',
+        requirement: paymentRequirement,
+        amountMinor,
+        amountSar: consultationFee,
+        currency: consultationCurrency,
+        publishableKey,
+        applePayEnabled: Boolean(settings?.applePayEnabled),
+        notice:
+          locale === 'en'
+            ? settings?.paymentNoticeEn || 'Consultation booking fee is deductible upon representation retainer.'
+            : settings?.paymentNoticeAr || 'رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي.',
+      },
     };
 
     // Cache idempotency result for 1 hour

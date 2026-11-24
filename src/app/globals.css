@@ -94,3 +94,25 @@
 .skip-link:focus {
   top: 1rem;
 }
+
+/* Moyasar Payment Form RTL & Fluidity Fixes */
+.mysr-form-container {
+  width: 100% !important;
+}
+
+.mysr-form-container .mysr-form {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto;
+}
+
+/* Ensure proper spacing for alerts and card inputs in RTL */
+.mysr-form .mysr-form-group {
+  margin-bottom: 1rem;
+}
+
+.mysr-form input[type="text"],
+.mysr-form input[type="tel"] {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}

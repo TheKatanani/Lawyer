@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { Phone, MessageSquare, Shield, Scale, MapPin } from 'lucide-react';
+import Image from 'next/image';
+import { Phone, MessageSquare, Shield, Scale, MapPin, Mail, Globe } from 'lucide-react';
+import { FIRM_DETAILS } from '@/config/compliance';
 
 interface FooterProps {
   locale: string;
@@ -16,13 +18,18 @@ export function Footer({ locale }: FooterProps) {
           {/* Identity & Licensing */}
           <div className="space-y-4 lg:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-sm bg-gold text-signature flex items-center justify-center font-heading-ar font-bold text-lg">
-                {isAr ? 'ر' : 'R'}
+              <div className="relative w-11 h-11 flex-shrink-0">
+                <Image
+                  src="/logo-gold-emblem.png"
+                  alt="RMA Legal"
+                  fill
+                  className="object-contain"
+                />
               </div>
-              <span className="font-heading-ar font-bold text-lg text-on-dark leading-tight">
+              <span className="font-heading-ar font-bold text-base sm:text-lg text-on-dark leading-tight">
                 {isAr
                   ? 'شركة رياض محمد الزهراني للمحاماة'
-                  : 'Riyadh Alzahrani Law Company'}
+                  : 'Riyadh Alzahrani Law Firm'}
               </span>
             </div>
             <p className="text-sm text-on-dark/70 leading-relaxed font-normal">
@@ -75,25 +82,38 @@ export function Footer({ locale }: FooterProps) {
               {isAr ? 'قنوات التواصل' : 'Direct Channels'}
             </h3>
             <ul className="space-y-3 text-sm text-on-dark/70">
-              <li className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-gold flex-shrink-0" />
-                <span>{isAr ? 'الرياض، المملكة العربية السعودية' : 'Riyadh, Kingdom of Saudi Arabia'}</span>
+              <li className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-gold flex-shrink-0 mt-1" />
+                <span className="leading-snug">{isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-gold flex-shrink-0" />
-                <a href="tel:+966110000000" className="hover:text-gold transition-colors" dir="ltr">
-                  +966 11 000 0000
+                <a href={`tel:${FIRM_DETAILS.phoneRaw}`} className="hover:text-gold transition-colors font-medium">
+                  <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <MessageSquare className="w-4 h-4 text-gold flex-shrink-0" />
                 <a
-                  href="https://wa.me/966500000000"
+                  href={FIRM_DETAILS.whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-gold transition-colors"
+                  className="hover:text-gold transition-colors font-medium"
                 >
-                  {isAr ? 'محادثة واتساب الرسمية' : 'Official WhatsApp Channel'}
+                  {isAr ? 'واتساب: ' : 'WhatsApp: '}
+                  <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
+                </a>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Mail className="w-4 h-4 text-gold flex-shrink-0" />
+                <a href={`mailto:${FIRM_DETAILS.email}`} className="hover:text-gold transition-colors">
+                  {FIRM_DETAILS.email}
+                </a>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Globe className="w-4 h-4 text-gold flex-shrink-0" />
+                <a href={FIRM_DETAILS.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">
+                  {FIRM_DETAILS.website}
                 </a>
               </li>
             </ul>
