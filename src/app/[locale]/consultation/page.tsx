@@ -5,7 +5,6 @@ import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ConsultationForm } from '@/components/consultation/ConsultationForm';
 import { buildPageMetadata } from '@/lib/seo';
-import { isPaymentsEnabled } from '@/server/payments/moyasar';
 
 interface Props {
   params: { locale: string };
@@ -41,7 +40,6 @@ export default async function ConsultationPage({ params: { locale } }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'consultation' });
   const currentLocale = locale as SupportedLocale;
-  const paymentsEnabled = isPaymentsEnabled();
 
   // Fetch active published services and lawyers from projections
   const publishedServices = await listPublishedProjections('service', currentLocale);
@@ -93,7 +91,6 @@ export default async function ConsultationPage({ params: { locale } }: Props) {
             services={servicesData}
             lawyers={lawyersData}
             messages={messages}
-            paymentsEnabled={paymentsEnabled}
           />
         </Suspense>
       </div>

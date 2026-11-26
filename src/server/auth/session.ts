@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import crypto from 'crypto';
 import { store } from '../db/store';
 import { AdminUser, Role } from '../types';
+import { getServerSigningSecret } from './secret';
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 export const SESSION_COOKIE_NAME = IS_PROD ? '__Host-rma_session' : 'rma_session';
@@ -20,25 +21,7 @@ export interface SessionData {
 }
 
 function getSessionSecret(): string {
-  const configured =
-    process.env.SESSION_SECRET?.trim() ||
-    process.env.ADMIN_SESSION_SECRET?.trim() ||
-    process.env.JWT_SECRET?.trim();
-
-  if (configured && configured.length >= 16) {
-    return configured;
-  }
-
-  // Deterministic fallback from stable server env vars so separate serverless
-  // instances on Vercel share the exact same signing key even when SESSION_SECRET
-  // is not explicitly set in staging env configuration.
-  const seedMaterial = [
-    process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!',
-    process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'lawyer-ad052',
-    process.env.CLOUDINARY_API_SECRET || 'rma-legal-jwt-hmac-v1',
-  ].join('|');
-
-  return crypto.createHash('sha256').update(seedMaterial).digest('hex');
+  return getServerSigningSecret();
 }
 
 function toBase64Url(input: Buffer | string): string {

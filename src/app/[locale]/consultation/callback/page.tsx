@@ -1,8 +1,11 @@
 import React, { Suspense } from 'react';
 import { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { setRequestLocale } from 'next-intl/server';
 import { ConsultationPaymentCallback } from '@/components/consultation/ConsultationPaymentCallback';
 import { isPaymentsEnabled } from '@/server/payments/moyasar';
+
+export const dynamic = 'force-dynamic';
 
 interface Props {
   params: { locale: string };
@@ -28,6 +31,7 @@ export async function generateMetadata({ params: { locale } }: Props): Promise<M
 }
 
 export default function PaymentCallbackPage({ params: { locale }, searchParams }: Props) {
+  noStore();
   setRequestLocale(locale);
 
   // Moyasar sends status ('paid' | 'failed') and message ('APPROVED' or failure reason).

@@ -1,6 +1,8 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+import { deriveSamplePaymentToken, sealPaymentToken, unsealPaymentToken } from '../payments/tokens';
 import {
   AdminUser,
   ServiceEntity,
@@ -56,7 +58,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
   aboutVisionAr: 'أن نكون المرجع القانوني الموثوق للأفراد والأسر والشركات في المملكة، بمنهج يجمع العمق النظامي والرؤية الاستراتيجية والالتزام المهني.',
   aboutVisionEn: 'To be the trusted legal reference for individuals, families and companies in the Kingdom — with a method that unites legal depth, strategic vision and professional commitment.',
   // Payment Gateway Settings (Moyasar) — disabled by default unless PAYMENTS_ENABLED=true
-  paymentEnabled: false,
+  paymentEnabled: process.env.PAYMENTS_ENABLED === 'true',
   paymentRequirement: 'optional',
   consultationFee: 500,
   consultationCurrency: 'SAR',
@@ -1249,8 +1251,8 @@ class InMemoryStore {
     this.consultations.set(sampleConsultation2.id, sampleConsultation2);
 
     // Initial sample payment requests if none loaded
-    const sampleToken1 = crypto.randomBytes(24).toString('base64url');
-    const sampleToken2 = crypto.randomBytes(24).toString('base64url');
+    const sampleToken1 = deriveSamplePaymentToken('PR-2026-0001');
+    const sampleToken2 = deriveSamplePaymentToken('PR-2026-0002');
     const samplePaymentRequest1: PaymentRequest = {
       id: 'PR-2026-0001',
       token: sampleToken1,
@@ -1295,6 +1297,13 @@ class InMemoryStore {
     for (const req of this.paymentRequests.values()) {
       if (req.token === token) return req;
     }
+    const unsealed = unsealPaymentToken(token);
+    if (unsealed) {
+      if (!this.paymentRequests.has(unsealed.id)) {
+        this.paymentRequests.set(unsealed.id, unsealed);
+      }
+      return unsealed;
+    }
     return undefined;
   }
 
@@ -1309,12 +1318,27 @@ class InMemoryStore {
     return `PR-${year}-${String(nextNum).padStart(4, '0')}`;
   }
 
-  generatePaymentRequestToken(): string {
+  generatePaymentRequestToken(
+    draft?: Pick<
+      PaymentRequest,
+      'id' | 'clientName' | 'serviceCategory' | 'amountMinor' | 'description' | 'createdAt' | 'expiresAt'
+    >
+  ): string {
+    if (draft) {
+      return sealPaymentToken(draft);
+    }
     return crypto.randomBytes(24).toString('base64url');
   }
 
+  private getDataDir(): string {
+    if (process.env.VERCEL === '1') {
+      return path.join(os.tmpdir(), 'rma-legal-data');
+    }
+    return path.join(process.cwd(), '.data');
+  }
+
   loadFromDisk() {
-    const dataDir = path.join(process.cwd(), '.data');
+    const dataDir = this.getDataDir();
     const filePath = path.join(dataDir, 'store_state.json');
     const backupPath = path.join(dataDir, 'store_state.json.bak');
 
@@ -1361,7 +1385,7 @@ class InMemoryStore {
 
   persistToDisk() {
     try {
-      const dataDir = path.join(process.cwd(), '.data');
+      const dataDir = this.getDataDir();
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }

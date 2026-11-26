@@ -92,7 +92,6 @@ export function ConsultationForm({
   locale,
   services,
   lawyers,
-  paymentsEnabled = false,
   messages,
 }: ConsultationFormProps) {
   const searchParams = useSearchParams();
@@ -254,7 +253,12 @@ export function ConsultationForm({
         throw new Error(data.error || messages.failure);
       }
 
-      if (paymentsEnabled && data.payment && data.payment.enabled && data.payment.requirement !== 'disabled') {
+      if (
+        data.payment &&
+        data.payment.enabled &&
+        data.payment.requirement !== 'disabled' &&
+        Boolean(data.payment.publishableKey)
+      ) {
         setConsultationResult(data);
         setPaymentData(data.payment);
         setPaymentStep(true);
@@ -284,14 +288,14 @@ export function ConsultationForm({
   // Mount Moyasar Form when in Payment Step
   useEffect(() => {
     if (
-      !paymentsEnabled ||
+      !paymentData?.enabled ||
+      !paymentData?.publishableKey ||
       !paymentStep ||
       !moyasarScriptReady ||
       !window.Moyasar ||
       !paymentElementRef.current ||
       moyasarMounted ||
       selectedPaymentMode !== 'online' ||
-      !paymentData ||
       !consultationResult
     ) {
       return;
@@ -357,7 +361,6 @@ export function ConsultationForm({
       setPaymentError(err.message || (isAr ? 'تعذر تحميل نموذج ميسّر للدفع.' : 'Failed to mount Moyasar.'));
     }
   }, [
-    paymentsEnabled,
     paymentStep,
     moyasarScriptReady,
     moyasarMounted,
@@ -519,7 +522,7 @@ export function ConsultationForm({
   }
 
   // Render Step 2: Moyasar Payment Screen
-  if (paymentsEnabled && paymentStep && paymentData?.enabled && consultationResult) {
+  if (paymentStep && paymentData?.enabled && consultationResult) {
     const isOptional = paymentData.requirement === 'optional';
 
     return (

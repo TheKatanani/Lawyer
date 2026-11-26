@@ -58,10 +58,20 @@ export async function POST(req: NextRequest) {
     }
 
     const id = store.getNextPaymentRequestId();
-    const token = store.generatePaymentRequestToken();
     const now = new Date().toISOString();
     const expiresInDays = body.expiresInDays && body.expiresInDays > 0 ? body.expiresInDays : 14;
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+    const description = body.description?.trim() || body.serviceCategory.trim();
+    const amountMinor = Math.round(amountSar * 100);
+    const token = store.generatePaymentRequestToken({
+      id,
+      clientName: body.clientName.trim(),
+      serviceCategory: body.serviceCategory.trim(),
+      amountMinor,
+      description,
+      createdAt: now,
+      expiresAt,
+    });
 
     const paymentRequest: PaymentRequest = {
       id,
@@ -70,8 +80,8 @@ export async function POST(req: NextRequest) {
       clientPhone: body.clientPhone.trim(),
       serviceCategory: body.serviceCategory.trim(),
       amountSar,
-      amountMinor: Math.round(amountSar * 100),
-      description: body.description?.trim() || body.serviceCategory.trim(),
+      amountMinor,
+      description,
       status: 'unpaid',
       createdAt: now,
       expiresAt,

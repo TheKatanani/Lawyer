@@ -5,6 +5,8 @@ import { ConsultationRequest, ConsultationStatus, SupportedLocale } from '@/serv
 import { normalizePhoneE164, buildWhatsAppMessage } from '@/server/utils/consultation';
 import { getMoyasarPublishableKey, isPaymentsEnabled } from '@/server/payments/moyasar';
 
+export const dynamic = 'force-dynamic';
+
 // Rate limiting sliding window helper
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 5;

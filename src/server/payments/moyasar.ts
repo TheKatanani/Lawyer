@@ -66,7 +66,14 @@ export function getMoyasarPublishableKey(): string {
   if (store.siteSettings?.moyasarPublishableKey?.trim()) {
     return store.siteSettings.moyasarPublishableKey.trim();
   }
-  return process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY || '';
+  // Avoid Next.js build-time inlining of NEXT_PUBLIC_* so runtime Vercel env edits take effect cleanly.
+  const dynamicPublicKeyName = 'NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY';
+  return (
+    process.env.MOYASAR_PUBLISHABLE_KEY?.trim() ||
+    process.env[dynamicPublicKeyName]?.trim() ||
+    process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY?.trim() ||
+    ''
+  );
 }
 
 /**

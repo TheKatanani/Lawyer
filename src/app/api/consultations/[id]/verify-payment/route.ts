@@ -3,6 +3,9 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { store } from '@/server/db/store';
 import { fetchMoyasarPayment, isPaymentsEnabled } from '@/server/payments/moyasar';
+import { ConsultationRequest } from '@/server/types';
+
+export const dynamic = 'force-dynamic';
 
 const VerifyConsultationPaymentSchema = z.object({
   paymentId: z.string().trim().min(1).max(120).optional(),
@@ -17,10 +20,7 @@ interface Params {
 
 export async function POST(req: NextRequest, { params: { id } }: Params) {
   try {
-    const consultation = store.consultations.get(id);
-    if (!consultation) {
-      return NextResponse.json({ error: 'Consultation record not found.' }, { status: 404 });
-    }
+    let consultation = store.consultations.get(id);
 
     const rawBody = await req.json().catch(() => null);
     const parsed = VerifyConsultationPaymentSchema.safeParse(rawBody);
@@ -31,6 +31,9 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
 
     // Handle "pay at office" choice if payment is optional
     if (chosenMethod === 'office') {
+      if (!consultation) {
+        return NextResponse.json({ error: 'Consultation record not found.' }, { status: 404 });
+      }
       consultation.paymentStatus = 'unpaid';
       consultation.paymentMethod = 'office_cash';
       consultation.updatedAt = new Date().toISOString();
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
     }
 
     // Idempotent: If already marked as paid with this paymentId
-    if (consultation.paymentStatus === 'paid' && consultation.paymentId === paymentId) {
+    if (consultation && consultation.paymentStatus === 'paid' && consultation.paymentId === paymentId) {
       return NextResponse.json({
         success: true,
         consultation,
@@ -79,6 +82,41 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
 
     // Direct server verification with Moyasar API
     const verifiedPayment = await fetchMoyasarPayment(paymentId);
+
+    // Cross-lambda fallback: if another serverless instance created this consultation,
+    // verify ownership cleanly via Moyasar's verified metadata.consultationId
+    if (!consultation) {
+      if (verifiedPayment.metadata?.consultationId !== id) {
+        return NextResponse.json({ error: 'Consultation record not found.' }, { status: 404 });
+      }
+      const fallbackNow = new Date().toISOString();
+      consultation = {
+        id,
+        reference: String(verifiedPayment.metadata?.reference || id),
+        fullName: verifiedPayment.source?.name || 'Client',
+        phone: '',
+        serviceId: 'general',
+        serviceLabelSnapshot: { ar: 'استشارة قانونية', en: 'Legal Consultation' },
+        preferredLawyerId: null,
+        preferredLawyerLabelSnapshot: null,
+        preferredDate: null,
+        assignedLawyerId: null,
+        scheduledAt: null,
+        appointmentTimezone: 'Asia/Riyadh',
+        meetingType: null,
+        meetingLink: null,
+        meetingAddress: null,
+        status: 'pending',
+        locale: 'ar',
+        sourcePage: null,
+        notes: [],
+        history: [],
+        createdAt: fallbackNow,
+        updatedAt: fallbackNow,
+        amountMinor: Math.round((store.siteSettings?.consultationFee || 500) * 100),
+        currency: store.siteSettings?.consultationCurrency || 'SAR',
+      };
+    }
 
     if (verifiedPayment.status !== 'paid' && verifiedPayment.status !== 'captured') {
       return NextResponse.json(
