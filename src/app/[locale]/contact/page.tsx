@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ContactForm } from '@/components/forms/ContactForm';
 import { listPublishedProjections } from '@/server/repositories/content';
@@ -6,6 +7,25 @@ import { SupportedLocale } from '@/server/types';
 import { Phone, MessageSquare, MapPin, Clock, ShieldCheck, Mail, Globe } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/contact',
+    title: isAr ? 'تواصل معنا' : 'Contact Us',
+    description: isAr
+      ? 'تواصل مع مكتب شركة رياض محمد الزهراني للمحاماة في برج هيدكوارترز بجدة عبر الهاتف أو واتساب أو نموذج التواصل الرسمي.'
+      : 'Contact Riyadh Mohammed Alzahrani Law Firm at Headquarters Tower in Jeddah by phone, WhatsApp, email or online inquiry form.',
+  });
+}
 
 export default async function ContactPage({
   params: { locale },

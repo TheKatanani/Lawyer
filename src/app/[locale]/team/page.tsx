@@ -1,10 +1,30 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { Scale, ArrowUpRight, Award } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/team',
+    title: isAr ? 'القيادة وفريق المحامين' : 'Leadership & Legal Team',
+    description: isAr
+      ? 'القيادة القانونية والسيرة المهنية للمستشار رياض بن محمد الزهراني الشريك المؤسس ومحكم تجاري دولي معتمد.'
+      : 'Legal leadership and professional credentials of Founding & Managing Partner Counselor Riyadh Mohammed Alzahrani.',
+  });
+}
 
 export default async function TeamPage({
   params: { locale },

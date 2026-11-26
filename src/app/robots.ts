@@ -1,7 +1,8 @@
 import { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/seo';
 
 export default function robots(): MetadataRoute.Robots {
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
+  const origin = getSiteUrl();
 
   return {
     rules: {

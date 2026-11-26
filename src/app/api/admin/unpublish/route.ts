@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSessionUser } from '@/server/auth/session';
+import { assertCapability } from '@/server/permissions/rbac';
 import { unpublishService } from '@/server/repositories/content';
+
+const UnpublishSchema = z.object({
+  entityType: z.enum(['service']),
+  entityId: z.string().trim().min(1).max(120),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { entityType, entityId } = await req.json();
+    assertCapability(user.role, 'content.publish');
 
-    if (entityType === 'service') {
-      const res = await unpublishService(entityId, user.uid);
-      return NextResponse.json(res);
+    const body = await req.json().catch(() => null);
+    const parsed = UnpublishSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Unsupported or invalid entity payload' }, { status: 400 });
     }
 
-    return NextResponse.json({ error: 'Unsupported entity type' }, { status: 400 });
+    const res = await unpublishService(parsed.data.entityId, user.uid);
+    return NextResponse.json(res);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Unpublish transaction failed' }, { status: 400 });
+    const msg = err.message || 'Unpublish transaction failed';
+    return NextResponse.json({ error: msg }, { status: msg.startsWith('Forbidden') ? 403 : 400 });
   }
 }

@@ -99,7 +99,7 @@ for (const area of PRACTICE_AREAS) {
       },
     ],
     seo: {
-      title: `${area.titleAr} | شركة رياض محمد الزهراني للمحاماة`,
+      title: area.titleAr,
       description: area.leadAxiomAr,
     },
     approvalEvidenceRefs: ['PROFILE-PDF-PAGE-' + area.sortOrder],
@@ -172,7 +172,7 @@ for (const area of PRACTICE_AREAS) {
       },
     ],
     seo: {
-      title: `${area.titleEn} | Riyadh Alzahrani Law Firm`,
+      title: area.titleEn,
       description: area.leadAxiomEn,
     },
     approvalEvidenceRefs: ['PROFILE-PDF-PAGE-' + area.sortOrder],

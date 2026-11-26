@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       portraitAssetId: portraitAssetId?.trim() || undefined,
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryAr?.trim() || fullNameAr.trim() } }],
       seo: {
-        title: `${fullNameAr.trim()} | شركة رياض محمد الزهراني للمحاماة`,
+        title: fullNameAr.trim(),
         description: summaryAr?.trim() || fullNameAr.trim(),
       },
       approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED'],
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       portraitAssetId: portraitAssetId?.trim() || undefined,
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryEn?.trim() || fullNameEn.trim() } }],
       seo: {
-        title: `${fullNameEn.trim()} | Riyadh Alzahrani Law Firm`,
+        title: fullNameEn.trim(),
         description: summaryEn?.trim() || fullNameEn.trim(),
       },
       approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED'],

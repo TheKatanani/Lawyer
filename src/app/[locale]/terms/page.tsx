@@ -1,6 +1,27 @@
 import React from 'react';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Scale, ShieldAlert } from 'lucide-react';
+import type { Metadata } from 'next';
+import { setRequestLocale } from 'next-intl/server';
+import { SupportedLocale } from '@/server/types';
+import { buildPageMetadata } from '@/lib/seo';
+import { FIRM_DETAILS } from '@/config/compliance';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/terms',
+    title: isAr ? 'الشروط والأحكام العامة' : 'Terms of Use & Disclaimer',
+    description: isAr
+      ? 'الشروط والأحكام العامة لاستخدام موقع شركة رياض محمد الزهراني للمحاماة وإخلاء المسؤولية والضوابط النظامية.'
+      : 'Terms of use, non-representation notice, intellectual property, and regulatory disclaimers for Riyadh Alzahrani Law Firm.',
+  });
+}
 
 export default async function TermsPage({
   params: { locale },
@@ -54,8 +75,8 @@ export default async function TermsPage({
             </h2>
             <p className="text-muted">
               {isAr
-                ? 'كافة النصوص، التصاميم، الشعارات، والمقالات المنشورة في هذا الموقع مملوكة حصراً لشركة رياض محمد الزهراني للمحاماة، ومحمية بموجب أنظمة حماية حقوق المؤلف وحقوق الملكية الفكرية في المملكة العربية السعودية.'
-                : 'All written materials, design tokens, trademarks, and articles on this platform are the intellectual property of Riyadh Mohammed Alzahrani Legal Company and protected under Saudi copyright statutes.'}
+                ? `كافة النصوص، التصاميم، الشعارات، والمقالات المنشورة في هذا الموقع مملوكة حصراً لـ ${FIRM_DETAILS.nameAr}، ومحمية بموجب أنظمة حماية حقوق المؤلف وحقوق الملكية الفكرية في المملكة العربية السعودية.`
+                : `All written materials, design tokens, trademarks, and articles on this platform are the intellectual property of ${FIRM_DETAILS.nameEn} and protected under Saudi copyright statutes.`}
             </p>
           </div>
 
@@ -65,8 +86,8 @@ export default async function TermsPage({
             </h2>
             <p className="text-muted">
               {isAr
-                ? 'تخضع هذه الشروط والأحكام وتُفسر وفقاً للأنظمة المعمول بها في المملكة العربية السعودية، وتختص المحاكم السعودية بمدينة الرياض بالفصل في أي نزاع قد ينشأ عنها.'
-                : 'These terms are governed by the laws and regulations of the Kingdom of Saudi Arabia, and any disputes shall be adjudicated before the competent courts of Riyadh.'}
+                ? `تخضع هذه الشروط والأحكام وتُفسر وفقاً للأنظمة المعمول بها في المملكة العربية السعودية، وتختص المحاكم السعودية بمدينة ${FIRM_DETAILS.cityAr} بالفصل في أي نزاع قد ينشأ عنها.`
+                : `These terms are governed by the laws and regulations of the Kingdom of Saudi Arabia, and any disputes shall be adjudicated before the competent courts of ${FIRM_DETAILS.cityEn}.`}
             </p>
           </div>
         </div>

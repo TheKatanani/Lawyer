@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import { ConsultationPaymentCallback } from '@/components/consultation/ConsultationPaymentCallback';
+import { isPaymentsEnabled } from '@/server/payments/moyasar';
 
 interface Props {
   params: { locale: string };
@@ -17,8 +18,8 @@ export async function generateMetadata({ params: { locale } }: Props): Promise<M
   const isAr = locale === 'ar';
   return {
     title: isAr
-      ? 'نتيجة سداد الاستشارة القانونية | شركة رياض الزهراني للمحاماة'
-      : 'Consultation Payment Result | Riyadh Alzahrani Law Firm',
+      ? 'نتيجة سداد الاستشارة القانونية'
+      : 'Consultation Payment Result',
     robots: {
       index: false,
       follow: false,
@@ -49,6 +50,7 @@ export default function PaymentCallbackPage({ params: { locale }, searchParams }
           paymentStatus={searchParams.status || ''}
           consultationId={searchParams.consultation || ''}
           errorMessage={errorMessage}
+          paymentsEnabled={isPaymentsEnabled()}
         />
       </Suspense>
     </div>

@@ -56,21 +56,21 @@ export function StatsBanner({ locale }: StatsBannerProps) {
           desc: isAr ? 'التشخيص، الإثبات، الإجراء، الخيارات، الوقاية' : 'Diagnosis, proof, procedure, options, prevention',
           icon: <Compass className="w-5 h-5 text-gold" />,
         },
-    UNVERIFIED_CLAIMS_CONFIG.enable24HoursResponseClaim
+    UNVERIFIED_CLAIMS_CONFIG.enable100PercentComplianceClaim
       ? {
-          target: 24,
-          prefix: '',
-          suffix: isAr ? ' ساعة' : 'h',
-          title: isAr ? 'استجابة ومتابعة سريعة' : 'Client Response Turnaround',
-          desc: isAr ? 'تنسيق المواعيد المباشرة عبر واتساب' : 'Direct appointment triage via WhatsApp',
-          icon: <ShieldCheck className="w-5 h-5 text-gold" />,
-        }
-      : {
           target: 100,
           prefix: '',
           suffix: '%',
           title: isAr ? 'سرية وحماية بيانات' : 'Confidentiality & PDPL',
           desc: isAr ? 'سر مهني صارم ونظام حماية البيانات الشخصية' : 'Strict professional secrecy and PDPL adherence',
+          icon: <CheckCircle className="w-5 h-5 text-gold" />,
+        }
+      : {
+          target: 7,
+          prefix: '',
+          suffix: isAr ? ' مسارات' : ' Tracks',
+          title: isAr ? 'خدمات متخصصة ومؤسسية' : 'Specialised Client Programs',
+          desc: isAr ? 'لكبار العملاء والمجموعات والثروات والنزاعات' : 'Private clients, groups, family wealth & cross-border',
           icon: <CheckCircle className="w-5 h-5 text-gold" />,
         },
   ];
@@ -100,7 +100,7 @@ export function StatsBanner({ locale }: StatsBannerProps) {
 
                 {/* Counter & Metric Number */}
                 <div className="space-y-1.5">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold text-ink tracking-tight group-hover:text-gold-ink transition-colors duration-300">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-ink group-hover:text-gold-ink transition-colors duration-300">
                     <AnimatedCounter
                       target={item.target}
                       prefix={item.prefix}

@@ -8,6 +8,7 @@ import {
   AudienceTag,
 } from '../types';
 import { assertCapability } from '../permissions/rbac';
+import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
 
 export async function getPublishedProjection(
   entityType: string,
@@ -364,7 +365,7 @@ export async function publishArticlePaired(id: string, actorUid: string) {
     summary: arRev.summary,
     blocks: arRev.blocks,
     metadata: {
-      readingTimeMinutes: arRev.readingTimeMinutes || 5,
+      readingTimeMinutes: computeArticleReadingTimeMinutes(arRev.summary, arRev.blocks),
       categoryIds: article.categoryIds,
       authorTeamMemberId: article.authorTeamMemberId,
       relatedServiceIds: article.relatedServiceIds,
@@ -393,7 +394,7 @@ export async function publishArticlePaired(id: string, actorUid: string) {
     summary: enRev.summary,
     blocks: enRev.blocks,
     metadata: {
-      readingTimeMinutes: enRev.readingTimeMinutes || 5,
+      readingTimeMinutes: computeArticleReadingTimeMinutes(enRev.summary, enRev.blocks),
       categoryIds: article.categoryIds,
       authorTeamMemberId: article.authorTeamMemberId,
       relatedServiceIds: article.relatedServiceIds,

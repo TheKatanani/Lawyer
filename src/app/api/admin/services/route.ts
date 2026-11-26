@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       deliverables: Array.isArray(deliverablesAr) ? deliverablesAr.filter(Boolean) : [],
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryAr?.trim() || titleAr.trim() } }],
       seo: {
-        title: `${titleAr.trim()} | شركة رياض محمد الزهراني للمحاماة`,
+        title: titleAr.trim(),
         description: summaryAr?.trim() || titleAr.trim(),
       },
       approvalEvidenceRefs: ['EVID-NEW-SERVICE'],
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       deliverables: Array.isArray(deliverablesEn) ? deliverablesEn.filter(Boolean) : [],
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryEn?.trim() || titleEn.trim() } }],
       seo: {
-        title: `${titleEn.trim()} | Riyadh Alzahrani Law Firm`,
+        title: titleEn.trim(),
         description: summaryEn?.trim() || titleEn.trim(),
       },
       approvalEvidenceRefs: ['EVID-NEW-SERVICE'],

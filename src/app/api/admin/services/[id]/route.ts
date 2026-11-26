@@ -63,7 +63,7 @@ export async function PATCH(
       if (deliverablesAr && Array.isArray(deliverablesAr)) {
         arRev.deliverables = deliverablesAr.filter(Boolean);
       }
-      if (titleAr) arRev.seo.title = `${titleAr.trim()} | شركة رياض محمد الزهراني للمحاماة`;
+      if (titleAr) arRev.seo.title = titleAr.trim();
       if (summaryAr) arRev.seo.description = summaryAr.trim();
     }
 
@@ -79,7 +79,7 @@ export async function PATCH(
       if (deliverablesEn && Array.isArray(deliverablesEn)) {
         enRev.deliverables = deliverablesEn.filter(Boolean);
       }
-      if (titleEn) enRev.seo.title = `${titleEn.trim()} | Riyadh Alzahrani Law Firm`;
+      if (titleEn) enRev.seo.title = titleEn.trim();
       if (summaryEn) enRev.seo.description = summaryEn.trim();
     }
 

@@ -49,6 +49,7 @@ interface ConsultationFormProps {
   locale: string;
   services: ServiceOption[];
   lawyers: LawyerOption[];
+  paymentsEnabled?: boolean;
   messages: {
     title: string;
     explanation: string;
@@ -91,6 +92,7 @@ export function ConsultationForm({
   locale,
   services,
   lawyers,
+  paymentsEnabled = false,
   messages,
 }: ConsultationFormProps) {
   const searchParams = useSearchParams();
@@ -252,7 +254,7 @@ export function ConsultationForm({
         throw new Error(data.error || messages.failure);
       }
 
-      if (data.payment && data.payment.enabled && data.payment.requirement !== 'disabled') {
+      if (paymentsEnabled && data.payment && data.payment.enabled && data.payment.requirement !== 'disabled') {
         setConsultationResult(data);
         setPaymentData(data.payment);
         setPaymentStep(true);
@@ -282,6 +284,7 @@ export function ConsultationForm({
   // Mount Moyasar Form when in Payment Step
   useEffect(() => {
     if (
+      !paymentsEnabled ||
       !paymentStep ||
       !moyasarScriptReady ||
       !window.Moyasar ||
@@ -354,6 +357,7 @@ export function ConsultationForm({
       setPaymentError(err.message || (isAr ? 'تعذر تحميل نموذج ميسّر للدفع.' : 'Failed to mount Moyasar.'));
     }
   }, [
+    paymentsEnabled,
     paymentStep,
     moyasarScriptReady,
     moyasarMounted,
@@ -515,7 +519,7 @@ export function ConsultationForm({
   }
 
   // Render Step 2: Moyasar Payment Screen
-  if (paymentStep && paymentData && consultationResult) {
+  if (paymentsEnabled && paymentStep && paymentData?.enabled && consultationResult) {
     const isOptional = paymentData.requirement === 'optional';
 
     return (
@@ -756,6 +760,8 @@ export function ConsultationForm({
           {/* Anti-spam honeypot (hidden from human visitors) */}
           <div className="hidden" aria-hidden="true">
             <input
+              id="consultation-honeypot"
+              aria-label="Leave this field empty"
               type="text"
               tabIndex={-1}
               autoComplete="off"

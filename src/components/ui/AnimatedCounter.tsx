@@ -21,6 +21,8 @@ export function AnimatedCounter({
   const elementRef = useRef<HTMLSpanElement>(null);
   const hasAnimated = useRef(false);
 
+  const finalLabel = `${prefix}${target.toLocaleString()}${suffix}`;
+
   useEffect(() => {
     // Check prefers-reduced-motion
     if (typeof window !== 'undefined') {
@@ -55,11 +57,11 @@ export function AnimatedCounter({
       function update(currentTime: number) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         // easeOutExpo
         const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
         const currentCount = Math.floor(ease * target);
-        
+
         setCount(currentCount);
 
         if (progress < 1) {
@@ -77,11 +79,23 @@ export function AnimatedCounter({
     };
   }, [target, duration]);
 
+  const isPercentSuffix = suffix.trim() === '%';
+
   return (
-    <span ref={elementRef} className={className} dir="ltr">
-      {prefix}
-      {count.toLocaleString()}
-      {suffix}
+    <span ref={elementRef} className={className} aria-label={finalLabel}>
+      <span className="sr-only">{finalLabel}</span>
+      <span aria-hidden="true" className="inline-flex items-baseline gap-1.5">
+        <span dir="ltr" className="font-mono tracking-tight tabular-nums">
+          {prefix}
+          {count.toLocaleString()}
+          {isPercentSuffix ? suffix : ''}
+        </span>
+        {suffix && !isPercentSuffix && (
+          <span className="font-heading-ar font-bold text-xl sm:text-2xl lg:text-3xl tracking-normal">
+            {suffix.trim()}
+          </span>
+        )}
+      </span>
     </span>
   );
 }

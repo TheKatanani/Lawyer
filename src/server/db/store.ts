@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { hashPassword } from '../auth/password';
 import { UNVERIFIED_CLAIMS_CONFIG, FIRM_DETAILS } from '../../config/compliance';
+import { computeArticleReadingTimeMinutes } from '../../lib/reading-time';
 import {
   PRACTICE_AREAS_SERVICES,
   PRACTICE_AREAS_SERVICE_REVISIONS,
@@ -54,8 +55,8 @@ export const INITIAL_SETTINGS: SiteSettings = {
   aboutMissionEn: 'To deliver precise, practical legal services that safeguard the client’s interests and afford complete clarity at every stage, adhering to the highest standards of integrity and confidentiality.',
   aboutVisionAr: 'أن نكون المرجع القانوني الموثوق للأفراد والأسر والشركات في المملكة، بمنهج يجمع العمق النظامي والرؤية الاستراتيجية والالتزام المهني.',
   aboutVisionEn: 'To be the trusted legal reference for individuals, families and companies in the Kingdom — with a method that unites legal depth, strategic vision and professional commitment.',
-  // Payment Gateway Settings (Moyasar)
-  paymentEnabled: true,
+  // Payment Gateway Settings (Moyasar) — disabled by default unless PAYMENTS_ENABLED=true
+  paymentEnabled: false,
   paymentRequirement: 'optional',
   consultationFee: 500,
   consultationCurrency: 'SAR',
@@ -555,7 +556,7 @@ const INITIAL_TEAM_REVISIONS: Record<string, TeamMemberRevision> = {
       },
     ],
     seo: {
-      title: 'المستشار رياض بن محمد الزهراني | شركة رياض محمد الزهراني للمحاماة',
+      title: 'المستشار رياض بن محمد الزهراني',
       description: 'السيرة المهنية للمستشار رياض الزهراني الشريك المؤسس والمدير العام.',
     },
     approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED', 'AUTH-BOOK-COMMERCIAL-LAW'],
@@ -608,7 +609,7 @@ const INITIAL_TEAM_REVISIONS: Record<string, TeamMemberRevision> = {
       },
     ],
     seo: {
-      title: 'Counselor Riyadh M. Alzahrani | RMA Legal',
+      title: 'Counselor Riyadh M. Alzahrani',
       description: 'Professional profile of Founding & Managing Partner Counselor Riyadh M. Alzahrani.',
     },
     approvalEvidenceRefs: ['MOJ-LICENSE-VERIFIED', 'AUTH-BOOK-COMMERCIAL-LAW'],
@@ -713,18 +714,115 @@ const INITIAL_ARTICLE_REVISIONS: Record<string, ArticleRevision> = {
     locale: 'ar',
     title: 'الأبعاد الإستراتيجية لنظام الشركات السعودي الجديد',
     slug: 'new-saudi-companies-law',
-    summary: 'قراءة تحليلية في المزايا التي يقدمها نظام الشركات للشركات العائلية والمساهمة المبسطة في تعزيز بيئة الأعمال بالمملكة.',
-    readingTimeMinutes: 5,
+    summary: 'قراءة تحليلية عامة في أبرز التحولات التشريعية التي استحدثها نظام الشركات السعودي الصادر بالمرسوم الملكي رقم (م/132)، ولا سيما في تنظيم الشركات العائلية واستحداث شركة المساهمة المبسطة وتعزيز مبادئ الحوكمة المؤسسية.',
+    readingTimeMinutes: 4,
     blocks: [
       {
         id: 'b1',
         type: 'paragraph',
-        data: { text: 'يعد نظام الشركات السعودي الجديد نقطة تحول جوهرية في المنظومة التشريعية لبيئة الأعمال، حيث استحدث أشكالاً جديدة من الكيانات كالشركة المساهمة المبسطة.' },
+        data: {
+          text: 'يمثل نظام الشركات السعودي الصادر بالمرسوم الملكي رقم (م/132) وتاريخ 1443/12/1هـ نقطة تحول جوهرية في البنية التشريعية لبيئة الأعمال في المملكة العربية السعودية، إذ أعاد صياغة الإطار النظامي للشركات التجارية وغير الربحية والمهنية في وثيقة تشريعية موحدة تهدف إلى رفع كفاءة السوق، وتقليص القيود الإجرائية، ومواكبة المتغيرات الاقتصادية والاستثمارية المعاصرة.',
+        },
+      },
+      {
+        id: 'b2',
+        type: 'heading',
+        data: {
+          text: 'أولاً: استحداث شركة المساهمة المبسطة ومرونة الهيكلة',
+          level: 2,
+        },
+      },
+      {
+        id: 'b3',
+        type: 'paragraph',
+        data: {
+          text: 'من أبرز المستجدات التي جاء بها النظام إتاحة تأسيس "شركة المساهمة المبسطة" لتلبية احتياجات رواد الأعمال والمشاريع الناشئة وصناديق الاستثمار. فقد استبعد النظام في هذا الكيان اشتراط الحد الأدنى لرأس المال، وسمح بأن تتولى إدارتها شخصية واحدة أو أكثر وفق نظامها الأساس دون إلزام بتشكيل مجلس إدارة تقليدي، مع تمكين الشركاء من استحداث فئات متعددة من الأسهم تتفاوت في حقوق التصويت وتوزيع الأرباح والأولوية عند التصفية. وتمنح هذه المرونة المؤسسين والمستثمرين قدرة أوسع على تصميم اتفاقيات التمويل وجولات الاستثمار بصورة واضحة ومتوازنة.',
+        },
+      },
+      {
+        id: 'b4',
+        type: 'heading',
+        data: {
+          text: 'ثانياً: حوكمة الشركات العائلية والمواثيق الملزمة',
+          level: 2,
+        },
+      },
+      {
+        id: 'b5',
+        type: 'paragraph',
+        data: {
+          text: 'أولى النظام عناية خاصة لاستدامة الشركات العائلية التي تشكل ركيزة أساسية في الاقتصاد الوطني، حيث أجاز تضمين عقد التأسيس أو نظام الشركة الأساس أحكاماً مقتبسة من "الميثاق العائلي"، بما يكفل إضفاء الصفة الإلزامية على قواعد ملكية الحصص أو الأسهم، وضوابط تداولها بين أفراد الأسرة، وآليات التقييم والتخارج، والضوابط الحاكمة لتولي أفراد العائلة المناصب التنفيذية أو مقاعد الإدارة. ويسهم هذا التأصيل النظامي في الحد من نزاعات انتقال الملكية عبر الأجيال، ويمنع تفتت الأصول أو تعطل القرار الإداري عند خلاف الشركاء.',
+        },
+      },
+      {
+        id: 'b6',
+        type: 'heading',
+        data: {
+          text: 'ثالثاً: واجبات العناية والولاء ومسؤولية الإدارة',
+          level: 2,
+        },
+      },
+      {
+        id: 'b7',
+        type: 'paragraph',
+        data: {
+          text: 'رسّخ النظام منظومة صريحة من واجبات المديرين وأعضاء مجالس الإدارة، في مقدمتها واجب العناية والالتزام بأحكام النظام وعقد التأسيس، وواجب الولاء وتجنب حالات تعارض المصالح، والالتزام بالإفصاح المسبق عن أي مصلحة مباشرة أو غير مباشرة في الأعمال والعقود التي تتم لحساب الشركة. كما نظّم النظام قواعد دعوى المسؤولية وأطر الحماية المتوازنة لقرارات الإدارة المبنية على دراسة مهنية سليمة وبحسن نية، مما يعزز الانضباط المؤسسي ويرفع مستوى الشفافية أمام الشركاء والدائنين والجهات الرقابية على حد سواء.',
+        },
+      },
+      {
+        id: 'b8',
+        type: 'heading',
+        data: {
+          text: 'رابعاً: أدوات التمويل والتحفيز والوقاية من النزاعات',
+          level: 2,
+        },
+      },
+      {
+        id: 'b9',
+        type: 'paragraph',
+        data: {
+          text: 'توسّع النظام في إقرار أدوات تعزز جاذبية الشركات واستمراريتها، مثل السماح للشركات ذات المسؤولية المحدودة بإصدار أدوات دين أو صكوك تمويلية قابلة للتداول وفق نظام السوق المالية، وإمكانية تخصيص أسهم أو حصص لتحفيز العاملين واستبقاء الكفاءات القيادية، فضلاً عن الاعتراف النظامي باتفاقيات الشركاء أو المساهمين بشرط عدم تعارضها مع النظام الأساس وأحكام النظام. وتؤكد الخبرة العملية أن مراجعة عقود التأسيس وتحديث اللوائح الداخلية بصورة استباقية هو المسار الأكثر فاعلية لتلافي التعارضات الإجرائية وحماية استقرار المنشأة على المدى الطويل.',
+        },
+      },
+      {
+        id: 'b9b',
+        type: 'heading',
+        data: {
+          text: 'خامساً: مواءمة عقود التأسيس وإجراءات التحول والتخارج والوقاية من النزاعات',
+          level: 2,
+        },
+      },
+      {
+        id: 'b9c',
+        type: 'paragraph',
+        data: {
+          text: 'كما وسّع النظام مرونة عمليات الاندماج والاستحواذ والتحول بين الأشكال النظامية المختلفة للشركات، ونظم إجراءات التقسيم وتصفية الشركات المتعثرة أو التي استنفدت غرضها بصورة أكثر وضوحاً وسرعة. ومن المهم للمنشآت القائمة ألا تكتفي بتعديلات شكلية عابرة على نصوص عقودها السابقة، بل أن تراجع بشكل شامل آليات الدعوة للجمعيات العامة، ونصاب التصويت في القرارات المصيرية، وقواعد تقييم الحصص عند رغبة أحد الشركاء في التخارج أو بيع حصته لطرف ثالث، بما يضمن انسجام الصياغة التعاقدية مع الإطار النظامي الساري ويقلص مساحات الخلاف التفسيري أمام الدوائر التجارية أو هيئات التحكيم.',
+        },
+      },
+      {
+        id: 'b9d',
+        type: 'list',
+        data: {
+          title: 'محاور عملية للمراجعة الوقائية لحوكمة الشركات:',
+          items: [
+            'مراجعة عقود التأسيس والأنظمة الأساسية للتأكد من توافقها مع الضوابط الحديثة لإدارة الشركات ونصاب القرارات غير العادية.',
+            'توثيق اتفاقيات الشركاء أو المساهمين وربطها بملاحق واضحة تحدد آليات فض النزاعات واللجوء إلى الوساطة أو التحكيم عند الاقتضاء.',
+            'ضبط سياسات الإفصاح عن تعارض المصالح وتنظيم صلاحيات التوقيع والتمثيل الإداري والمالي أمام الجهات الرسمية والمصارف.',
+            'تحديث هياكل الملكية العائلية بآليات مدروسة للانتقال السلس للقيادة وحماية الأصول التشغيلية والعقارية للمنشأة.',
+          ],
+        },
+      },
+      {
+        id: 'b10',
+        type: 'paragraph',
+        data: {
+          text: 'تنبيه معرفي عام: تتناول هذه المادة المبادئ العامة لنظام الشركات السعودي ولوائحه التنفيذية لأغراض التوعية القانونية العامة فحسب، ولا تشكل رأياً قانونياً مخصصاً لأي واقعة أو كيان بعينه، ولا ترتبط بأي عملاء أو ملفات قائمة، وتخضع كل حالة لتقييم مستقل وفق مستنداتها وظروفها النظامية الخاصة.',
+        },
       },
     ],
     seo: {
-      title: 'نظام الشركات السعودي الجديد | رؤى شركة رياض الزهراني للمحاماة',
-      description: 'تحليل نظام الشركات الجديد وتأثيره على حوكمة واستدامة الأعمال في السعودية.',
+      title: 'الأبعاد الإستراتيجية لنظام الشركات السعودي الجديد',
+      description: 'تحليل عام لأبرز أحكام نظام الشركات السعودي الجديد في حوكمة الشركات العائلية، شركة المساهمة المبسطة، وواجبات الإدارة.',
     },
     approvalEvidenceRefs: [],
     createdBy: 'admin-rma-01',
@@ -737,18 +835,115 @@ const INITIAL_ARTICLE_REVISIONS: Record<string, ArticleRevision> = {
     locale: 'en',
     title: 'Strategic Dimensions of the New Saudi Companies Law',
     slug: 'new-saudi-companies-law',
-    summary: 'An analytical review of the operational benefits introduced by the Saudi Companies Law for family businesses and simplified joint-stock entities.',
-    readingTimeMinutes: 5,
+    summary: 'A general analytical overview of key statutory developments under the Saudi Companies Law (Royal Decree No. M/132), highlighting simplified joint-stock entities, family governance charters, and fiduciary accountability.',
+    readingTimeMinutes: 4,
     blocks: [
       {
         id: 'b1',
         type: 'paragraph',
-        data: { text: 'The new Saudi Companies Law represents a pivotal structural shift for businesses operating in the Kingdom, introducing modern flexible corporate forms.' },
+        data: {
+          text: 'The Saudi Companies Law enacted by Royal Decree No. (M/132) dated 1/12/1443H marks a foundational modernisation of the Kingdom’s commercial legislative framework. Consolidating commercial, non-profit, and professional companies into a single unified statute, the law streamlines incorporation rules, removes outdated procedural barriers, and equips enterprises with flexible governance tools aligned with international commercial practice.',
+        },
+      },
+      {
+        id: 'b2',
+        type: 'heading',
+        data: {
+          text: '1. Simplified Joint-Stock Companies & Structural Flexibility',
+          level: 2,
+        },
+      },
+      {
+        id: 'b3',
+        type: 'paragraph',
+        data: {
+          text: 'A central innovation of the statute is the Simplified Joint-Stock Company (SJSC), designed to serve venture capital investments, startups, and agile holding vehicles. The law removes mandatory minimum share-capital thresholds for this form and permits management by a single executive, multiple managers, or a board tailored within the articles of association. Shareholders may also structure multiple classes of shares carrying distinct voting, dividend, redemption, or liquidation rights, enabling clear alignment of commercial expectations during financing rounds.',
+        },
+      },
+      {
+        id: 'b4',
+        type: 'heading',
+        data: {
+          text: '2. Family Business Continuity & Binding Family Charters',
+          level: 2,
+        },
+      },
+      {
+        id: 'b5',
+        type: 'paragraph',
+        data: {
+          text: 'Recognising the vital role of family enterprises across the Saudi economy, the law expressly allows companies to incorporate binding provisions derived from a Family Charter directly into their articles of association or bylaws. Properly integrated, these mechanisms govern share transfer restrictions, pre-emption rights, valuation formulas for exiting heirs, dividend distributions, and criteria for family participation in leadership — significantly reducing the likelihood of generational deadlock or asset fragmentation.',
+        },
+      },
+      {
+        id: 'b6',
+        type: 'heading',
+        data: {
+          text: '3. Codified Fiduciary Duties & Board Accountability',
+          level: 2,
+        },
+      },
+      {
+        id: 'b7',
+        type: 'paragraph',
+        data: {
+          text: 'The statute explicitly codifies managers’ and directors’ duties of care and loyalty, requiring informed, diligent decision-making in the company’s best interests alongside strict conflict-of-interest disclosure before executing related-party transactions. By balancing clear liability standards with recognition of sound business judgement taken in good faith, the law strengthens corporate transparency for shareholders, financiers, and regulatory bodies alike.',
+        },
+      },
+      {
+        id: 'b8',
+        type: 'heading',
+        data: {
+          text: '4. Financing Instruments, Employee Incentives & Dispute Prevention',
+          level: 2,
+        },
+      },
+      {
+        id: 'b9',
+        type: 'paragraph',
+        data: {
+          text: 'Additional reforms expand capital-raising and retention options, including enabling limited liability companies to issue negotiable debt or sukuk financing instruments under Capital Market Authority rules, allocating shares for employee incentive plans, and formally recognising binding shareholders’ agreements alongside corporate bylaws. From a preventive legal standpoint, reviewing legacy articles of association and aligning internal governance policies proactively remains the most reliable safeguard against future corporate disputes.',
+        },
+      },
+      {
+        id: 'b9b',
+        type: 'heading',
+        data: {
+          text: '5. Aligning Legacy Charters, Conversions & Preventive Governance',
+          level: 2,
+        },
+      },
+      {
+        id: 'b9c',
+        type: 'paragraph',
+        data: {
+          text: 'The statute further streamlines corporate mergers, conversions between legal forms, corporate divisions, and orderly liquidation procedures, providing enterprises with clearer statutory timelines when restructuring operations. For existing companies, updating corporate charters involves more than minor formal edits: general assembly notice periods, extraordinary resolution quorums, share valuation mechanics on partner exit, and pre-emption workflows should all be harmonised with the statute to minimise interpretive friction in commercial or arbitral proceedings.',
+        },
+      },
+      {
+        id: 'b9d',
+        type: 'list',
+        data: {
+          title: 'Practical Corporate Governance Review Checklist:',
+          items: [
+            'Audit existing articles of association and bylaws against updated statutory quorum and management rules.',
+            'Align shareholders’ agreements cleanly with constitutional documents, including deadlock and dispute-resolution clauses.',
+            'Formalise conflict-of-interest disclosure procedures and dual-signatory financial authority matrices.',
+            'Integrate family-business succession rules to support orderly leadership transition and asset continuity.',
+          ],
+        },
+      },
+      {
+        id: 'b10',
+        type: 'paragraph',
+        data: {
+          text: 'General Educational Notice: This article outlines general principles of the Saudi Companies Law and its implementing regulations for informational purposes only. It does not constitute legal advice for any specific entity, client, or transaction, and every corporate structure requires independent legal review.',
+        },
       },
     ],
     seo: {
-      title: 'New Saudi Companies Law Analysis | Alzahrani Law Insights',
-      description: 'Strategic analysis on the corporate reforms enacted under the new Saudi Companies Law.',
+      title: 'Strategic Dimensions of the New Saudi Companies Law',
+      description: 'General overview of corporate reforms under the Saudi Companies Law: simplified joint-stock companies, family charters, and fiduciary duties.',
     },
     approvalEvidenceRefs: [],
     createdBy: 'admin-rma-01',
@@ -860,7 +1055,7 @@ function generateInitialProjections(): PublicContentProjection[] {
         summary: rev.summary,
         blocks: rev.blocks,
         metadata: {
-          readingTimeMinutes: rev.readingTimeMinutes || 5,
+          readingTimeMinutes: computeArticleReadingTimeMinutes(rev.summary, rev.blocks),
           categoryIds: a.categoryIds,
         },
         seo: {

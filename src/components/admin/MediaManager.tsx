@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Upload,
   Image as LucideImage,
@@ -227,10 +228,13 @@ export function MediaManager() {
             <div className="md:col-span-1 border-2 border-dashed border-border rounded-sm p-4 flex flex-col items-center justify-center text-center hover:border-gold transition-colors bg-canvas/50 relative">
               {previewUrl ? (
                 <div className="space-y-2 w-full">
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Preview"
-                    className="max-h-40 mx-auto rounded object-contain border border-border"
+                    width={320}
+                    height={160}
+                    unoptimized
+                    className="max-h-40 w-auto mx-auto rounded object-contain border border-border"
                   />
                   <p className="text-xs text-muted truncate max-w-full">
                     {selectedFile?.name} ({(selectedFile!.size / 1024).toFixed(1)} KB)
@@ -336,10 +340,13 @@ export function MediaManager() {
                 className="bg-surface border border-border rounded-sm overflow-hidden flex flex-col justify-between group shadow-xs hover:border-gold/50 transition-colors"
               >
                 <div className="relative aspect-video bg-canvas overflow-hidden border-b border-border flex items-center justify-center">
-                  <img
+                  <Image
                     src={asset.secureUrl}
                     alt={asset.altText.ar}
-                    className="max-h-full max-w-full object-contain"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-contain"
                   />
                   <span className="absolute top-2 start-2 bg-ink/80 text-white text-[10px] px-1.5 py-0.5 rounded font-mono uppercase">
                     {asset.format}

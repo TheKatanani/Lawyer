@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/firebase-client';
@@ -12,8 +11,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +40,7 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'فشل تسجيل الدخول. يرجى التحقق من صحة البريد الإلكتروني وكلمة المرور.');
       }
 
-      router.push('/admin');
-      router.refresh();
+      window.location.assign('/admin');
     } catch (err: any) {
       setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البريد الإلكتروني وكلمة المرور.');
     } finally {

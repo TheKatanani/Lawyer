@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   CalendarCheck,
   Search,
@@ -123,27 +123,24 @@ export function ConsultationsManager({
     }
   }, [initialConsultations]);
 
-  const refreshList = async (showLoading = false) => {
+  const refreshList = useCallback(async (showLoading = false) => {
     if (showLoading) setIsRefreshing(true);
     try {
       const res = await fetch('/api/admin/consultations', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        setConsultations(data.consultations || []);
-        // Update selectedItem if open
-        if (selectedItem) {
-          const updated = (data.consultations || []).find(
-            (c: ConsultationRequest) => c.id === selectedItem.id
-          );
-          if (updated) setSelectedItem(updated);
-        }
+        const nextList: ConsultationRequest[] = data.consultations || [];
+        setConsultations(nextList);
+        setSelectedItem((prev) =>
+          prev ? nextList.find((c) => c.id === prev.id) || prev : prev
+        );
       }
     } catch (err) {
       console.error('Failed to reload consultations', err);
     } finally {
       if (showLoading) setIsRefreshing(false);
     }
-  };
+  }, []);
 
   // Live polling every 10 seconds and on initial mount
   useEffect(() => {
@@ -152,7 +149,7 @@ export function ConsultationsManager({
       refreshList();
     }, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshList]);
 
   const handleSave = async (targetStatus?: ConsultationStatus) => {
     if (!selectedItem) return;
@@ -727,7 +724,7 @@ export function ConsultationsManager({
                       <label className="font-semibold text-ink block">عنوان المقر أو القاعة</label>
                       <input
                         type="text"
-                        placeholder="الرياض، طريق الملك فهد - برج الشركة، الطابق 14"
+                        placeholder="جدة، برج هيدكوارترز، الدور 46، مكتب 4602"
                         value={editMeetingAddress}
                         onChange={(e) => setEditMeetingAddress(e.target.value)}
                         className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"

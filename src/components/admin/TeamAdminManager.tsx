@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Scale,
   Plus,
@@ -326,9 +327,12 @@ export function TeamAdminManager() {
                   <div className="flex items-start gap-4">
                     <div className="w-16 h-16 rounded-full bg-signature/10 border border-gold/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {ar?.portraitAssetId ? (
-                        <img
+                        <Image
                           src={ar.portraitAssetId}
                           alt={ar.fullName}
+                          width={64}
+                          height={64}
+                          unoptimized
                           className="w-full h-full object-cover"
                         />
                       ) : (

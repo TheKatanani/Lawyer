@@ -48,6 +48,7 @@ interface PaymentRequestViewProps {
   locale: string;
   publishableKey: string;
   applePayEnabled: boolean;
+  paymentsEnabled?: boolean;
   officialPhone: string;
   officialWhatsApp: string;
 }
@@ -57,6 +58,7 @@ export function PaymentRequestView({
   locale,
   publishableKey,
   applePayEnabled,
+  paymentsEnabled = false,
   officialPhone,
   officialWhatsApp,
 }: PaymentRequestViewProps) {
@@ -128,6 +130,8 @@ export function PaymentRequestView({
   // Mount Moyasar MPF form when ready
   useEffect(() => {
     if (
+      !paymentsEnabled ||
+      !publishableKey ||
       data.status !== 'unpaid' ||
       !scriptLoaded ||
       !window.Moyasar ||
@@ -192,7 +196,7 @@ export function PaymentRequestView({
       console.error('[MOYASAR_INIT_ERROR]', e);
       setErrorMsg(isAr ? 'تعذر إتمام الدفع: فشل تهيئة نموذج السداد' : 'Failed to initialize payment form');
     }
-  }, [data, scriptLoaded, moyasarMounted, verifying, publishableKey, locale, isAr, applePayEnabled]);
+  }, [paymentsEnabled, data, scriptLoaded, moyasarMounted, verifying, publishableKey, locale, isAr, applePayEnabled]);
 
   const handlePrint = () => {
     window.print();
@@ -209,18 +213,22 @@ export function PaymentRequestView({
   return (
     <div className="min-h-screen bg-canvas py-10 sm:py-16 px-4 sm:px-6 lg:px-8 font-body-ar">
       {/* Moyasar MPF Stylesheet & Script */}
-      <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.14.0/moyasar.css" />
-      <Script
-        src="https://cdn.moyasar.com/mpf/1.14.0/moyasar.js"
-        strategy="lazyOnload"
-        onLoad={() => setScriptLoaded(true)}
-      />
+      {paymentsEnabled && Boolean(publishableKey) && (
+        <>
+          <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.14.0/moyasar.css" />
+          <Script
+            src="https://cdn.moyasar.com/mpf/1.14.0/moyasar.js"
+            strategy="lazyOnload"
+            onLoad={() => setScriptLoaded(true)}
+          />
+        </>
+      )}
 
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Top Branding Header */}
         <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="relative w-44 h-14 sm:w-56 sm:h-18">
+            <div className="relative w-44 h-14 sm:w-56 sm:h-[4.5rem]">
               <Image
                 src="/logo-gold-full.png"
                 alt="شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية"
@@ -471,52 +479,88 @@ export function PaymentRequestView({
             </div>
 
             {/* Moyasar Form Container Card */}
-            <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading-ar font-bold text-lg text-ink flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-gold-ink" />
-                    <span>{isAr ? 'خيارات الدفع الإلكتروني' : 'Payment Methods'}</span>
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <Lock className="w-3.5 h-3.5 text-success" />
-                    <span>
-                      {isAr ? (
-                        <>
-                          تشفير <span dir="ltr" className="inline-block font-mono">256-bit</span> آمن
-                        </>
-                      ) : (
-                        <span dir="ltr">256-bit Encrypted</span>
-                      )}
-                    </span>
+            {paymentsEnabled && Boolean(publishableKey) ? (
+              <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-heading-ar font-bold text-lg text-ink flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-gold-ink" />
+                      <span>{isAr ? 'خيارات الدفع الإلكتروني' : 'Payment Methods'}</span>
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <Lock className="w-3.5 h-3.5 text-success" />
+                      <span>
+                        {isAr ? (
+                          <>
+                            تشفير <span dir="ltr" className="inline-block font-mono">256-bit</span> آمن
+                          </>
+                        ) : (
+                          <span dir="ltr">256-bit Encrypted</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-xs text-muted">
+                    {isAr
+                      ? 'يتم السداد المباشر عبر بطاقات مدى السعودية، البطاقات الائتمانية (فيزا / ماستركارد)، أو Apple Pay'
+                      : 'Pay securely via Mada, Credit Cards (Visa/Mastercard), or Apple Pay'}
+                  </p>
                 </div>
-                <p className="text-xs text-muted">
-                  {isAr
-                    ? 'يتم السداد المباشر عبر بطاقات مدى السعودية، البطاقات الائتمانية (فيزا / ماستركارد)، أو Apple Pay'
-                    : 'Pay securely via Mada, Credit Cards (Visa/Mastercard), or Apple Pay'}
-                </p>
-              </div>
 
-              {/* The Moyasar MPF mounted container */}
-              <div
-                ref={formContainerRef}
-                className="mysr-form-container w-full min-h-[220px]"
-              >
-                {!scriptLoaded && (
-                  <div className="flex items-center justify-center py-12 gap-2 text-muted text-sm">
-                    <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-                    <span>{isAr ? 'جاري تحميل بوابة الدفع...' : 'Loading payment gateway...'}</span>
-                  </div>
-                )}
-              </div>
+                {/* The Moyasar MPF mounted container */}
+                <div
+                  ref={formContainerRef}
+                  className="mysr-form-container w-full min-h-[220px]"
+                >
+                  {!scriptLoaded && (
+                    <div className="flex items-center justify-center py-12 gap-2 text-muted text-sm">
+                      <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                      <span>{isAr ? 'جاري تحميل بوابة الدفع...' : 'Loading payment gateway...'}</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Supported payment badges footer */}
-              <div className="pt-4 border-t border-border/40 flex items-center justify-between text-xs text-muted">
-                <span>{isAr ? 'المدفوعات الإلكترونية بواسطة ميسّر' : 'Powered by Moyasar Payments'}</span>
-                <span className="font-mono text-[11px] text-muted/70">PCI-DSS Certified</span>
+                {/* Supported payment badges footer */}
+                <div className="pt-4 border-t border-border/40 flex items-center justify-between text-xs text-muted">
+                  <span>{isAr ? 'المدفوعات الإلكترونية بواسطة ميسّر' : 'Powered by Moyasar Payments'}</span>
+                  <span className="font-mono text-[11px] text-muted/70">PCI-DSS Certified</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 sm:p-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-gold/10 text-gold-ink flex items-center justify-center mx-auto">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-heading-ar font-bold text-base text-ink">
+                    {isAr ? 'بوابة الدفع الإلكتروني متوقفة مؤقتاً' : 'Online Payment Temporarily Unavailable'}
+                  </h3>
+                  <p className="text-xs text-muted leading-relaxed max-w-md mx-auto">
+                    {isAr
+                      ? 'يرجى التواصل مع الإدارة المالية عبر واتساب أو الهاتف المباشر لاستكمال ترتيبات السداد المعتمدة للمكتب.'
+                      : 'Please contact our billing desk via WhatsApp or direct phone to arrange approved invoice settlement.'}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <a
+                    href={`https://wa.me/${officialWhatsApp.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-signature text-surface text-xs font-semibold hover:bg-signature/90 transition"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{isAr ? 'التواصل عبر واتساب' : 'Contact via WhatsApp'}</span>
+                  </a>
+                  <a
+                    href={`tel:${officialPhone.replace(/[^0-9+]/g, '')}`}
+                    dir="ltr"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-border text-ink text-xs font-mono font-semibold hover:bg-canvas transition"
+                  >
+                    {officialPhone}
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

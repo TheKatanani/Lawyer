@@ -4,6 +4,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ConsultationForm } from '@/components/consultation/ConsultationForm';
+import { buildPageMetadata } from '@/lib/seo';
+import { isPaymentsEnabled } from '@/server/payments/moyasar';
 
 interface Props {
   params: { locale: string };
@@ -24,25 +26,22 @@ function FormFallback() {
 }
 
 export async function generateMetadata({ params: { locale } }: Props): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const t = await getTranslations({ locale, namespace: 'consultation' });
-  const isAr = locale === 'ar';
 
-  return {
-    title: isAr
-      ? `${t('title')} | شركة رياض محمد الزهراني للمحاماة`
-      : `${t('title')} | Riyadh Alzahrani Law Firm`,
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/consultation',
+    title: t('title'),
     description: t('explanation'),
-    robots: {
-      index: true,
-      follow: true,
-    },
-  };
+  });
 }
 
 export default async function ConsultationPage({ params: { locale } }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'consultation' });
   const currentLocale = locale as SupportedLocale;
+  const paymentsEnabled = isPaymentsEnabled();
 
   // Fetch active published services and lawyers from projections
   const publishedServices = await listPublishedProjections('service', currentLocale);
@@ -94,6 +93,7 @@ export default async function ConsultationPage({ params: { locale } }: Props) {
             services={servicesData}
             lawyers={lawyersData}
             messages={messages}
+            paymentsEnabled={paymentsEnabled}
           />
         </Suspense>
       </div>

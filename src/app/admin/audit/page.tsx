@@ -5,6 +5,9 @@ import { store } from '@/server/db/store';
 import { hasCapability } from '@/server/permissions/rbac';
 import { History, Shield, Lock } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminAuditPage() {
   const user = await getSessionUser();
   if (!user) redirect('/admin/login');

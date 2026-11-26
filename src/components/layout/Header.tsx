@@ -56,14 +56,14 @@ export function Header({ locale, messages }: HeaderProps) {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-surface/95 backdrop-blur-md border-b border-border shadow-sm py-0'
-          : 'bg-canvas/90 backdrop-blur-sm border-b border-border/70 py-1'
+          ? 'bg-canvas/95 backdrop-blur-md border-b border-border shadow-sm py-0'
+          : 'bg-canvas border-b border-border/70 py-0'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           className={`flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? 'h-16 sm:h-18' : 'h-20'
+            isScrolled ? 'h-16 sm:h-[4.5rem]' : 'h-20'
           }`}
         >
           {/* Logo & Identity */}
@@ -122,7 +122,7 @@ export function Header({ locale, messages }: HeaderProps) {
             <Link
               href={switchLocalePath}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-sm border border-border text-ink hover:bg-surface hover:border-gold/50 transition-all duration-200 shadow-xs hover:shadow-xs"
-              title="Switch Language"
+              title={isRTL ? 'تبديل اللغة' : 'Switch Language'}
             >
               <Globe className="w-3.5 h-3.5 text-gold-ink" />
               <span>{messages.languageSwitchLabel}</span>
@@ -146,7 +146,7 @@ export function Header({ locale, messages }: HeaderProps) {
             <Link
               href={switchLocalePath}
               className="p-2 text-ink hover:text-gold-ink focus:outline-none transition-colors"
-              aria-label="Switch Language"
+              aria-label={isRTL ? 'Switch to English' : 'التبديل إلى العربية'}
             >
               <Globe className="w-5 h-5 text-gold-ink" />
             </Link>
@@ -155,7 +155,7 @@ export function Header({ locale, messages }: HeaderProps) {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-sm text-ink hover:bg-surface focus:outline-none focus:ring-2 focus:ring-gold transition-colors"
               aria-expanded={mobileMenuOpen}
-              aria-label="Toggle navigation menu"
+              aria-label={isRTL ? 'فتح أو إغلاق قائمة التنقل' : 'Toggle navigation menu'}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>

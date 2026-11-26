@@ -1,6 +1,27 @@
 import React from 'react';
-import { ShieldCheck, Lock, FileText, Database, UserCheck } from 'lucide-react';
+import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
+import { SupportedLocale } from '@/server/types';
+import { buildPageMetadata } from '@/lib/seo';
+import { FIRM_DETAILS } from '@/config/compliance';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/privacy',
+    title: isAr ? 'سياسة الخصوصية وحماية البيانات الشخصية' : 'Privacy Notice & Data Protection',
+    description: isAr
+      ? 'إشعار الخصوصية وحماية البيانات الشخصية المُعدّ وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL) وضوابط سدايا.'
+      : 'Privacy notice and personal data protection safeguards aligned with the Saudi Personal Data Protection Law (PDPL).',
+  });
+}
 
 export default async function PrivacyPage({
   params: { locale },
@@ -37,8 +58,8 @@ export default async function PrivacyPage({
             </h2>
             <p className="text-muted">
               {isAr
-                ? 'تُعد شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية، ومقرها مدينة الرياض بالمملكة العربية السعودية، هي "جهة التحكم" المسؤولة عن معالجة بياناتك الشخصية التي تُجمع عبر هذا الموقع الإلكتروني.'
-                : 'Riyadh Mohammed Alzahrani Legal Company, headquartered in Riyadh, Kingdom of Saudi Arabia, acts as the designated Data Controller responsible for processing personal data submitted across this website.'}
+                ? `تُعد ${FIRM_DETAILS.nameAr}، ومقرها مدينة ${FIRM_DETAILS.cityAr} بالمملكة العربية السعودية، هي "جهة التحكم" المسؤولة عن معالجة بياناتك الشخصية التي تُجمع عبر هذا الموقع الإلكتروني.`
+                : `${FIRM_DETAILS.nameEn}, headquartered in ${FIRM_DETAILS.cityEn}, Kingdom of Saudi Arabia, acts as the designated Data Controller responsible for processing personal data submitted across this website.`}
             </p>
           </div>
 
@@ -98,8 +119,8 @@ export default async function PrivacyPage({
             </h3>
             <p className="text-xs text-muted leading-relaxed">
               {isAr
-                ? 'لممارسة حقوقك أو لتقديم أي استفسار حول سياسة الخصوصية، يرجى مراسلة مسؤول حماية البيانات عبر البريد: privacy@rma-law.sa'
-                : 'To exercise your statutory rights or submit a privacy inquiry, contact our Data Protection Officer at: privacy@rma-law.sa'}
+                ? `لممارسة حقوقك أو لتقديم أي استفسار حول سياسة الخصوصية، يرجى مراسلة مسؤول حماية البيانات عبر البريد: ${FIRM_DETAILS.email}`
+                : `To exercise your statutory rights or submit a privacy inquiry, contact our Data Protection Officer at: ${FIRM_DETAILS.email}`}
             </p>
           </div>
         </div>

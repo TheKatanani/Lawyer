@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { store } from '@/server/db/store';
@@ -7,6 +8,30 @@ import { Role, AdminUser } from '@/server/types';
 import { getClientIp, checkRateLimit } from '@/server/security/rate-limit';
 
 const GENERIC_LOGIN_ERROR = 'بيانات الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
+
+async function verifyFirebaseIdToken(idToken: string, expectedEmail: string): Promise<boolean> {
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
+  if (!apiKey || !idToken) return false;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    const user = Array.isArray(data?.users) ? data.users[0] : null;
+    if (!user?.email) return false;
+    return String(user.email).trim().toLowerCase() === expectedEmail && !user.disabled;
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +55,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify Firebase idToken server-side when provided
+    const isVerifiedFirebaseToken = idToken
+      ? await verifyFirebaseIdToken(String(idToken), normalizedEmail)
+      : false;
+
     // Lookup staff user in store
     let matchedUser = Array.from(store.admins.values()).find(
       (u) => u.email.toLowerCase() === normalizedEmail
@@ -46,21 +76,25 @@ export async function POST(req: NextRequest) {
       normalizedEmail === 'admin@rma-law.sa';
 
     if (!matchedUser) {
-      if (idToken || isDesignatedSuperAdmin) {
-        // Auto-provision user into the administrative store
-        const newUid = `admin-${Date.now().toString().slice(-6)}`;
+      if (isVerifiedFirebaseToken || isDesignatedSuperAdmin) {
+        // Deterministic UID per email so cross-lambda identity remains stable
+        const deterministicUid = `admin-${crypto
+          .createHash('sha256')
+          .update(normalizedEmail)
+          .digest('hex')
+          .slice(0, 12)}`;
         const newRole: Role = isDesignatedSuperAdmin ? 'super_admin' : 'editor';
         const newUser: AdminUser = {
-          uid: newUid,
+          uid: deterministicUid,
           email: normalizedEmail,
           displayName: normalizedEmail.split('@')[0],
           role: newRole,
           isActive: true,
-          mfaEnrolled: Boolean(idToken),
+          mfaEnrolled: isVerifiedFirebaseToken,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        store.admins.set(newUid, newUser);
+        store.admins.set(deterministicUid, newUser);
         matchedUser = newUser;
       }
     }
@@ -95,12 +129,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    if (!password && !idToken) {
+    if (!password && !isVerifiedFirebaseToken) {
       return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // If idToken is present, Firebase client has already verified the password
-    if (!idToken) {
+    // Verify password unless already authenticated via verified Firebase idToken
+    if (!isVerifiedFirebaseToken) {
       const defaultExpectedPassword = process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!';
       const isValidPassword = matchedUser.passwordHash
         ? verifyPassword(password, matchedUser.passwordHash)
@@ -121,8 +155,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Issue Session Cookie
-    const sessionToken = encodeSessionPayload(matchedUser.uid, matchedUser.email, matchedUser.role);
+    // Issue Signed HS256 JWT Session Cookie
+    const sessionToken = encodeSessionPayload(
+      matchedUser.uid,
+      matchedUser.email,
+      matchedUser.role,
+      matchedUser.displayName
+    );
     const cookieStore = cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {

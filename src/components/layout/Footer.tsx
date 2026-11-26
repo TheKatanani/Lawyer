@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Phone, MessageSquare, Shield, Scale, MapPin, Mail, Globe } from 'lucide-react';
-import { FIRM_DETAILS } from '@/config/compliance';
+import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface FooterProps {
   locale: string;
@@ -21,7 +21,7 @@ export function Footer({ locale }: FooterProps) {
               <div className="relative w-11 h-11 flex-shrink-0">
                 <Image
                   src="/logo-gold-emblem.png"
-                  alt="RMA Legal"
+                  alt={isAr ? 'شعار شركة رياض محمد الزهراني للمحاماة' : 'Riyadh Alzahrani Law Firm Emblem'}
                   fill
                   className="object-contain"
                 />
@@ -40,9 +40,13 @@ export function Footer({ locale }: FooterProps) {
             <div className="flex items-center gap-2 text-xs text-gold font-medium pt-2">
               <Scale className="w-4 h-4 text-gold flex-shrink-0" />
               <span>
-                {isAr
-                  ? 'مرخصة ومسجلة بوزارة العدل'
-                  : 'Licensed by Saudi Ministry of Justice'}
+                {UNVERIFIED_CLAIMS_CONFIG.enableMojLicenseNumber
+                  ? isAr
+                    ? `مرخصة ومسجلة بوزارة العدل · ترخيص رقم ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}`
+                    : `Licensed by Saudi Ministry of Justice · No. ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}`
+                  : isAr
+                    ? 'مرخصة ومسجلة بوزارة العدل'
+                    : 'Licensed by Saudi Ministry of Justice'}
               </span>
             </div>
           </div>
@@ -146,8 +150,8 @@ export function Footer({ locale }: FooterProps) {
           <p>
             © {new Date().getFullYear()}{' '}
             {isAr
-              ? 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية. جميع الحقوق محفوظة.'
-              : 'Riyadh Mohammed Alzahrani Legal Company. All rights reserved.'}
+              ? `${FIRM_DETAILS.nameAr}. جميع الحقوق محفوظة.`
+              : `${FIRM_DETAILS.nameEn}. All rights reserved.`}
           </p>
           <p className="flex items-center gap-1.5 text-on-dark/60">
             <Shield className="w-3.5 h-3.5 text-gold/70" />

@@ -1,8 +1,8 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { ArrowUpRight, Scale, Shield, Building2, User, Phone, MessageSquare } from 'lucide-react';
+import { ArrowUpRight, MessageSquare } from 'lucide-react';
 import { Hero } from '@/components/sections/Hero';
 import { StatsBanner } from '@/components/sections/StatsBanner';
 import { ServicesPreview } from '@/components/sections/ServicesPreview';
@@ -11,13 +11,32 @@ import { MethodologySection } from '@/components/sections/MethodologySection';
 import { SpecialisedServices } from '@/components/sections/SpecialisedServices';
 import { InstitutionalExcellence } from '@/components/sections/InstitutionalExcellence';
 import { ClosingWord } from '@/components/sections/ClosingWord';
-import { ValuesSection } from '@/components/sections/ValuesSection';
 import { JourneySection } from '@/components/sections/JourneySection';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { FIRM_DETAILS } from '@/config/compliance';
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '',
+    title: {
+      absolute: isAr ? settings.seoTitleAr : settings.seoTitleEn,
+    },
+    description: isAr ? settings.seoDescAr : settings.seoDescEn,
+  });
+}
 
 export default async function HomePage({
   params: { locale },
@@ -30,8 +49,6 @@ export default async function HomePage({
   const isAr = locale === 'ar';
 
   const publishedServices = await listPublishedProjections('service', currentLocale);
-  const publishedTeam = await listPublishedProjections('teamMember', currentLocale);
-  const publishedInsights = await listPublishedProjections('article', currentLocale);
   const settings = store.siteSettings || INITIAL_SETTINGS;
 
   const heroMessages = {
@@ -53,17 +70,6 @@ export default async function HomePage({
       business: t('servicesSection.filters.business'),
     },
     viewDetails: t('servicesSection.viewDetails'),
-  };
-
-  const valuesMessages = {
-    eyebrow: t('valuesSection.eyebrow'),
-    heading: t('valuesSection.heading'),
-    value1Title: t('valuesSection.value1Title'),
-    value1Desc: t('valuesSection.value1Desc'),
-    value2Title: t('valuesSection.value2Title'),
-    value2Desc: t('valuesSection.value2Desc'),
-    value3Title: t('valuesSection.value3Title'),
-    value3Desc: t('valuesSection.value3Desc'),
   };
 
   const journeyMessages = {

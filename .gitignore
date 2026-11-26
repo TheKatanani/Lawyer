@@ -27,6 +27,9 @@ yarn-error.log*
 .env
 .data
 
+# raw unoptimized source images
+/raw-images/
+
 # vercel
 .vercel
 

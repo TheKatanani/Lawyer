@@ -8,38 +8,33 @@ import { Scale, CheckCircle2, ArrowUpRight, Globe, Languages } from 'lucide-reac
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
+import { buildPageMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
   params: { locale, slug },
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+
   if (
     !UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers &&
     (slug === 'senior-counsel' || slug === 'abdulrahman-alotaibi')
   ) {
-    return { title: 'Lawyer Not Found' };
+    return { title: currentLocale === 'ar' ? 'الصفحة غير موجودة' : 'Lawyer Not Found' };
   }
 
-  const currentLocale = locale as SupportedLocale;
   const projection = await getPublishedProjection('teamMember', slug, currentLocale);
+  if (!projection) {
+    return { title: currentLocale === 'ar' ? 'الصفحة غير موجودة' : 'Lawyer Not Found' };
+  }
 
-  if (!projection) return { title: 'Lawyer Not Found' };
-
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
-  return {
-    title: projection.seo.title,
-    description: projection.seo.description,
-    metadataBase: new URL(origin),
-    alternates: {
-      canonical: projection.seo.canonicalPath,
-      languages: {
-        ar: projection.seo.alternatePaths.ar,
-        en: projection.seo.alternatePaths.en,
-        'x-default': projection.seo.alternatePaths.ar,
-      },
-    },
-  };
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: `/team/${projection.slug}`,
+    title: projection.seo.title || projection.title,
+    description: projection.seo.description || projection.summary,
+  });
 }
 
 export default async function TeamMemberDetailPage({

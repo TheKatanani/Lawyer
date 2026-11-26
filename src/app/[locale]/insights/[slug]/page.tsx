@@ -4,34 +4,30 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getPublishedProjection } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { Clock, BookOpen, ArrowUpRight, Scale, ShieldAlert } from 'lucide-react';
+import { Clock, Scale, ShieldAlert } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { buildPageMetadata } from '@/lib/seo';
+import { computeArticleReadingTimeMinutes, formatReadingTime } from '@/lib/reading-time';
 
 export async function generateMetadata({
   params: { locale, slug },
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
-  const currentLocale = locale as SupportedLocale;
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const projection = await getPublishedProjection('article', slug, currentLocale);
 
-  if (!projection) return { title: 'Article Not Found' };
+  if (!projection) {
+    return { title: currentLocale === 'ar' ? 'المقال غير موجود' : 'Article Not Found' };
+  }
 
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
-  return {
-    title: projection.seo.title,
-    description: projection.seo.description,
-    metadataBase: new URL(origin),
-    alternates: {
-      canonical: projection.seo.canonicalPath,
-      languages: {
-        ar: projection.seo.alternatePaths.ar,
-        en: projection.seo.alternatePaths.en,
-        'x-default': projection.seo.alternatePaths.ar,
-      },
-    },
-  };
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: `/insights/${projection.slug}`,
+    title: projection.seo.title || projection.title,
+    description: projection.seo.description || projection.summary,
+  });
 }
 
 export default async function ArticleDetailPage({
@@ -45,6 +41,8 @@ export default async function ArticleDetailPage({
 
   const article = await getPublishedProjection('article', slug, currentLocale);
   if (!article) notFound();
+
+  const readMinutes = computeArticleReadingTimeMinutes(article.summary, article.blocks);
 
   return (
     <article className="py-12 sm:py-16 lg:py-20 bg-canvas">
@@ -67,7 +65,7 @@ export default async function ArticleDetailPage({
             <div className="flex items-center gap-6 text-xs text-muted pt-2 border-b border-border pb-6">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-gold-ink" />
-                <span>{isAr ? 'قراءة في 5 دقائق' : '5 min read'}</span>
+                <span>{formatReadingTime(readMinutes, locale)}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <Scale className="w-4 h-4 text-gold-ink" />
@@ -88,13 +86,44 @@ export default async function ArticleDetailPage({
 
         {/* Article Body Blocks */}
         <div className="space-y-6 text-ink text-base sm:text-lg leading-relaxed">
-          {article.blocks?.map((b, bIdx) => (
-            <ScrollReveal key={b.id} direction="up" delay={120 + bIdx * 60}>
-              <div className="p-2">
-                <p>{b.data?.text}</p>
-              </div>
-            </ScrollReveal>
-          ))}
+          {article.blocks?.map((b, bIdx) => {
+            if (b.type === 'heading') {
+              return (
+                <ScrollReveal key={b.id} direction="up" delay={100 + bIdx * 40}>
+                  <h2 className="font-heading-ar font-bold text-xl sm:text-2xl text-ink pt-4">
+                    {b.data?.text}
+                  </h2>
+                </ScrollReveal>
+              );
+            }
+            if (b.type === 'list' && Array.isArray(b.data?.items)) {
+              return (
+                <ScrollReveal key={b.id} direction="up" delay={100 + bIdx * 40}>
+                  <ul className="list-disc list-inside space-y-2 text-muted px-2">
+                    {b.data.items.map((item: string, idx: number) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </ScrollReveal>
+              );
+            }
+            if (b.type === 'quote') {
+              return (
+                <ScrollReveal key={b.id} direction="up" delay={100 + bIdx * 40}>
+                  <blockquote className="p-5 bg-surface border-s-4 border-gold text-ink italic rounded-sm">
+                    {b.data?.text}
+                  </blockquote>
+                </ScrollReveal>
+              );
+            }
+            return (
+              <ScrollReveal key={b.id} direction="up" delay={100 + bIdx * 40}>
+                <div className="p-1">
+                  <p>{b.data?.text}</p>
+                </div>
+              </ScrollReveal>
+            );
+          })}
         </div>
 
         {/* Mandatory Educational Disclaimer */}

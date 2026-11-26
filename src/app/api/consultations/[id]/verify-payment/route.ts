@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { store } from '@/server/db/store';
-import { fetchMoyasarPayment } from '@/server/payments/moyasar';
+import { fetchMoyasarPayment, isPaymentsEnabled } from '@/server/payments/moyasar';
+
+const VerifyConsultationPaymentSchema = z.object({
+  paymentId: z.string().trim().min(1).max(120).optional(),
+  chosenMethod: z.enum(['office', 'online']).optional(),
+});
 
 interface Params {
   params: {
@@ -16,8 +22,12 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
       return NextResponse.json({ error: 'Consultation record not found.' }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { paymentId, chosenMethod } = body;
+    const rawBody = await req.json().catch(() => null);
+    const parsed = VerifyConsultationPaymentSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid payment verification payload.' }, { status: 400 });
+    }
+    const { paymentId, chosenMethod } = parsed.data;
 
     // Handle "pay at office" choice if payment is optional
     if (chosenMethod === 'office') {
@@ -37,6 +47,13 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
         consultation,
         message: 'Pay at office recorded successfully.',
       });
+    }
+
+    if (!isPaymentsEnabled()) {
+      return NextResponse.json(
+        { error: 'Online payments are currently disabled.' },
+        { status: 503 }
+      );
     }
 
     if (!paymentId || typeof paymentId !== 'string') {

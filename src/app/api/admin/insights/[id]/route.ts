@@ -3,6 +3,7 @@ import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { publishArticlePaired, unpublishArticle } from '@/server/repositories/content';
+import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
 
 export async function GET(
   req: NextRequest,
@@ -87,9 +88,9 @@ export async function PATCH(
       if (contentAr !== undefined) {
         arRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: contentAr.trim() } }];
       }
-      if (readingTimeMinutes !== undefined) arRev.readingTimeMinutes = Number(readingTimeMinutes) || 5;
+      arRev.readingTimeMinutes = computeArticleReadingTimeMinutes(arRev.summary, arRev.blocks);
       if (coverAssetId !== undefined) arRev.coverAssetId = coverAssetId.trim() || undefined;
-      arRev.seo.title = `${arRev.title} | شركة رياض محمد الزهراني للمحاماة`;
+      arRev.seo.title = arRev.title;
       arRev.seo.description = arRev.summary;
       arRev.seo.imageAssetId = arRev.coverAssetId;
     }
@@ -100,9 +101,9 @@ export async function PATCH(
       if (contentEn !== undefined) {
         enRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: contentEn.trim() } }];
       }
-      if (readingTimeMinutes !== undefined) enRev.readingTimeMinutes = Number(readingTimeMinutes) || 5;
+      enRev.readingTimeMinutes = computeArticleReadingTimeMinutes(enRev.summary, enRev.blocks);
       if (coverAssetId !== undefined) enRev.coverAssetId = coverAssetId.trim() || undefined;
-      enRev.seo.title = `${enRev.title} | Alzahrani Law Insights`;
+      enRev.seo.title = enRev.title;
       enRev.seo.description = enRev.summary;
       enRev.seo.imageAssetId = enRev.coverAssetId;
     }

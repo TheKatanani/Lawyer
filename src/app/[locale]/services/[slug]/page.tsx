@@ -7,35 +7,29 @@ import { SupportedLocale } from '@/server/types';
 import { getPracticeAreaBySlug } from '@/data/practice-areas';
 import { CheckCircle2, ArrowUpRight, ShieldCheck, Quote, Compass, AlertCircle } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
+import { ImageSlot } from '@/components/ImageSlot';
+import { isSiteImageSlug } from '@/lib/site-images';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { buildPageMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
   params: { locale, slug },
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
-  const currentLocale = locale as SupportedLocale;
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const projection = await getPublishedProjection('service', slug, currentLocale);
 
   if (!projection) {
-    return { title: 'Service Not Found' };
+    return { title: currentLocale === 'ar' ? 'الخدمة غير موجودة' : 'Service Not Found' };
   }
 
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
-
-  return {
-    title: projection.seo.title,
-    description: projection.seo.description,
-    metadataBase: new URL(origin),
-    alternates: {
-      canonical: projection.seo.canonicalPath,
-      languages: {
-        ar: projection.seo.alternatePaths.ar,
-        en: projection.seo.alternatePaths.en,
-        'x-default': projection.seo.alternatePaths.ar,
-      },
-    },
-  };
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: `/services/${projection.slug}`,
+    title: projection.seo.title || projection.title,
+    description: projection.seo.description || projection.summary,
+  });
 }
 
 export default async function ServiceDetailPage({
@@ -68,43 +62,65 @@ export default async function ServiceDetailPage({
     ? (isAr ? area.valueToClientAr : area.valueToClientEn)
     : null;
 
+  const imageSlug = isSiteImageSlug(slug)
+    ? slug
+    : isSiteImageSlug(service.slug)
+    ? service.slug
+    : isSiteImageSlug(service.entityId)
+    ? service.entityId
+    : null;
+
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Breadcrumb & Header */}
         <ScrollReveal direction="up">
-          <div className="max-w-4xl space-y-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              <Link href={`/${locale}/services`} className="hover:underline">
-                {isAr ? 'مجالات الممارسة' : 'Practice Areas'}
-              </Link>
-              <span>/</span>
-              <span>{service.title}</span>
-            </div>
+          <div className={imageSlug ? 'grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center' : 'max-w-4xl'}>
+            <div className={`${imageSlug ? 'lg:col-span-7 ' : ''}space-y-4`}>
+              <div className="flex items-center gap-2 text-xs font-semibold text-gold-ink uppercase tracking-wider">
+                <Link href={`/${locale}/services`} className="hover:underline">
+                  {isAr ? 'مجالات الممارسة' : 'Practice Areas'}
+                </Link>
+                <span>/</span>
+                <span>{service.title}</span>
+              </div>
 
-            <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl leading-tight">
-              {service.title}
-            </h1>
+              <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl leading-tight">
+                {service.title}
+              </h1>
 
-            <p className="text-muted text-base sm:text-lg leading-relaxed">
-              {service.summary}
-            </p>
+              <p className="text-muted text-base sm:text-lg leading-relaxed">
+                {service.summary}
+              </p>
 
-            <div className="flex items-center gap-2 pt-2">
-              {service.metadata?.audiences?.map((aud: string) => (
-                <span
-                  key={aud}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xs bg-surface border border-border text-xs font-semibold text-ink"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-gold-ink" />
-                  <span>
-                    {aud === 'business'
-                      ? isAr ? 'خدمات المنشآت والشركات' : 'Corporate & Enterprise'
-                      : isAr ? 'خدمات الأفراد' : 'Private Clients'}
+              <div className="flex items-center gap-2 pt-2">
+                {service.metadata?.audiences?.map((aud: string) => (
+                  <span
+                    key={aud}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xs bg-surface border border-border text-xs font-semibold text-ink"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-gold-ink" />
+                    <span>
+                      {aud === 'business'
+                        ? isAr ? 'خدمات المنشآت والشركات' : 'Corporate & Enterprise'
+                        : isAr ? 'خدمات الأفراد' : 'Private Clients'}
+                    </span>
                   </span>
-                </span>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {imageSlug && (
+              <div className="lg:col-span-5">
+                <ImageSlot
+                  slug={imageSlug}
+                  locale={isAr ? 'ar' : 'en'}
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 42vw"
+                  className="rounded-sm border border-border/80 shadow-md"
+                />
+              </div>
+            )}
           </div>
         </ScrollReveal>
 

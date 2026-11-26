@@ -4,7 +4,7 @@ import { SESSION_COOKIE_NAME, getSessionUser } from '@/server/auth/session';
 import { store } from '@/server/db/store';
 
 export async function POST(req: NextRequest) {
-  const user = await getSessionUser();
+  const user = await getSessionUser(req);
   if (user) {
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
@@ -19,7 +19,13 @@ export async function POST(req: NextRequest) {
   }
 
   const cookieStore = cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -17,6 +17,9 @@ import {
 import { AdminSignoutButton } from '@/components/admin/SignoutButton';
 import '@/app/globals.css';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata = {
   title: 'لوحة التحكم | شركة رياض محمد الزهراني للمحاماة',
   robots: {

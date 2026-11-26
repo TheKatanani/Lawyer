@@ -4,6 +4,9 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { redirect } from 'next/navigation';
 import { MediaManager } from '@/components/admin/MediaManager';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata = {
   title: 'مكتبة الوسائط وCloudinary | لوحة التحكم',
 };

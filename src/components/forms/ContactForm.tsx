@@ -183,10 +183,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
       {/* Name & Phone Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-ink">
+          <label htmlFor="contact-name" className="block text-xs font-semibold text-ink">
             {messages.nameLabel} <span className="text-danger">*</span>
           </label>
           <input
+            id="contact-name"
+            name="name"
             type="text"
             required
             value={name}
@@ -197,10 +199,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-ink">
+          <label htmlFor="contact-phone" className="block text-xs font-semibold text-ink">
             {messages.phoneLabel} <span className="text-danger">*</span>
           </label>
           <input
+            id="contact-phone"
+            name="phone"
             type="tel"
             required
             dir="ltr"
@@ -215,10 +219,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
       {/* Optional Email & Company Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-ink">
+          <label htmlFor="contact-email" className="block text-xs font-semibold text-ink">
             {messages.emailLabel}
           </label>
           <input
+            id="contact-email"
+            name="email"
             type="email"
             dir="ltr"
             value={email}
@@ -230,10 +236,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
 
         {audience === 'business' && (
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-ink">
+            <label htmlFor="contact-company" className="block text-xs font-semibold text-ink">
               {messages.companyLabel} <span className="text-danger">*</span>
             </label>
             <input
+              id="contact-company"
+              name="companyName"
               type="text"
               required={audience === 'business'}
               value={companyName}
@@ -245,10 +253,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
         )}
 
         <div className="space-y-1.5 sm:col-span-2">
-          <label className="block text-xs font-semibold text-ink">
+          <label htmlFor="contact-service" className="block text-xs font-semibold text-ink">
             {messages.serviceLabel}
           </label>
           <select
+            id="contact-service"
+            name="serviceId"
             value={serviceId}
             onChange={(e) => setServiceId(e.target.value)}
             className="w-full px-4 py-3 bg-canvas border border-border rounded-sm text-sm text-ink focus:outline-none focus:border-gold transition-colors"
@@ -265,10 +275,12 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
 
       {/* Message & Sensitive Data Helper */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold text-ink">
+        <label htmlFor="contact-message" className="block text-xs font-semibold text-ink">
           {messages.messageLabel} <span className="text-danger">*</span>
         </label>
         <textarea
+          id="contact-message"
+          name="message"
           required
           rows={4}
           value={message}
@@ -284,6 +296,8 @@ export function ContactForm({ locale, services, messages }: ContactFormProps) {
       {/* Honeypot field (hidden from accessibility tree & visual display) */}
       <div className="hidden" aria-hidden="true">
         <input
+          id="contact-honeypot"
+          aria-label="Leave this field empty"
           type="text"
           tabIndex={-1}
           autoComplete="off"

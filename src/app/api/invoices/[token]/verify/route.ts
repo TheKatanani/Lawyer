@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { store } from '@/server/db/store';
-import { fetchMoyasarPayment, PaymentVerificationError } from '@/server/payments/moyasar';
+import { fetchMoyasarPayment, isPaymentsEnabled, PaymentVerificationError } from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp, logInvalidTokenProbe } from '@/server/security/rate-limit';
 import { PaymentRequestMethod } from '@/server/types';
+
+const VerifyInvoiceSchema = z
+  .object({
+    paymentId: z.string().trim().min(1).max(120).optional(),
+    id: z.string().trim().min(1).max(120).optional(),
+  })
+  .optional();
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +18,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { token: string } }
 ) {
+  if (!isPaymentsEnabled()) {
+    return NextResponse.json(
+      { error: 'خدمة الدفع الإلكتروني غير مفعلة حالياً.' },
+      { status: 503 }
+    );
+  }
   const ip = getClientIp(req);
   const userAgent = req.headers.get('user-agent');
   const token = params.token;
@@ -52,18 +66,23 @@ export async function POST(
     });
   }
 
-  // 4. Extract Moyasar payment ID
+  // 4. Extract and validate Moyasar payment ID
   let paymentId: string | null = null;
   try {
-    const body = await req.json().catch(() => ({}));
-    paymentId = body.paymentId || body.id || null;
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = VerifyInvoiceSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'بيانات التحقق غير صالحة' }, { status: 400 });
+    }
+    paymentId = parsed.data?.paymentId || parsed.data?.id || null;
   } catch {
     // Body parsing error handled below
   }
 
   if (!paymentId) {
     const url = new URL(req.url);
-    paymentId = url.searchParams.get('id');
+    const paramId = url.searchParams.get('id')?.trim();
+    paymentId = paramId && paramId.length <= 120 ? paramId : null;
   }
 
   if (!paymentId) {

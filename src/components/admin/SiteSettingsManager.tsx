@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import {
   Settings,
   Globe,
@@ -51,13 +52,13 @@ const DEFAULT_SETTINGS: SiteSettings = {
   aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
   aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
   aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
-  paymentEnabled: true,
+  paymentEnabled: false,
   paymentRequirement: 'optional',
   consultationFee: 500,
   consultationCurrency: 'SAR',
   applePayEnabled: false,
-  moyasarPublishableKey: 'pk_test_QzcZrt1FfrrBDYEBccN5WGh9SDYnQ9UgayfNUW2N',
-  moyasarSecretKey: 'sk_test_GfpmFMBFHGtcnDEn4GExRQT9pnK2GWzTB3NzGenP',
+  moyasarPublishableKey: '',
+  moyasarSecretKey: '',
   paymentNoticeAr: 'رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي.',
   paymentNoticeEn: 'The initial consultation fee is deductible from overall legal representation fees upon retainer engagement.',
 };
@@ -515,7 +516,14 @@ export function SiteSettingsManager() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded border border-border bg-surface flex items-center justify-center p-1.5 flex-shrink-0 shadow-xs">
                     {settings.faviconUrl ? (
-                      <img src={settings.faviconUrl} alt="Favicon" className="w-8 h-8 object-contain" />
+                      <Image
+                        src={settings.faviconUrl}
+                        alt="Favicon"
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="w-8 h-8 object-contain"
+                      />
                     ) : (
                       <span className="text-[10px] text-muted">لا يوجد</span>
                     )}
@@ -576,7 +584,14 @@ export function SiteSettingsManager() {
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-12 rounded border border-border bg-surface flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
                     {settings.ogImageUrl ? (
-                      <img src={settings.ogImageUrl} alt="OG Image" className="w-full h-full object-cover" />
+                      <Image
+                        src={settings.ogImageUrl}
+                        alt="OG Image"
+                        width={64}
+                        height={48}
+                        unoptimized
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <span className="text-[10px] text-muted">لا يوجد</span>
                     )}

@@ -4,6 +4,7 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { ArticleEntity, ArticleRevision } from '@/server/types';
 import { publishArticlePaired } from '@/server/repositories/content';
+import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
 
 export async function GET(req: NextRequest) {
   try {
@@ -83,6 +84,21 @@ export async function POST(req: NextRequest) {
     const arRevId = `rev-art-${articleId}-ar-1`;
     const enRevId = `rev-art-${articleId}-en-1`;
 
+    const arBlocks = [
+      {
+        id: 'b1',
+        type: 'paragraph' as const,
+        data: { text: contentAr?.trim() || summaryAr?.trim() || titleAr.trim() },
+      },
+    ];
+    const enBlocks = [
+      {
+        id: 'b1',
+        type: 'paragraph' as const,
+        data: { text: contentEn?.trim() || summaryEn?.trim() || titleEn.trim() },
+      },
+    ];
+
     const arRev: ArticleRevision = {
       id: arRevId,
       entityId: articleId,
@@ -91,17 +107,11 @@ export async function POST(req: NextRequest) {
       title: titleAr.trim(),
       slug: articleId,
       summary: summaryAr?.trim() || titleAr.trim(),
-      readingTimeMinutes: Number(readingTimeMinutes) || 5,
+      readingTimeMinutes: computeArticleReadingTimeMinutes(summaryAr?.trim() || titleAr.trim(), arBlocks),
       coverAssetId: coverAssetId?.trim() || undefined,
-      blocks: [
-        {
-          id: 'b1',
-          type: 'paragraph',
-          data: { text: contentAr?.trim() || summaryAr?.trim() || titleAr.trim() },
-        },
-      ],
+      blocks: arBlocks,
       seo: {
-        title: `${titleAr.trim()} | رؤى وتحليلات شركة رياض الزهراني للمحاماة`,
+        title: titleAr.trim(),
         description: summaryAr?.trim() || titleAr.trim(),
         imageAssetId: coverAssetId?.trim() || undefined,
       },
@@ -118,17 +128,11 @@ export async function POST(req: NextRequest) {
       title: titleEn.trim(),
       slug: articleId,
       summary: summaryEn?.trim() || titleEn.trim(),
-      readingTimeMinutes: Number(readingTimeMinutes) || 5,
+      readingTimeMinutes: computeArticleReadingTimeMinutes(summaryEn?.trim() || titleEn.trim(), enBlocks),
       coverAssetId: coverAssetId?.trim() || undefined,
-      blocks: [
-        {
-          id: 'b1',
-          type: 'paragraph',
-          data: { text: contentEn?.trim() || summaryEn?.trim() || titleEn.trim() },
-        },
-      ],
+      blocks: enBlocks,
       seo: {
-        title: `${titleEn.trim()} | Alzahrani Law Insights`,
+        title: titleEn.trim(),
         description: summaryEn?.trim() || titleEn.trim(),
         imageAssetId: coverAssetId?.trim() || undefined,
       },

@@ -5,6 +5,9 @@ import { getAllServices } from '@/server/repositories/content';
 import { hasCapability } from '@/server/permissions/rbac';
 import { ServicesAdminManager } from '@/components/admin/ServicesAdminManager';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminServicesPage() {
   const user = await getSessionUser();
   if (!user) redirect('/admin/login');

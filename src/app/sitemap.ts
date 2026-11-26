@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next';
 import { store } from '@/server/db/store';
+import { getSiteUrl } from '@/lib/seo';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
+  const origin = getSiteUrl();
   const now = new Date();
 
   // Core Static Routes

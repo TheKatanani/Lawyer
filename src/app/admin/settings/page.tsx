@@ -4,6 +4,9 @@ import { getSessionUser } from '@/server/auth/session';
 import { hasCapability } from '@/server/permissions/rbac';
 import { SiteSettingsManager } from '@/components/admin/SiteSettingsManager';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminSettingsPage() {
   const user = await getSessionUser();
   if (!user) redirect('/admin/login');

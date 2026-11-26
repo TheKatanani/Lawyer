@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
+import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface ArticleItem {
   id: string;
@@ -475,7 +476,9 @@ export function InsightsAdminManager() {
                     className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
                   >
                     <option value="riyadh-alzahrani">أ. رياض بن محمد الزهراني</option>
-                    <option value="senior-counsel">د. عبد الرحمن العتيبي</option>
+                    {UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers && (
+                      <option value="senior-counsel">د. عبد الرحمن العتيبي</option>
+                    )}
                   </select>
                 </div>
 

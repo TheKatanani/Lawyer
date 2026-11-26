@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { FIRM_DETAILS } from '@/config/compliance';
+import { getSiteUrl } from '@/lib/seo';
 import '@/app/globals.css';
 
 export function generateStaticParams() {
@@ -20,7 +21,7 @@ export async function generateMetadata({
   params: { locale: string };
 }): Promise<Metadata> {
   const isAr = locale === 'ar';
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://rma-law.sa';
+  const siteUrl = getSiteUrl();
   const settings = store.siteSettings || INITIAL_SETTINGS;
 
   return {
@@ -35,15 +36,7 @@ export async function generateMetadata({
       description: isAr ? settings.seoDescAr : settings.seoDescEn,
       images: settings.ogImageUrl ? [{ url: settings.ogImageUrl, width: 1200, height: 630 }] : undefined,
     },
-    metadataBase: new URL(origin),
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        ar: '/ar',
-        en: '/en',
-        'x-default': '/ar',
-      },
-    },
+    metadataBase: new URL(siteUrl),
     robots: {
       index: true,
       follow: true,

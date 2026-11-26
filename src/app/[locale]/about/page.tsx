@@ -1,13 +1,35 @@
 import React from 'react';
-import Image from 'next/image';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Scale, ShieldCheck, Building2, BookOpen, ArrowUpRight, Compass, Target } from 'lucide-react';
+import { setRequestLocale } from 'next-intl/server';
+import { ArrowUpRight, Compass, Target } from 'lucide-react';
+import { ImageSlot } from '@/components/ImageSlot';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { SupportedLocale } from '@/server/types';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { LeadershipMessage } from '@/components/sections/LeadershipMessage';
 import { MethodologySection } from '@/components/sections/MethodologySection';
 import { InstitutionalExcellence } from '@/components/sections/InstitutionalExcellence';
+import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+
+  return buildPageMetadata({
+    locale: currentLocale,
+    path: '/about',
+    title: isAr ? 'عن الشركة والرؤية المؤسسية' : 'About the Firm & Vision',
+    description: isAr
+      ? 'تعرّف على شركة رياض محمد الزهراني للمحاماة في جدة، خبرة تتجاوز عشرين عاماً في التقاضي والتحكيم ومنهج عملنا الخماسي.'
+      : 'Learn about Riyadh Mohammed Alzahrani Law Firm in Jeddah, 20+ years in litigation and arbitration, and our 5-step methodology.',
+  });
+}
 
 export default async function AboutPage({
   params: { locale },
@@ -15,12 +37,11 @@ export default async function AboutPage({
   params: { locale: string };
 }) {
   setRequestLocale(locale);
-  const t = await getTranslations();
   const isAr = locale === 'ar';
   const settings = store.siteSettings || INITIAL_SETTINGS;
 
   return (
-    <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+    <div className="py-12 sm:py-16 lg:py-20 bg-canvas overflow-x-clip">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Header Breadcrumb & Title */}
         <ScrollReveal direction="up">
@@ -47,17 +68,17 @@ export default async function AboutPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7">
             <ScrollReveal direction={isAr ? 'left' : 'right'} delay={100}>
-              <div className="relative h-[380px] sm:h-[480px] rounded-sm overflow-hidden border border-border shadow-sm group">
-                <Image
-                  src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80"
-                  alt="Riyadh Architecture"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 60vw"
-                  className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
+              <ImageSlot
+                slug="about-library"
+                locale={isAr ? 'ar' : 'en'}
+                priority
+                sizes="(max-width: 1024px) 100vw, 60vw"
+                aspectClassName="h-[380px] sm:h-[480px] w-full"
+                className="rounded-sm border border-border shadow-sm group"
+                imgClassName="group-hover:scale-105 transition-transform duration-700 ease-out"
+              >
                 <div className="absolute inset-0 bg-signature/10 pointer-events-none group-hover:bg-transparent transition-colors duration-500" />
-              </div>
+              </ImageSlot>
             </ScrollReveal>
           </div>
 
@@ -83,9 +104,13 @@ export default async function AboutPage({
                   <h3>{isAr ? 'الترخيص والاعتماد النظامي' : 'Official Licensing & Accreditation'}</h3>
                 </div>
                 <p className="text-muted text-sm leading-relaxed">
-                  {isAr
-                    ? 'تمارس الشركة أعمالها بموجب تراخيص رسمية معتمدة من وزارة العدل بالمملكة العربية السعودية، ونخبة محامين مسجلين بالهيئة السعودية للمحامين.'
-                    : 'The practice operates under formal accreditation from the Saudi Ministry of Justice, with advocates certified by the Saudi Bar Association.'}
+                  {UNVERIFIED_CLAIMS_CONFIG.enableMojLicenseNumber
+                    ? isAr
+                      ? `تمارس الشركة أعمالها بموجب ترخيص وزارة العدل رقم ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber} بالمملكة العربية السعودية، ونخبة محامين مسجلين بالهيئة السعودية للمحامين.`
+                      : `The practice operates under Saudi Ministry of Justice License No. ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}, with advocates certified by the Saudi Bar Association.`
+                    : isAr
+                      ? 'تمارس الشركة أعمالها بموجب تراخيص رسمية معتمدة من وزارة العدل بالمملكة العربية السعودية، وعضوية الهيئة السعودية للمحامين.'
+                      : 'The practice operates under formal accreditation from the Saudi Ministry of Justice and membership in the Saudi Bar Association.'}
                 </p>
               </div>
             </ScrollReveal>

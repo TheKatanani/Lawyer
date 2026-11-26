@@ -21,6 +21,7 @@ interface Props {
   paymentStatus: string;
   consultationId: string;
   errorMessage?: string;
+  paymentsEnabled?: boolean;
 }
 
 export function ConsultationPaymentCallback({
@@ -29,6 +30,7 @@ export function ConsultationPaymentCallback({
   paymentStatus,
   consultationId,
   errorMessage,
+  paymentsEnabled = false,
 }: Props) {
   const isAr = locale === 'ar';
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,16 @@ export function ConsultationPaymentCallback({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!paymentsEnabled) {
+      setLoading(false);
+      setError(
+        isAr
+          ? 'خدمة الدفع الإلكتروني غير مفعلة حالياً.'
+          : 'Online payments are currently disabled.'
+      );
+      return;
+    }
+
     // If Moyasar reported failure directly in query params
     if (paymentStatus === 'failed') {
       setLoading(false);
@@ -88,7 +100,7 @@ export function ConsultationPaymentCallback({
     };
 
     verify();
-  }, [paymentId, paymentStatus, consultationId, errorMessage, isAr]);
+  }, [paymentsEnabled, paymentId, paymentStatus, consultationId, errorMessage, isAr]);
 
   const copyReference = () => {
     if (receiptData?.reference) {

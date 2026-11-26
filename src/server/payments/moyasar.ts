@@ -42,6 +42,14 @@ export class PaymentVerificationError extends Error {
 }
 
 /**
+ * Checks the environment flag controlling whether public online payments are active.
+ * Kept false by default until Moyasar production onboarding is confirmed.
+ */
+export function isPaymentsEnabled(): boolean {
+  return process.env.PAYMENTS_ENABLED === 'true';
+}
+
+/**
  * Resolves the effective Moyasar Secret Key either from database/siteSettings or env
  */
 export function getMoyasarSecretKey(): string {
