@@ -4,6 +4,9 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { ConsultationRequest, ConsultationStatus } from '@/server/types';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getSessionUser(req);

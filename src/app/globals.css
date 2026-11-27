@@ -118,3 +118,20 @@
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
+
+@media print {
+  header,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  #printable-receipt {
+    box-shadow: none !important;
+    border-color: #d4d4d8 !important;
+  }
+}

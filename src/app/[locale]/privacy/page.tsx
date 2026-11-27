@@ -4,6 +4,9 @@ import { setRequestLocale } from 'next-intl/server';
 import { SupportedLocale } from '@/server/types';
 import { buildPageMetadata } from '@/lib/seo';
 import { FIRM_DETAILS } from '@/config/compliance';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
+
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -29,10 +32,18 @@ export default async function PrivacyPage({
   params: { locale: string };
 }) {
   setRequestLocale(locale);
-  const isAr = locale === 'ar';
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const firmName = isAr ? (settings.brandNameAr || FIRM_DETAILS.nameAr) : (settings.brandNameEn || FIRM_DETAILS.nameEn);
+  const firmEmail = settings.email || FIRM_DETAILS.email;
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={currentLocale}
+        items={[{ name: isAr ? 'سياسة الخصوصية' : 'Privacy Policy', path: '/privacy' }]}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="space-y-4">
           <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
@@ -58,8 +69,8 @@ export default async function PrivacyPage({
             </h2>
             <p className="text-muted">
               {isAr
-                ? `تُعد ${FIRM_DETAILS.nameAr}، ومقرها مدينة ${FIRM_DETAILS.cityAr} بالمملكة العربية السعودية، هي "جهة التحكم" المسؤولة عن معالجة بياناتك الشخصية التي تُجمع عبر هذا الموقع الإلكتروني.`
-                : `${FIRM_DETAILS.nameEn}, headquartered in ${FIRM_DETAILS.cityEn}, Kingdom of Saudi Arabia, acts as the designated Data Controller responsible for processing personal data submitted across this website.`}
+                ? `تُعد ${firmName}، ومقرها مدينة ${FIRM_DETAILS.cityAr} بالمملكة العربية السعودية، هي "جهة التحكم" المسؤولة عن معالجة بياناتك الشخصية التي تُجمع عبر هذا الموقع الإلكتروني.`
+                : `${firmName}, headquartered in ${FIRM_DETAILS.cityEn}, Kingdom of Saudi Arabia, acts as the designated Data Controller responsible for processing personal data submitted across this website.`}
             </p>
           </div>
 
@@ -119,8 +130,8 @@ export default async function PrivacyPage({
             </h3>
             <p className="text-xs text-muted leading-relaxed">
               {isAr
-                ? `لممارسة حقوقك أو لتقديم أي استفسار حول سياسة الخصوصية، يرجى مراسلة مسؤول حماية البيانات عبر البريد: ${FIRM_DETAILS.email}`
-                : `To exercise your statutory rights or submit a privacy inquiry, contact our Data Protection Officer at: ${FIRM_DETAILS.email}`}
+                ? `لممارسة حقوقك أو لتقديم أي استفسار حول سياسة الخصوصية، يرجى مراسلة مسؤول حماية البيانات عبر البريد: ${firmEmail}`
+                : `To exercise your statutory rights or submit a privacy inquiry, contact our Data Protection Officer at: ${firmEmail}`}
             </p>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ServicesPreview } from '@/components/sections/ServicesPreview';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -48,6 +49,10 @@ export default async function ServicesPage({
 
   return (
     <div className="py-12 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={currentLocale}
+        items={[{ name: currentLocale === 'ar' ? 'الخدمات' : 'Practice Areas', path: '/services' }]}
+      />
       <ServicesPreview
         locale={locale}
         initialServices={publishedServices}

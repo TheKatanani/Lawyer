@@ -6,9 +6,10 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 interface LeadershipMessageProps {
   locale: string;
+  quote?: string;
 }
 
-export function LeadershipMessage({ locale }: LeadershipMessageProps) {
+export function LeadershipMessage({ locale, quote }: LeadershipMessageProps) {
   const isAr = locale === 'ar';
 
   return (
@@ -28,9 +29,10 @@ export function LeadershipMessage({ locale }: LeadershipMessageProps) {
 
             <div className="space-y-6 text-ink leading-relaxed">
               <h2 className="font-heading-ar font-bold text-2xl sm:text-3xl lg:text-4xl text-ink leading-snug">
-                {isAr
-                  ? 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة.'
-                  : 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential.'}
+                {quote ||
+                  (isAr
+                    ? 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة.'
+                    : 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential.')}
               </h2>
 
               <p className="text-muted text-base sm:text-lg leading-relaxed font-normal">

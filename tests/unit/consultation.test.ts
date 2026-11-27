@@ -22,6 +22,11 @@ describe('Consultation Phone Normalization', () => {
   it('strips non-digit formatting characters such as dashes, spaces, and parentheses', () => {
     expect(normalizePhoneE164('+966 (55) 777-5504')).toBe('+966557775504');
   });
+
+  it('strips redundant national leading zero immediately after international dial code', () => {
+    expect(normalizePhoneE164('+9660551234567')).toBe('+966551234567');
+    expect(normalizePhoneE164('+9710501234567')).toBe('+971501234567');
+  });
 });
 
 describe('WhatsApp Localized Message Builder', () => {

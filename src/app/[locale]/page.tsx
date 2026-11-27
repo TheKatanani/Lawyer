@@ -50,9 +50,10 @@ export default async function HomePage({
 
   const publishedServices = await listPublishedProjections('service', currentLocale);
   const settings = store.siteSettings || INITIAL_SETTINGS;
+  const whatsappUrl = `https://wa.me/${(settings.whatsapp || FIRM_DETAILS.whatsapp).replace(/[^\d]/g, '')}`;
 
   const heroMessages = {
-    eyebrow: t('hero.eyebrow'),
+    eyebrow: isAr ? (settings.heroEyebrowAr || t('hero.eyebrow')) : (settings.heroEyebrowEn || t('hero.eyebrow')),
     heading: isAr ? (settings.heroHeadlineAr || t('hero.heading')) : (settings.heroHeadlineEn || t('hero.heading')),
     description: isAr ? (settings.heroDescAr || t('hero.description')) : (settings.heroDescEn || t('hero.description')),
     ctaPrimary: t('hero.ctaPrimary'),
@@ -94,7 +95,10 @@ export default async function HomePage({
       <StatsBanner locale={locale} />
 
       {/* 2. Leadership Message (PDF p. 6-7) */}
-      <LeadershipMessage locale={locale} />
+      <LeadershipMessage
+        locale={locale}
+        quote={isAr ? settings.leadershipQuoteAr : settings.leadershipQuoteEn}
+      />
 
       {/* 3. 5-Step Methodology & Philosophy (PDF p. 10-11) */}
       <MethodologySection locale={locale} />
@@ -116,7 +120,10 @@ export default async function HomePage({
       <JourneySection locale={locale} messages={journeyMessages} />
 
       {/* 8. Closing Word / Promise (PDF p. 54) */}
-      <ClosingWord locale={locale} />
+      <ClosingWord
+        locale={locale}
+        closingWord={isAr ? settings.closingWordAr : settings.closingWordEn}
+      />
 
       {/* 9. Final Contact Call to Action Banner */}
       <section className="py-20 bg-canvas">
@@ -127,10 +134,14 @@ export default async function HomePage({
                 {t('contactSection.eyebrow')}
               </span>
               <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-                {t('contactSection.heading')}
+                {isAr
+                  ? (settings.homeCtaHeadingAr || t('contactSection.heading'))
+                  : (settings.homeCtaHeadingEn || t('contactSection.heading'))}
               </h2>
               <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto">
-                {t('contactSection.description')}
+                {isAr
+                  ? (settings.homeCtaDescAr || t('contactSection.description'))
+                  : (settings.homeCtaDescEn || t('contactSection.description'))}
               </p>
             </div>
 
@@ -143,7 +154,7 @@ export default async function HomePage({
                 <ArrowUpRight className="w-4 h-4 text-gold group-hover:scale-110 transition-transform duration-300" />
               </Link>
               <a
-                href={FIRM_DETAILS.whatsappUrl}
+                href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-sm bg-surface border border-border text-ink text-base font-semibold hover:border-gold hover:bg-canvas transition-all duration-300 hover:-translate-y-0.5 shadow-xs"

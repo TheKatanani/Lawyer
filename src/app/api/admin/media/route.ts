@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
     };
 
     store.media.set(newAsset.id, newAsset);
+    store.persistToDisk();
 
     // Audit log
     store.auditLogs.unshift({
@@ -106,6 +107,7 @@ export async function DELETE(req: NextRequest) {
 
     const asset = store.media.get(assetId)!;
     store.media.delete(assetId);
+    store.persistToDisk();
 
     // Audit log
     store.auditLogs.unshift({

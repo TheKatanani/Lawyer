@@ -218,7 +218,9 @@ export function ConsultationForm({
       return;
     }
 
-    const cleanDigits = phoneDigits.replace(/[^\d]/g, '');
+    const rawDigits = phoneDigits.replace(/[^\d]/g, '');
+    const cleanDigits =
+      countryCode !== '+1' && rawDigits.startsWith('0') ? rawDigits.slice(1) : rawDigits;
     if (!cleanDigits || cleanDigits.length < 7) {
       setError(isAr ? 'يرجى إدخال رقم هاتف واتساب صالح' : 'Please enter a valid WhatsApp phone number');
       return;
@@ -263,19 +265,18 @@ export function ConsultationForm({
         setPaymentData(data.payment);
         setPaymentStep(true);
       } else {
-        // Save persistent success state
-        setSavedData({
+        const savedPayload = {
           reference: data.reference,
           whatsappUrl: data.whatsappUrl,
-        });
-
-        // Open WhatsApp in a new tab so user sees the on-site confirmation receipt
+        };
+        setSavedData(savedPayload);
         try {
-          if (!window.location.search.includes('no_wa_redirect')) {
-            window.open(data.whatsappUrl, '_blank');
-          }
-        } catch (navErr) {
-          // Handled gracefully by persistent fallback state
+          sessionStorage.setItem('rma_last_consultation', JSON.stringify(savedPayload));
+        } catch {}
+
+        // Navigate synchronously after persistence instead of async window.open() so popup blockers never produce about:blank
+        if (!window.location.search.includes('no_wa_redirect') && data.whatsappUrl) {
+          window.location.assign(data.whatsappUrl);
         }
       }
     } catch (err: any) {
@@ -314,6 +315,7 @@ export function ConsultationForm({
         description: `RMA Legal Consultation ${consultationResult.reference}`,
         publishable_api_key: paymentData.publishableKey,
         callback_url: `${window.location.origin}/${locale}/consultation/callback?consultation=${consultationResult.consultationId}`,
+        use_payment_intent: true,
         metadata: {
           consultationId: consultationResult.consultationId,
           reference: consultationResult.reference,
@@ -324,6 +326,50 @@ export function ConsultationForm({
           country: 'SA',
           label: 'Riyadh Alzahrani Law Firm',
           validate_merchant_url: 'https://api.moyasar.com/v1/applepay/initiate',
+        },
+        on_initiating: async () => {
+          try {
+            const checkoutRes = await fetch(
+              `/api/consultations/${consultationResult.consultationId}/checkout`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  locale,
+                  reference: consultationResult.reference,
+                }),
+              }
+            );
+            const checkoutJson = await checkoutRes.json();
+            if (checkoutRes.status === 409 && checkoutJson.alreadyPaid) {
+              setSavedData({
+                reference: consultationResult.reference,
+                whatsappUrl: consultationResult.whatsappUrl,
+                paid: true,
+                paymentId: checkoutJson.paymentId,
+                amountSar: paymentData.amountSar,
+                method: 'Moyasar',
+              });
+              setPaymentStep(false);
+              return false;
+            }
+            if (!checkoutRes.ok || !checkoutJson.paymentIntent?.client_secret) {
+              setPaymentError(
+                checkoutJson.error ||
+                  (isAr ? 'تعذر تجهيز جلسة الدفع الإلكتروني.' : 'Failed to prepare payment session.')
+              );
+              return false;
+            }
+            return {
+              payment_intent: {
+                id: checkoutJson.paymentIntent.id,
+                client_secret: checkoutJson.paymentIntent.client_secret,
+              },
+            };
+          } catch {
+            setPaymentError(isAr ? 'تعذر التحقق قبل الدفع.' : 'Pre-payment check failed.');
+            return false;
+          }
         },
         on_completed: async (payment: { id: string }) => {
           setPaymentProcessing(true);
@@ -657,9 +703,9 @@ export function ConsultationForm({
             </div>
 
             {/* Stylesheet & Script for Moyasar */}
-            <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.15.0/moyasar.css" />
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/moyasar-payment-form@2.3.1/dist/moyasar.css" />
             <Script
-              src="https://cdn.moyasar.com/mpf/1.15.0/moyasar.js"
+              src="https://cdn.jsdelivr.net/npm/moyasar-payment-form@2.3.1/dist/moyasar.umd.min.js"
               strategy="afterInteractive"
               onReady={() => setMoyasarScriptReady(true)}
               onError={() => setPaymentError('Failed to load Moyasar script from CDN')}

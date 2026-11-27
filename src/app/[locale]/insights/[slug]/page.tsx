@@ -9,6 +9,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
 import { computeArticleReadingTimeMinutes, formatReadingTime } from '@/lib/reading-time';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale, slug },
@@ -46,6 +47,13 @@ export default async function ArticleDetailPage({
 
   return (
     <article className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[
+          { name: isAr ? 'المدونة المعرفية' : 'Legal Insights', path: '/insights' },
+          { name: article.title, path: `/insights/${article.slug}` },
+        ]}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Breadcrumb & Header */}
         <ScrollReveal direction="up">

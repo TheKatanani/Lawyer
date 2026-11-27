@@ -6,10 +6,35 @@ import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface FooterProps {
   locale: string;
+  settings?: {
+    brandName?: string;
+    brandShort?: string;
+    footerDesc?: string;
+    address?: string;
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+  };
 }
 
-export function Footer({ locale }: FooterProps) {
+export function Footer({ locale, settings }: FooterProps) {
   const isAr = locale === 'ar';
+  const firmName =
+    settings?.brandName || (isAr ? FIRM_DETAILS.nameAr : FIRM_DETAILS.nameEn);
+  const shortBrand =
+    settings?.brandShort ||
+    (isAr ? 'شركة رياض محمد الزهراني للمحاماة' : 'Riyadh Alzahrani Law Firm');
+  const footerDesc =
+    settings?.footerDesc ||
+    (isAr
+      ? 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.'
+      : 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.');
+  const address = settings?.address || (isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn);
+  const phone = settings?.phone || FIRM_DETAILS.phone;
+  const phoneHref = phone.replace(/[^\d+]/g, '');
+  const whatsapp = settings?.whatsapp || FIRM_DETAILS.whatsapp;
+  const whatsappUrl = `https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`;
+  const email = settings?.email || FIRM_DETAILS.email;
 
   return (
     <footer className="bg-signature text-on-dark/90 border-t border-gold/20 pt-16 pb-12">
@@ -27,15 +52,11 @@ export function Footer({ locale }: FooterProps) {
                 />
               </div>
               <span className="font-heading-ar font-bold text-base sm:text-lg text-on-dark leading-tight">
-                {isAr
-                  ? 'شركة رياض محمد الزهراني للمحاماة'
-                  : 'Riyadh Alzahrani Law Firm'}
+                {shortBrand}
               </span>
             </div>
             <p className="text-sm text-on-dark/70 leading-relaxed font-normal">
-              {isAr
-                ? 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.'
-                : 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.'}
+              {footerDesc}
             </p>
             <div className="flex items-center gap-2 text-xs text-gold font-medium pt-2">
               <Scale className="w-4 h-4 text-gold flex-shrink-0" />
@@ -88,30 +109,30 @@ export function Footer({ locale }: FooterProps) {
             <ul className="space-y-3 text-sm text-on-dark/70">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-gold flex-shrink-0 mt-1" />
-                <span className="leading-snug">{isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn}</span>
+                <span className="leading-snug">{address}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-gold flex-shrink-0" />
-                <a href={`tel:${FIRM_DETAILS.phoneRaw}`} className="hover:text-gold transition-colors font-medium">
-                  <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
+                <a href={`tel:${phoneHref}`} className="hover:text-gold transition-colors font-medium">
+                  <bdi dir="ltr">{phone}</bdi>
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <MessageSquare className="w-4 h-4 text-gold flex-shrink-0" />
                 <a
-                  href={FIRM_DETAILS.whatsappUrl}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gold transition-colors font-medium"
                 >
                   {isAr ? 'واتساب: ' : 'WhatsApp: '}
-                  <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
+                  <bdi dir="ltr">{whatsapp}</bdi>
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-gold flex-shrink-0" />
-                <a href={`mailto:${FIRM_DETAILS.email}`} className="hover:text-gold transition-colors">
-                  {FIRM_DETAILS.email}
+                <a href={`mailto:${email}`} className="hover:text-gold transition-colors">
+                  {email}
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
@@ -150,8 +171,8 @@ export function Footer({ locale }: FooterProps) {
           <p>
             © {new Date().getFullYear()}{' '}
             {isAr
-              ? `${FIRM_DETAILS.nameAr}. جميع الحقوق محفوظة.`
-              : `${FIRM_DETAILS.nameEn}. All rights reserved.`}
+              ? `${firmName}. جميع الحقوق محفوظة.`
+              : `${firmName}. All rights reserved.`}
           </p>
           <p className="flex items-center gap-1.5 text-on-dark/60">
             <Shield className="w-3.5 h-3.5 text-gold/70" />

@@ -187,3 +187,38 @@ export async function PATCH(
     return NextResponse.json({ error: err.message || 'Update failed.' }, { status: 403 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getSessionUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    }
+    assertCapability(user.role, 'inquiries.purge');
+
+    const consultation = store.consultations.get(params.id);
+    if (!consultation) {
+      return NextResponse.json({ error: 'Consultation request not found.' }, { status: 404 });
+    }
+
+    store.consultations.delete(params.id);
+    store.auditLogs.unshift({
+      id: `AUDIT-${Date.now()}`,
+      actorUid: user.uid,
+      actorEmail: user.email,
+      action: 'CONSULTATION_DELETED',
+      targetType: 'consultationRequest',
+      targetId: params.id,
+      details: { reference: consultation.reference, fullName: consultation.fullName },
+      createdAt: new Date().toISOString(),
+    });
+    store.persistToDisk?.();
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Delete failed.' }, { status: 403 });
+  }
+}

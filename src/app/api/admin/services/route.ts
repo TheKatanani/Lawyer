@@ -4,6 +4,7 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { ServiceEntity, ServiceRevision } from '@/server/types';
 import { publishServicePaired } from '@/server/repositories/content';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(req: NextRequest) {
   try {
@@ -136,6 +137,9 @@ export async function POST(req: NextRequest) {
     if (publishImmediately) {
       await publishServicePaired(serviceId, user.uid);
     }
+
+    store.persistToDisk();
+    revalidateSiteRoutes([`/ar/services/${serviceId}`, `/en/services/${serviceId}`]);
 
     // Audit log
     store.auditLogs.unshift({

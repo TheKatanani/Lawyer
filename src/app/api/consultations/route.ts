@@ -86,11 +86,22 @@ export async function POST(req: NextRequest) {
     const effectiveServiceId = serviceId || 'general';
 
     if (effectiveServiceId !== 'general') {
-      const matchedService = store.services.get(effectiveServiceId);
+      let matchedService = store.services.get(effectiveServiceId);
+      if (!matchedService) {
+        for (const svc of Array.from(store.services.values())) {
+          if (svc.locales.ar.slug === effectiveServiceId || svc.locales.en.slug === effectiveServiceId) {
+            matchedService = svc;
+            break;
+          }
+        }
+      }
       if (matchedService) {
-        // Look up revision titles
-        const arRev = store.serviceRevisions.get(matchedService.locales.ar.publishedRevisionId || '');
-        const enRev = store.serviceRevisions.get(matchedService.locales.en.publishedRevisionId || '');
+        const arRev = store.serviceRevisions.get(
+          matchedService.locales.ar.publishedRevisionId || matchedService.locales.ar.draftRevisionId || ''
+        );
+        const enRev = store.serviceRevisions.get(
+          matchedService.locales.en.publishedRevisionId || matchedService.locales.en.draftRevisionId || ''
+        );
         serviceLabelAr = arRev?.title || matchedService.id;
         serviceLabelEn = enRev?.title || matchedService.id;
       }
@@ -102,11 +113,23 @@ export async function POST(req: NextRequest) {
     let validLawyerId: string | null = null;
 
     if (preferredLawyerId && preferredLawyerId !== 'no_preference') {
-      const matchedLawyer = store.teamMembers.get(preferredLawyerId);
+      let matchedLawyer = store.teamMembers.get(preferredLawyerId);
+      if (!matchedLawyer) {
+        for (const tm of Array.from(store.teamMembers.values())) {
+          if (tm.locales.ar.slug === preferredLawyerId || tm.locales.en.slug === preferredLawyerId) {
+            matchedLawyer = tm;
+            break;
+          }
+        }
+      }
       if (matchedLawyer) {
         validLawyerId = matchedLawyer.id;
-        const arRev = store.teamMemberRevisions.get(matchedLawyer.locales.ar.publishedRevisionId || '');
-        const enRev = store.teamMemberRevisions.get(matchedLawyer.locales.en.publishedRevisionId || '');
+        const arRev = store.teamMemberRevisions.get(
+          matchedLawyer.locales.ar.publishedRevisionId || matchedLawyer.locales.ar.draftRevisionId || ''
+        );
+        const enRev = store.teamMemberRevisions.get(
+          matchedLawyer.locales.en.publishedRevisionId || matchedLawyer.locales.en.draftRevisionId || ''
+        );
         preferredLawyerAr = arRev?.fullName || validLawyerId;
         preferredLawyerEn = enRev?.fullName || validLawyerId;
       }
@@ -134,9 +157,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Generate Reference Number & Store Entity
-    const count = store.consultations.size + 1;
-    const refNum = `CR-2026-${String(count).padStart(4, '0')}`;
+    // 5. Generate monotonic Reference Number & Store Entity
+    const year = new Date().getFullYear();
+    const maxSeq = Array.from(store.consultations.values()).reduce((max, item) => {
+      const m = item.reference?.match(/^CR-\d{4}-(\d+)$/);
+      const num = m ? parseInt(m[1], 10) : 0;
+      return num > max ? num : max;
+    }, 0);
+    const refNum = `CR-${year}-${String(maxSeq + 1).padStart(4, '0')}`;
     const id = `consultation-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const nowIso = new Date().toISOString();
 
@@ -236,7 +264,8 @@ export async function POST(req: NextRequest) {
     });
 
     // 6. Construct Encoded WhatsApp URL
-    const destinationWhatsApp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+966557775504';
+    const destinationWhatsApp =
+      settings?.whatsapp || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+966557775504';
     const cleanDestination = destinationWhatsApp.replace(/[^\d]/g, '');
 
     const lawyerLabel =

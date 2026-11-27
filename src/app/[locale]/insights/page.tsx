@@ -8,6 +8,7 @@ import { ArrowUpRight, Clock } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
 import { computeArticleReadingTimeMinutes, formatReadingTime } from '@/lib/reading-time';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -41,6 +42,10 @@ export default async function InsightsPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[{ name: isAr ? 'المدونة المعرفية' : 'Legal Insights', path: '/insights' }]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">

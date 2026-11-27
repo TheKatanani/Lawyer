@@ -40,12 +40,24 @@ const DEFAULT_SETTINGS: SiteSettings = {
   seoTitleEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations | Jeddah',
   seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للشركات والأفراد.',
   seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
-  ogImageUrl: '',
+  ogImageUrl: '/images/home-hero.webp',
   faviconUrl: '/favicon.ico',
-  heroHeadlineAr: 'رؤية قانونية واثقة. وحلول تقوم على المعرفة.',
-  heroHeadlineEn: 'A clear legal perspective. An approach grounded in knowledge.',
-  heroDescAr: 'خدمات قانونية متكاملة للأفراد والمنشآت في المملكة العربية السعودية، تبدأ بفهم عميق لاحتياجاتك وتوضيح دقيق للخطوات والحلول المناسبة.',
-  heroDescEn: 'Comprehensive legal services for individuals and corporate entities across Saudi Arabia, beginning with an in-depth understanding of your objectives.',
+  heroEyebrowAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة',
+  heroEyebrowEn: 'Licensed Saudi Law Practice & Legal Advisory',
+  heroHeadlineAr: 'نقرأ النزاع قبل أن يصل إلى المحكمة، ونقرأ أدلته قبل أن تتحول إلى مرافعة',
+  heroHeadlineEn: 'We read the dispute before it reaches court — and its evidence before it becomes a pleading.',
+  heroDescAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
+  heroDescEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.',
+  leadershipQuoteAr: 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة.',
+  leadershipQuoteEn: 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential.',
+  closingWordAr: '«كل ملف يصلنا يحمل حقاً ينتظر من يحسن عرضه، وقراراً ينتظر من يحسن قراءته. نعد عملاءنا برأي صادق، وعمل منظم، وسرية لا تُمس، ومتابعة لا تنقطع حتى يصل الملف إلى نهايته.»',
+  closingWordEn: '“Every matter that reaches us carries a right waiting to be presented well, and a decision waiting to be read well. We promise our clients candid advice, organised work, inviolable confidentiality, and follow-through that does not stop until the matter is concluded.”',
+  homeCtaHeadingAr: 'تواصل مع فريق الشركة',
+  homeCtaHeadingEn: 'Contact the company team',
+  homeCtaDescAr: 'يسعدنا الرد على استفساراتكم وتنسيق جلسة استشارية أولية مع المحامي المختص.',
+  homeCtaDescEn: 'We welcome your inquiry and look forward to coordinating an initial consultation with the specialized legal team.',
+  footerSummaryAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.',
+  footerSummaryEn: 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.',
   aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
   aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
   aboutMissionAr: 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.',
@@ -407,6 +419,29 @@ export function SiteSettingsManager() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">وصف الفوتر التعريفي (Footer Summary AR)</label>
+                <textarea
+                  rows={2}
+                  value={settings.footerSummaryAr || ''}
+                  onChange={(e) => setSettings({ ...settings, footerSummaryAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Footer Summary (English)</label>
+                <textarea
+                  rows={2}
+                  dir="ltr"
+                  value={settings.footerSummaryEn || ''}
+                  onChange={(e) => setSettings({ ...settings, footerSummaryEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -764,6 +799,122 @@ export function SiteSettingsManager() {
                   dir="ltr"
                   value={settings.aboutTextEn}
                   onChange={(e) => setSettings({ ...settings, aboutTextEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Hero Eyebrow, Leadership Quote & Closing Word */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">شارة واجهة الرئيسية (Hero Eyebrow AR)</label>
+                <input
+                  type="text"
+                  value={settings.heroEyebrowAr || ''}
+                  onChange={(e) => setSettings({ ...settings, heroEyebrowAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-sm text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Hero Eyebrow Badge (English)</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={settings.heroEyebrowEn || ''}
+                  onChange={(e) => setSettings({ ...settings, heroEyebrowEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-sm text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">اقتباس كلمة القيادة (Leadership Quote AR)</label>
+                <textarea
+                  rows={3}
+                  value={settings.leadershipQuoteAr || ''}
+                  onChange={(e) => setSettings({ ...settings, leadershipQuoteAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Leadership Quote (English)</label>
+                <textarea
+                  rows={3}
+                  dir="ltr"
+                  value={settings.leadershipQuoteEn || ''}
+                  onChange={(e) => setSettings({ ...settings, leadershipQuoteEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">الرسالة الختامية بالرئيسية (Closing Word AR)</label>
+                <textarea
+                  rows={3}
+                  value={settings.closingWordAr || ''}
+                  onChange={(e) => setSettings({ ...settings, closingWordAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Closing Word (English)</label>
+                <textarea
+                  rows={3}
+                  dir="ltr"
+                  value={settings.closingWordEn || ''}
+                  onChange={(e) => setSettings({ ...settings, closingWordEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">عنوان الدعوة للتواصل أسفل الرئيسية (CTA Heading AR)</label>
+                <input
+                  type="text"
+                  value={settings.homeCtaHeadingAr || ''}
+                  onChange={(e) => setSettings({ ...settings, homeCtaHeadingAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-sm text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Homepage CTA Heading (English)</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={settings.homeCtaHeadingEn || ''}
+                  onChange={(e) => setSettings({ ...settings, homeCtaHeadingEn: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-sm text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">وصف الدعوة للتواصل (CTA Description AR)</label>
+                <textarea
+                  rows={2}
+                  value={settings.homeCtaDescAr || ''}
+                  onChange={(e) => setSettings({ ...settings, homeCtaDescAr: e.target.value })}
+                  className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-ink">Homepage CTA Description (English)</label>
+                <textarea
+                  rows={2}
+                  dir="ltr"
+                  value={settings.homeCtaDescEn || ''}
+                  onChange={(e) => setSettings({ ...settings, homeCtaDescEn: e.target.value })}
                   className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold leading-relaxed"
                 />
               </div>

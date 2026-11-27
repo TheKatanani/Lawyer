@@ -3,7 +3,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
-import { getMoyasarPublishableKey, isPaymentsEnabled } from '@/server/payments/moyasar';
+import {
+  buildPaymentRequestReceipt,
+  getMoyasarPublishableKey,
+  isPaymentsEnabled,
+  reconcilePaidPaymentRequest,
+} from '@/server/payments/moyasar';
 import { PaymentRequestView } from '@/components/payment/PaymentRequestView';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +43,9 @@ export default async function PaymentPage({
     notFound();
   }
 
+  await reconcilePaidPaymentRequest(pr);
+  const receipt = pr.status === 'paid' ? buildPaymentRequestReceipt(pr) : null;
+
   const settings = store.siteSettings || INITIAL_SETTINGS;
   const paymentsEnabled = isPaymentsEnabled();
   const publishableKey = paymentsEnabled ? getMoyasarPublishableKey() : '';
@@ -49,17 +57,21 @@ export default async function PaymentPage({
     id: pr.id,
     token: pr.token,
     clientName: pr.clientName,
+    payerName: pr.payerName || receipt?.payerName || pr.clientName,
     serviceCategory: pr.serviceCategory,
     amountSar: pr.amountSar,
     amountMinor: pr.amountMinor,
+    currency: pr.currency || receipt?.currency || 'SAR',
     description: pr.description,
     status: pr.status,
     paymentMethod: pr.paymentMethod,
+    maskedCard: pr.maskedCard || receipt?.maskedCard,
     paidAt: pr.paidAt,
     createdAt: pr.createdAt,
     expiresAt: pr.expiresAt,
     isExpired: pr.expiresAt ? new Date(pr.expiresAt).getTime() < Date.now() : false,
     moyasarPaymentId: pr.moyasarPaymentId,
+    receipt,
   };
 
   return (

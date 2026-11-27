@@ -12,6 +12,7 @@ import { MethodologySection } from '@/components/sections/MethodologySection';
 import { InstitutionalExcellence } from '@/components/sections/InstitutionalExcellence';
 import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -42,6 +43,10 @@ export default async function AboutPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas overflow-x-clip">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[{ name: isAr ? 'عن الشركة' : 'About Firm', path: '/about' }]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Header Breadcrumb & Title */}
         <ScrollReveal direction="up">

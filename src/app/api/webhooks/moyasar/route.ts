@@ -2,9 +2,9 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { store } from '@/server/db/store';
-import { fetchMoyasarPayment } from '@/server/payments/moyasar';
+import { applySettledPaymentToRequest, fetchMoyasarPayment, mapMoyasarPaymentMethod } from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp } from '@/server/security/rate-limit';
-import { PaymentRequestMethod } from '@/server/types';
+import { ConsultationRequest } from '@/server/types';
 
 export const runtime = 'nodejs';
 
@@ -65,15 +65,11 @@ export async function POST(req: NextRequest) {
 
     // 3. Fetch verified payment details directly from Moyasar
     const payment = await fetchMoyasarPayment(paymentId);
+    if (payment.status !== 'paid' && payment.status !== 'captured') {
+      return NextResponse.json({ ok: true, note: `Payment status is ${payment.status}` });
+    }
     const nowIso = new Date().toISOString();
-
-    const sourceCompany = (payment.source?.company || payment.source?.type || 'card').toLowerCase();
-    const paymentMethodMapped: PaymentRequestMethod =
-      sourceCompany === 'mada'
-        ? 'mada'
-        : sourceCompany === 'applepay'
-        ? 'applepay'
-        : 'creditcard';
+    const paymentMethodMapped = mapMoyasarPaymentMethod(payment);
 
     // A. Check for Ad-Hoc Payment Request (Token or RequestId)
     const requestToken = payment.metadata?.token || event.data?.metadata?.token;
@@ -87,46 +83,79 @@ export async function POST(req: NextRequest) {
     if (pr) {
       // Idempotency: Return immediately if already settled
       if (pr.status === 'paid') {
-        return NextResponse.json({ ok: true, note: 'Payment request already settled' });
+        return NextResponse.json({ ok: true, alreadySettled: true, paymentRequestId: pr.id });
       }
 
       // Exact amount & currency validation
       if (payment.amount === pr.amountMinor && payment.currency.toUpperCase() === 'SAR') {
-        pr.status = 'paid';
-        pr.moyasarPaymentId = payment.id;
-        pr.paymentMethod = paymentMethodMapped;
-        pr.paidAt = nowIso;
+        const { changed } = applySettledPaymentToRequest(pr, payment);
 
-        store.paymentRequests.set(pr.id, pr);
-        store.persistToDisk?.();
-
-        try {
-          revalidatePath('/admin/invoices');
-          revalidatePath(`/pay/${pr.token}`);
-        } catch {}
+        if (changed) {
+          try {
+            revalidatePath('/admin/invoices');
+            revalidatePath(`/ar/pay/${pr.token}`);
+            revalidatePath(`/en/pay/${pr.token}`);
+          } catch {}
+        }
 
         return NextResponse.json({ ok: true, settled: true, paymentRequestId: pr.id });
       } else {
         console.warn(`[WEBHOOK_PAYMENT_MISMATCH] Amount or currency did not match for PR: ${pr.id}`);
+        return NextResponse.json({ ok: false, error: 'Payment amount or currency mismatch' }, { status: 400 });
       }
     }
 
-    // B. Check for Consultation Booking (Existing Integration - Preserved)
+    // B. Check for Consultation Booking
     const consultationId = payment.metadata?.consultationId || event.data?.metadata?.consultationId;
     if (consultationId) {
-      const consultation = store.consultations.get(consultationId);
+      let consultation = store.consultations.get(consultationId);
       if (!consultation) {
-        return NextResponse.json({ ok: true, note: 'Consultation not found in store' });
+        const fallbackNow = new Date().toISOString();
+        consultation = {
+          id: consultationId,
+          reference: String(payment.metadata?.reference || consultationId),
+          fullName: payment.source?.name || 'Client',
+          phone: '',
+          serviceId: 'general',
+          serviceLabelSnapshot: { ar: 'استشارة قانونية', en: 'Legal Consultation' },
+          preferredLawyerId: null,
+          preferredLawyerLabelSnapshot: null,
+          preferredDate: null,
+          assignedLawyerId: null,
+          scheduledAt: null,
+          appointmentTimezone: 'Asia/Riyadh',
+          meetingType: null,
+          meetingLink: null,
+          meetingAddress: null,
+          status: 'pending',
+          locale: 'ar',
+          sourcePage: null,
+          notes: [],
+          history: [],
+          createdAt: fallbackNow,
+          updatedAt: fallbackNow,
+          amountMinor: Math.round((store.siteSettings?.consultationFee || 500) * 100),
+          currency: store.siteSettings?.consultationCurrency || 'SAR',
+        };
       }
 
       if (consultation.paymentStatus === 'paid') {
-        return NextResponse.json({ ok: true, note: 'Consultation already settled' });
+        return NextResponse.json({ ok: true, alreadySettled: true, consultationId });
+      }
+
+      const expectedMinor =
+        consultation.amountMinor || Math.round((store.siteSettings?.consultationFee || 500) * 100);
+      if (payment.currency.toUpperCase() !== 'SAR' || payment.amount < expectedMinor) {
+        return NextResponse.json(
+          { ok: false, error: 'Consultation payment amount or currency mismatch' },
+          { status: 400 }
+        );
       }
 
       consultation.paymentStatus = 'paid';
       consultation.paymentId = payment.id;
       consultation.paymentMethod = paymentMethodMapped as any;
-      consultation.paidAt = nowIso;
+      consultation.paidAt = payment.created_at || nowIso;
       consultation.status = 'confirmed';
       consultation.updatedAt = nowIso;
 

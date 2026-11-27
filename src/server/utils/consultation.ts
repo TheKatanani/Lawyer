@@ -1,5 +1,7 @@
 import { SupportedLocale } from '../types';
 
+const TRUNK_ZERO_PREFIXES = ['+966', '+971', '+965', '+974', '+973', '+968', '+20', '+962', '+44'];
+
 export function normalizePhoneE164(phone: string): string {
   let cleaned = phone.replace(/[^\d+]/g, '');
   if (cleaned.startsWith('00')) {
@@ -11,6 +13,12 @@ export function normalizePhoneE164(phone: string): string {
       cleaned = '+966' + cleaned.slice(1);
     } else {
       cleaned = '+' + cleaned;
+    }
+  }
+  for (const prefix of TRUNK_ZERO_PREFIXES) {
+    if (cleaned.startsWith(`${prefix}0`)) {
+      cleaned = prefix + cleaned.slice(prefix.length + 1);
+      break;
     }
   }
   return cleaned;

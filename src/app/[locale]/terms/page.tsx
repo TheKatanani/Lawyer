@@ -4,6 +4,9 @@ import { setRequestLocale } from 'next-intl/server';
 import { SupportedLocale } from '@/server/types';
 import { buildPageMetadata } from '@/lib/seo';
 import { FIRM_DETAILS } from '@/config/compliance';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
+
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -29,10 +32,17 @@ export default async function TermsPage({
   params: { locale: string };
 }) {
   setRequestLocale(locale);
-  const isAr = locale === 'ar';
+  const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
+  const isAr = currentLocale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const firmName = isAr ? (settings.brandNameAr || FIRM_DETAILS.nameAr) : (settings.brandNameEn || FIRM_DETAILS.nameEn);
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={currentLocale}
+        items={[{ name: isAr ? 'الشروط والأحكام' : 'Terms of Use', path: '/terms' }]}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="space-y-4">
           <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
@@ -75,8 +85,8 @@ export default async function TermsPage({
             </h2>
             <p className="text-muted">
               {isAr
-                ? `كافة النصوص، التصاميم، الشعارات، والمقالات المنشورة في هذا الموقع مملوكة حصراً لـ ${FIRM_DETAILS.nameAr}، ومحمية بموجب أنظمة حماية حقوق المؤلف وحقوق الملكية الفكرية في المملكة العربية السعودية.`
-                : `All written materials, design tokens, trademarks, and articles on this platform are the intellectual property of ${FIRM_DETAILS.nameEn} and protected under Saudi copyright statutes.`}
+                ? `كافة النصوص، التصاميم، الشعارات، والمقالات المنشورة في هذا الموقع مملوكة حصراً لـ ${firmName}، ومحمية بموجب أنظمة حماية حقوق المؤلف وحقوق الملكية الفكرية في المملكة العربية السعودية.`
+                : `All written materials, design tokens, trademarks, and articles on this platform are the intellectual property of ${firmName} and protected under Saudi copyright statutes.`}
             </p>
           </div>
 

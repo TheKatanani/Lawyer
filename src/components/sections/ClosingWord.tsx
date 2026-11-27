@@ -6,9 +6,10 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 interface ClosingWordProps {
   locale: string;
+  closingWord?: string;
 }
 
-export function ClosingWord({ locale }: ClosingWordProps) {
+export function ClosingWord({ locale, closingWord }: ClosingWordProps) {
   const isAr = locale === 'ar';
 
   return (
@@ -29,9 +30,10 @@ export function ClosingWord({ locale }: ClosingWordProps) {
               {isAr ? 'رسالة ختامية' : 'A Closing Word'}
             </span>
             <p className="font-heading-ar font-bold text-xl sm:text-2xl lg:text-3xl leading-relaxed sm:leading-loose text-on-dark max-w-3xl mx-auto">
-              {isAr
-                ? '«كل ملف يصلنا يحمل حقاً ينتظر من يحسن عرضه، وقراراً ينتظر من يحسن قراءته. نعد عملاءنا برأي صادق، وعمل منظم، وسرية لا تُمس، ومتابعة لا تنقطع حتى يصل الملف إلى نهايته.»'
-                : '“Every matter that reaches us carries a right waiting to be presented well, and a decision waiting to be read well. We promise our clients candid advice, organised work, inviolable confidentiality, and follow-through that does not stop until the matter is concluded.”'}
+              {closingWord ||
+                (isAr
+                  ? '«كل ملف يصلنا يحمل حقاً ينتظر من يحسن عرضه، وقراراً ينتظر من يحسن قراءته. نعد عملاءنا برأي صادق، وعمل منظم، وسرية لا تُمس، ومتابعة لا تنقطع حتى يصل الملف إلى نهايته.»'
+                  : '“Every matter that reaches us carries a right waiting to be presented well, and a decision waiting to be read well. We promise our clients candid advice, organised work, inviolable confidentiality, and follow-through that does not stop until the matter is concluded.”')}
             </p>
           </div>
         </ScrollReveal>

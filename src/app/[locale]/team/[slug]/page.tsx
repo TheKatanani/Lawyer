@@ -9,6 +9,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale, slug },
@@ -58,6 +59,13 @@ export default async function TeamMemberDetailPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[
+          { name: isAr ? 'فريق المحامين' : 'Our Team', path: '/team' },
+          { name: member.metadata?.fullName || member.title, path: `/team/${member.slug}` },
+        ]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Breadcrumb */}
         <ScrollReveal direction="up">

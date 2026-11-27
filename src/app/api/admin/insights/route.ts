@@ -5,6 +5,7 @@ import { store } from '@/server/db/store';
 import { ArticleEntity, ArticleRevision } from '@/server/types';
 import { publishArticlePaired } from '@/server/repositories/content';
 import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(req: NextRequest) {
   try {
@@ -176,6 +177,9 @@ export async function POST(req: NextRequest) {
     if (publishImmediately) {
       await publishArticlePaired(articleId, user.uid);
     }
+
+    store.persistToDisk();
+    revalidateSiteRoutes([`/ar/insights/${articleId}`, `/en/insights/${articleId}`]);
 
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,

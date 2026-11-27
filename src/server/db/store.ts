@@ -45,12 +45,24 @@ export const INITIAL_SETTINGS: SiteSettings = {
   seoTitleEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations | Jeddah',
   seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للأفراد والشركات والجهات الاستثمارية.',
   seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
-  ogImageUrl: '/logo-gold-full.png',
+  ogImageUrl: '/images/home-hero.webp',
   faviconUrl: '/favicon.ico',
+  heroEyebrowAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة',
+  heroEyebrowEn: 'Licensed Saudi Law Practice & Legal Advisory',
   heroHeadlineAr: 'نقرأ النزاع قبل أن يصل إلى المحكمة، ونقرأ أدلته قبل أن تتحول إلى مرافعة',
   heroHeadlineEn: 'We read the dispute before it reaches court — and its evidence before it becomes a pleading.',
   heroDescAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
   heroDescEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.',
+  leadershipQuoteAr: 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة.',
+  leadershipQuoteEn: 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential.',
+  closingWordAr: '«كل ملف يصلنا يحمل حقاً ينتظر من يحسن عرضه، وقراراً ينتظر من يحسن قراءته. نعد عملاءنا برأي صادق، وعمل منظم، وسرية لا تُمس، ومتابعة لا تنقطع حتى يصل الملف إلى نهايته.»',
+  closingWordEn: '“Every matter that reaches us carries a right waiting to be presented well, and a decision waiting to be read well. We promise our clients candid advice, organised work, inviolable confidentiality, and follow-through that does not stop until the matter is concluded.”',
+  homeCtaHeadingAr: 'تواصل مع فريق الشركة',
+  homeCtaHeadingEn: 'Contact the company team',
+  homeCtaDescAr: 'يسعدنا الرد على استفساراتكم وتنسيق جلسة استشارية أولية مع المحامي المختص.',
+  homeCtaDescEn: 'We welcome your inquiry and look forward to coordinating an initial consultation with the specialized legal team.',
+  footerSummaryAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.',
+  footerSummaryEn: 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.',
   aboutTextAr: 'القضية لا تُقاس بحجم مستنداتها، بل بقوة مركزها القانوني وسلامة بنائها الإجرائي. شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
   aboutTextEn: 'A case is measured not by the volume of its documents, but by the strength of its legal position and the soundness of its procedure. Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities.',
   aboutMissionAr: 'تقديم خدمات قانونية دقيقة وعملية تحمي مصالح الموكل وتمنحه وضوحًا كاملًا في كل مرحلة، مع الالتزام بأعلى معايير النزاهة والسرية.',
@@ -1331,6 +1343,9 @@ class InMemoryStore {
   }
 
   private getDataDir(): string {
+    if (process.env.VITEST === 'true' || process.env.NODE_ENV === 'test') {
+      return path.join(os.tmpdir(), `rma-legal-test-${process.pid}`);
+    }
     if (process.env.VERCEL === '1') {
       return path.join(os.tmpdir(), 'rma-legal-data');
     }
@@ -1342,27 +1357,41 @@ class InMemoryStore {
     const filePath = path.join(dataDir, 'store_state.json');
     const backupPath = path.join(dataDir, 'store_state.json.bak');
 
+    const restoreMap = <T extends Record<string, any>>(
+      target: Map<string, T>,
+      items: unknown,
+      keyField = 'id',
+      replaceIfPresent = false
+    ) => {
+      if (!Array.isArray(items)) return;
+      if (replaceIfPresent) {
+        target.clear();
+      }
+      for (const item of items) {
+        if (item && typeof item === 'object' && typeof (item as any)[keyField] === 'string') {
+          target.set((item as any)[keyField], item as T);
+        }
+      }
+    };
+
     const tryParseAndLoad = (targetPath: string, isBackup = false): boolean => {
       try {
         if (!fs.existsSync(targetPath)) return false;
         const raw = fs.readFileSync(targetPath, 'utf-8');
         const data = JSON.parse(raw);
 
-        if (Array.isArray(data.consultations)) {
-          for (const c of data.consultations) {
-            this.consultations.set(c.id, c);
-          }
-        }
-        if (Array.isArray(data.inquiries)) {
-          for (const req of data.inquiries) {
-            this.inquiries.set(req.id, req);
-          }
-        }
-        if (Array.isArray(data.paymentRequests)) {
-          for (const pr of data.paymentRequests) {
-            this.paymentRequests.set(pr.id, pr);
-          }
-        }
+        restoreMap(this.consultations, data.consultations);
+        restoreMap(this.inquiries, data.inquiries);
+        restoreMap(this.paymentRequests, data.paymentRequests);
+        restoreMap(this.services, data.services, 'id', true);
+        restoreMap(this.serviceRevisions, data.serviceRevisions, 'id', true);
+        restoreMap(this.teamMembers, data.teamMembers, 'id', true);
+        restoreMap(this.teamMemberRevisions, data.teamMemberRevisions, 'id', true);
+        restoreMap(this.articles, data.articles, 'id', true);
+        restoreMap(this.articleRevisions, data.articleRevisions, 'id', true);
+        restoreMap(this.publishedContent, data.publishedContent, 'projectionId', true);
+        restoreMap(this.media, data.media);
+
         if (data.siteSettings) {
           this.siteSettings = { ...this.siteSettings, ...data.siteSettings };
         }
@@ -1407,6 +1436,14 @@ class InMemoryStore {
         consultations: Array.from(this.consultations.values()),
         inquiries: Array.from(this.inquiries.values()),
         paymentRequests: Array.from(this.paymentRequests.values()),
+        services: Array.from(this.services.values()),
+        serviceRevisions: Array.from(this.serviceRevisions.values()),
+        teamMembers: Array.from(this.teamMembers.values()),
+        teamMemberRevisions: Array.from(this.teamMemberRevisions.values()),
+        articles: Array.from(this.articles.values()),
+        articleRevisions: Array.from(this.articleRevisions.values()),
+        publishedContent: Array.from(this.publishedContent.values()),
+        media: Array.from(this.media.values()),
         siteSettings: this.siteSettings,
       };
       fs.writeFileSync(tempPath, JSON.stringify(payload, null, 2), 'utf-8');

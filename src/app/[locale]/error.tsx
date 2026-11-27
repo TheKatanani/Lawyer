@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 
 export default function LocaleError({
@@ -11,6 +12,10 @@ export default function LocaleError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const params = useParams();
+  const locale = params?.locale === 'en' ? 'en' : 'ar';
+  const isAr = locale === 'ar';
+
   useEffect(() => {
     console.error('Unhandled runtime error in localized route:', error);
   }, [error]);
@@ -24,13 +29,17 @@ export default function LocaleError({
 
         <div className="space-y-2">
           <h1 className="font-heading-ar font-bold text-2xl text-ink">
-            حدث خطأ غير متوقع
+            {isAr ? 'حدث خطأ غير متوقع' : 'Something went wrong'}
           </h1>
           <p className="text-muted text-sm leading-relaxed">
-            نعتذر عن هذا الخلل المؤقت. يرجى إعادة المحاولة أو العودة للصفحة الرئيسية لشركة رياض محمد الزهراني للمحاماة.
+            {isAr
+              ? 'نعتذر عن هذا الخلل المؤقت. يرجى إعادة المحاولة أو العودة للصفحة الرئيسية لشركة رياض محمد الزهراني للمحاماة.'
+              : 'We apologize for the temporary issue. Please try again or return to the Riyadh Mohammed Alzahrani Law Firm homepage.'}
           </p>
-          <p className="text-muted/70 text-xs font-mono" dir="ltr">
-            An unexpected error occurred. Please try again or return to homepage.
+          <p className="text-muted/70 text-xs" dir={isAr ? 'ltr' : 'rtl'}>
+            {isAr
+              ? 'An unexpected error occurred. Please try again or return to homepage.'
+              : 'حدث خطأ غير متوقع. يرجى إعادة المحاولة أو العودة للرئيسية.'}
           </p>
         </div>
 
@@ -42,18 +51,19 @@ export default function LocaleError({
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
+            type="button"
             onClick={() => reset()}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-ink text-on-dark rounded-sm text-xs font-semibold hover:bg-signature transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>إعادة المحاولة / Try Again</span>
+            <span>{isAr ? 'إعادة المحاولة' : 'Try Again'}</span>
           </button>
           <Link
-            href="/"
+            href={`/${locale}`}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-canvas border border-border text-ink rounded-sm text-xs font-semibold hover:bg-canvas/80 transition-colors"
           >
             <Home className="w-3.5 h-3.5 text-gold-ink" />
-            <span>الصفحة الرئيسية / Home</span>
+            <span>{isAr ? 'العودة للصفحة الرئيسية' : 'Back to Home'}</span>
           </Link>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { SupportedLocale } from '@/server/types';
 import { Scale } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -40,6 +41,10 @@ export default async function TeamPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[{ name: isAr ? 'فريق المحامين' : 'Our Team', path: '/team' }]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">

@@ -63,8 +63,8 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
       return NextResponse.json({ error: 'Valid Moyasar payment ID is required.' }, { status: 400 });
     }
 
-    // Idempotent: If already marked as paid with this paymentId
-    if (consultation && consultation.paymentStatus === 'paid' && consultation.paymentId === paymentId) {
+    // Idempotent: If already marked as paid, return persisted consultation receipt
+    if (consultation && consultation.paymentStatus === 'paid') {
       return NextResponse.json({
         success: true,
         consultation,
@@ -124,6 +124,13 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
           error: `Payment is not completed. Current status: ${verifiedPayment.status}`,
           status: verifiedPayment.status,
         },
+        { status: 422 }
+      );
+    }
+
+    if (verifiedPayment.currency.toUpperCase() !== 'SAR') {
+      return NextResponse.json(
+        { error: `Invalid payment currency (${verifiedPayment.currency}). Expected SAR.` },
         { status: 422 }
       );
     }

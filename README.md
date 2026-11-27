@@ -82,6 +82,21 @@ npm run build
 
 ---
 
+## 💳 Moyasar Payment Gateway (Test → Live Go-Live Checklist)
+
+Online payments stay **disabled by default** (`PAYMENTS_ENABLED="false"`). Every key and activation flag is resolved dynamically from environment variables:
+
+| Environment Variable | Test / Staging Value | Production Live Go-Live Value |
+| :--- | :--- | :--- |
+| `PAYMENTS_ENABLED` | `"false"` (or `"true"` when testing) | `"true"` |
+| `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` | `pk_test_...` | `pk_live_...` |
+| `MOYASAR_SECRET_KEY` | `sk_test_...` | `sk_live_...` |
+| `MOYASAR_WEBHOOK_SECRET` | Staging webhook secret | Production Moyasar dashboard webhook secret |
+
+When the real Moyasar merchant account is approved, replace the test values in Vercel (`Settings → Environment Variables`) with `pk_live_...`, `sk_live_...`, the live `MOYASAR_WEBHOOK_SECRET`, and `PAYMENTS_ENABLED=true`, then trigger a **Redeploy**.
+
+---
+
 ## 📁 Project Architecture
 
 ```

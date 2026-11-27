@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { SupportedLocale } from '@/server/types';
+import { FIRM_DETAILS } from '@/config/compliance';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
+
+export const DEFAULT_OG_IMAGE_PATH = '/images/home-hero.webp';
 
 /**
  * Resolves the canonical public site origin from a single env variable (NEXT_PUBLIC_SITE_URL),
@@ -16,6 +20,46 @@ export function getSiteUrl(): string {
     'https://rma-law.sa';
 
   return configured.replace(/\/+$/, '');
+}
+
+export function resolveAbsoluteAssetUrl(assetPath: string | undefined, baseOrigin: string): string {
+  const raw = assetPath?.trim() || DEFAULT_OG_IMAGE_PATH;
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+  const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+  return `${baseOrigin.replace(/\/+$/, '')}${normalized}`;
+}
+
+export function buildBreadcrumbJsonLd(
+  locale: SupportedLocale,
+  items: Array<{ name: string; path: string }>
+) {
+  const isAr = locale === 'ar';
+  const baseUrl = FIRM_DETAILS.websiteUrl.replace(/\/+$/, '');
+  const crumbs = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: isAr ? 'الرئيسية' : 'Home',
+      item: `${baseUrl}/${locale}`,
+    },
+    ...items.map((item, idx) => {
+      const normalized = item.path.startsWith('/') ? item.path : `/${item.path}`;
+      return {
+        '@type': 'ListItem',
+        position: idx + 2,
+        name: item.name,
+        item: `${baseUrl}/${locale}${normalized}`,
+      };
+    }),
+  ];
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs,
+  };
 }
 
 /**
@@ -55,18 +99,25 @@ export function buildPageMetadata({
   path,
   title,
   description,
+  ogImageUrl,
   noIndex = false,
 }: {
   locale: SupportedLocale;
   path: string;
   title: string | { absolute: string };
   description: string;
+  ogImageUrl?: string;
   noIndex?: boolean;
 }): Metadata {
   const siteUrl = getSiteUrl();
+  const settings = store.siteSettings || INITIAL_SETTINGS;
   const cleanTitle = typeof title === 'string' ? stripFirmTitleSuffix(title) : title;
   const alternates = buildAlternates(path, locale);
   const ogTitle = typeof cleanTitle === 'string' ? cleanTitle : cleanTitle.absolute;
+  const resolvedOgImage = resolveAbsoluteAssetUrl(
+    ogImageUrl || settings.ogImageUrl || DEFAULT_OG_IMAGE_PATH,
+    siteUrl
+  );
 
   return {
     title: cleanTitle,
@@ -79,6 +130,20 @@ export function buildPageMetadata({
       url: alternates.canonical,
       locale: locale === 'ar' ? 'ar_SA' : 'en_US',
       type: 'website',
+      images: [
+        {
+          url: resolvedOgImage,
+          width: 1200,
+          height: 630,
+          alt: ogTitle,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description,
+      images: [resolvedOgImage],
     },
     ...(noIndex
       ? {

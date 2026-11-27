@@ -4,6 +4,7 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { publishArticlePaired, unpublishArticle } from '@/server/repositories/content';
 import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(
   req: NextRequest,
@@ -68,10 +69,20 @@ export async function PATCH(
     // Handle Publish / Unpublish actions
     if (action === 'publish') {
       await publishArticlePaired(params.id, user.uid);
+      store.persistToDisk();
+      revalidateSiteRoutes([
+        `/ar/insights/${article.locales.ar.slug || params.id}`,
+        `/en/insights/${article.locales.en.slug || params.id}`,
+      ]);
       return NextResponse.json({ success: true, isPublished: true });
     }
     if (action === 'unpublish') {
       await unpublishArticle(params.id, user.uid);
+      store.persistToDisk();
+      revalidateSiteRoutes([
+        `/ar/insights/${article.locales.ar.slug || params.id}`,
+        `/en/insights/${article.locales.en.slug || params.id}`,
+      ]);
       return NextResponse.json({ success: true, isPublished: false });
     }
 
@@ -123,6 +134,12 @@ export async function PATCH(
       await publishArticlePaired(params.id, user.uid);
     }
 
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/insights/${article.locales.ar.slug || params.id}`,
+      `/en/insights/${article.locales.en.slug || params.id}`,
+    ]);
+
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
       actorUid: user.uid,
@@ -168,6 +185,11 @@ export async function DELETE(
 
     // Delete entity
     store.articles.delete(params.id);
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/insights/${article.locales.ar.slug || params.id}`,
+      `/en/insights/${article.locales.en.slug || params.id}`,
+    ]);
 
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,

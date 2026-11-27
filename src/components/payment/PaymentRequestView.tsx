@@ -6,6 +6,7 @@ import Script from 'next/script';
 import {
   CheckCircle2,
   Printer,
+  Download,
   MessageSquare,
   ShieldCheck,
   AlertCircle,
@@ -25,13 +26,27 @@ declare global {
   }
 }
 
+interface PaymentRequestReceiptData {
+  reference: string;
+  moyasarPaymentId: string;
+  amountSar: number;
+  amountMinor: number;
+  currency: string;
+  paidAt: string;
+  payerName: string;
+  paymentMethod?: string | null;
+  maskedCard?: string;
+}
+
 interface PaymentRequestData {
   id: string;
   token: string;
   clientName: string;
+  payerName?: string | null;
   serviceCategory: string;
   amountSar: number;
   amountMinor: number;
+  currency?: string;
   description: string;
   status: 'unpaid' | 'paid' | 'cancelled';
   paymentMethod?: string | null;
@@ -41,6 +56,7 @@ interface PaymentRequestData {
   isExpired?: boolean;
   moyasarPaymentId?: string | null;
   maskedCard?: string;
+  receipt?: PaymentRequestReceiptData | null;
 }
 
 interface PaymentRequestViewProps {
@@ -70,6 +86,41 @@ export function PaymentRequestView({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
 
+  const verifyAndSettlePayment = async (paymentId: string) => {
+    setVerifying(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/invoices/${data.token}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setData((prev) => ({
+          ...prev,
+          status: 'paid',
+          currency: json.data.currency || prev.currency || 'SAR',
+          payerName: json.data.payerName || json.data.receipt?.payerName || prev.payerName || prev.clientName,
+          paidAt: json.data.paidAt || new Date().toISOString(),
+          paymentMethod: json.data.paymentMethod || 'online',
+          moyasarPaymentId: json.data.moyasarPaymentId || paymentId,
+          maskedCard: json.data.maskedCard || json.data.receipt?.maskedCard,
+          receipt: json.data.receipt || prev.receipt,
+        }));
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        setErrorMsg(json.error || (isAr ? 'تعذر إتمام الدفع: فشل التحقق من السداد' : 'Payment verification failed'));
+      }
+    } catch (err) {
+      console.error('[PAYMENT_VERIFY_ERROR]', err);
+      setErrorMsg(isAr ? 'تعذر إتمام الدفع: خطأ في الاتصال بالبوابة' : 'Network error during verification');
+    } finally {
+      setVerifying(false);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
   // Check URL query parameters for 3DS redirect return (e.g. ?id=xyz or ?status=paid or ?status=failed)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -83,7 +134,6 @@ export function PaymentRequestView({
       const reason = messageParam ? `: ${messageParam}` : '';
       setErrorMsg(isAr ? `تعذر إتمام الدفع${reason}` : `Payment could not be completed${reason}`);
       setVerifying(false);
-      // Clean query parameters so customer can retry or reload cleanly
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -91,41 +141,11 @@ export function PaymentRequestView({
     // Case 2: Payment reported as paid or has a paymentId to verify
     if (statusParam === 'paid' || (paymentId && data.status !== 'paid' && !verifying)) {
       if (paymentId) {
-        setVerifying(true);
-        setErrorMsg(null);
-
-        fetch(`/api/invoices/${data.token}/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentId }),
-        })
-          .then(async (res) => {
-            const json = await res.json();
-            if (res.ok && json.success) {
-              setData((prev) => ({
-                ...prev,
-                status: 'paid',
-                paidAt: json.data.paidAt || new Date().toISOString(),
-                paymentMethod: json.data.paymentMethod || 'online',
-                moyasarPaymentId: json.data.moyasarPaymentId || paymentId,
-                maskedCard: json.data.maskedCard,
-              }));
-              window.history.replaceState({}, document.title, window.location.pathname);
-            } else {
-              setErrorMsg(json.error || (isAr ? 'تعذر إتمام الدفع: فشل التحقق من السداد' : 'Payment verification failed'));
-            }
-          })
-          .catch((err) => {
-            console.error('[PAYMENT_VERIFY_ERROR]', err);
-            setErrorMsg(isAr ? 'تعذر إتمام الدفع: خطأ في الاتصال بالبوابة' : 'Network error during verification');
-          })
-          .finally(() => {
-            setVerifying(false);
-            window.history.replaceState({}, document.title, window.location.pathname);
-          });
+        verifyAndSettlePayment(paymentId);
       }
     }
-  }, [data.token, data.status, verifying, isAr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.token, data.status, isAr]);
 
   // Mount Moyasar MPF form when ready
   useEffect(() => {
@@ -141,17 +161,7 @@ export function PaymentRequestView({
       return;
     }
 
-    // If container already has form elements mounted, avoid redundant init
     if (formContainerRef.current.children.length > 0 && moyasarMounted) {
-      return;
-    }
-
-    if (!publishableKey) {
-      setErrorMsg(
-        isAr
-          ? 'بوابة الدفع الإلكتروني قيد الصيانة. يرجى التواصل مع إدارة المكتب للسداد.'
-          : 'Payment gateway is currently under maintenance. Please contact office administration.'
-      );
       return;
     }
 
@@ -167,20 +177,61 @@ export function PaymentRequestView({
       window.Moyasar.init({
         element: formContainerRef.current,
         amount: data.amountMinor,
-        currency: 'SAR',
+        currency: data.currency || 'SAR',
         description: `RMA Legal - ${data.id} - ${data.clientName}`,
         language: locale,
         fixed_width: false,
         publishable_api_key: publishableKey,
         callback_url: `${window.location.origin}/${locale}/pay/${data.token}`,
         methods,
+        use_payment_intent: true,
         metadata: {
           requestId: data.id,
           token: data.token,
           clientName: data.clientName,
         },
-        on_completed: function (_payment: any) {
-          // Callback triggers page redirect or verification
+        on_initiating: async function () {
+          try {
+            const checkoutRes = await fetch(`/api/invoices/${data.token}/checkout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ locale }),
+            });
+            const checkoutJson = await checkoutRes.json();
+
+            if (checkoutRes.status === 409 && checkoutJson.alreadyPaid && checkoutJson.data) {
+              setData((prev) => ({
+                ...prev,
+                ...checkoutJson.data,
+                status: 'paid',
+              }));
+              setErrorMsg(null);
+              return false;
+            }
+
+            if (!checkoutRes.ok || !checkoutJson.paymentIntent?.client_secret) {
+              setErrorMsg(
+                checkoutJson.error ||
+                  (isAr ? 'تعذر بدء عملية الدفع. يرجى المحاولة لاحقاً.' : 'Unable to initiate payment.')
+              );
+              return false;
+            }
+
+            return {
+              payment_intent: {
+                id: checkoutJson.paymentIntent.id,
+                client_secret: checkoutJson.paymentIntent.client_secret,
+              },
+            };
+          } catch {
+            setErrorMsg(isAr ? 'تعذر التحقق من حالة الطلب قبل الدفع.' : 'Pre-payment check failed.');
+            return false;
+          }
+        },
+        on_completed: function (payment: any) {
+          if (payment?.id) {
+            verifyAndSettlePayment(payment.id);
+          }
         },
         on_failed: function (error: any) {
           console.warn('[MOYASAR_PAYMENT_FAILED]', error);
@@ -196,28 +247,82 @@ export function PaymentRequestView({
       console.error('[MOYASAR_INIT_ERROR]', e);
       setErrorMsg(isAr ? 'تعذر إتمام الدفع: فشل تهيئة نموذج السداد' : 'Failed to initialize payment form');
     }
-  }, [paymentsEnabled, data, scriptLoaded, moyasarMounted, verifying, publishableKey, locale, isAr, applePayEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentsEnabled, data.status, data.token, data.amountMinor, scriptLoaded, moyasarMounted, verifying, publishableKey, locale, isAr, applePayEnabled]);
 
   const handlePrint = () => {
     window.print();
   };
 
+  const receiptRef = data.receipt?.reference || data.id;
+  const receiptPayerName = data.receipt?.payerName || data.payerName || data.clientName;
+  const receiptCurrency = data.receipt?.currency || data.currency || 'SAR';
+  const receiptAmountSar = data.receipt?.amountSar ?? data.amountSar;
+  const receiptPaymentId = data.receipt?.moyasarPaymentId || data.moyasarPaymentId || '-';
+  const receiptPaidAt = data.receipt?.paidAt || data.paidAt;
+  const receiptMethod = data.receipt?.paymentMethod || data.paymentMethod;
+  const receiptMaskedCard = data.receipt?.maskedCard || data.maskedCard;
+
+  const handleDownloadReceipt = () => {
+    const formattedDate = receiptPaidAt
+      ? new Date(receiptPaidAt).toLocaleString(isAr ? 'ar-SA' : 'en-US')
+      : '-';
+    const escapeHtml = (v: string) =>
+      String(v).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+    const html = `<!doctype html>
+<html lang="${isAr ? 'ar' : 'en'}" dir="${isAr ? 'rtl' : 'ltr'}">
+<head>
+<meta charset="utf-8" />
+<title>${escapeHtml(isAr ? `إيصال سداد - ${receiptRef}` : `Payment Receipt - ${receiptRef}`)}</title>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #f6f2ea; color: #202522; padding: 32px; }
+  .card { max-width: 680px; margin: 0 auto; background: #fff; border: 1px solid #d9d1c2; border-radius: 12px; padding: 28px; }
+  .title { font-size: 20px; font-weight: bold; margin: 0 0 8px; }
+  .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .amt { background: #202522; color: #fff; padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; margin-top: 16px; font-weight: bold; font-size: 18px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="title">${escapeHtml(isAr ? 'إيصال سداد إلكتروني' : 'Electronic Payment Receipt')}</h1>
+    <p style="color:#666;font-size:12px;">${escapeHtml(isAr ? 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية' : 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations')}</p>
+    <div class="row"><span>${isAr ? 'رقم طلب السداد' : 'Payment Request Ref'}</span><strong>${escapeHtml(receiptRef)}</strong></div>
+    <div class="row"><span>${isAr ? 'معرّف الدفع (Moyasar)' : 'Moyasar Payment ID'}</span><strong>${escapeHtml(receiptPaymentId)}</strong></div>
+    <div class="row"><span>${isAr ? 'اسم الدافع / العميل' : 'Payer / Client Name'}</span><strong>${escapeHtml(receiptPayerName)}</strong></div>
+    <div class="row"><span>${isAr ? 'بيان الخدمة' : 'Legal Service'}</span><strong>${escapeHtml(data.serviceCategory)}</strong></div>
+    <div class="row"><span>${isAr ? 'تاريخ السداد' : 'Payment Date'}</span><strong>${escapeHtml(formattedDate)}</strong></div>
+    <div class="row"><span>${isAr ? 'وسيلة الدفع' : 'Payment Method'}</span><strong>${escapeHtml(String(receiptMethod || 'Card'))} ${receiptMaskedCard ? escapeHtml(receiptMaskedCard) : ''}</strong></div>
+    <div class="amt"><span>${isAr ? 'المبلغ المسدد' : 'Total Paid'}</span><span>${receiptAmountSar.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${escapeHtml(receiptCurrency)}</span></div>
+  </div>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt-${receiptRef}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getWhatsAppLink = () => {
     const rawPhone = officialWhatsApp.replace(/[^0-9]/g, '');
     const msg = isAr
-      ? `السلام عليكم ورحمة الله،\nأفيدكم بأنه تم سداد طلب السداد رقم (${data.id}) بمبلغ ${data.amountSar} ريال سعودي لصالح شركة رياض محمد الزهراني للمحاماة.\nاسم العميل: ${data.clientName}\nتاريخ السداد: ${data.paidAt ? new Date(data.paidAt).toLocaleDateString('ar-SA') : ''}`
-      : `Dear RMA Legal Team,\nPayment of ${data.amountSar} SAR for Request Ref (${data.id}) has been completed successfully.\nClient: ${data.clientName}`;
+      ? `السلام عليكم ورحمة الله،\nأفيدكم بأنه تم سداد طلب السداد رقم (${receiptRef}) بمبلغ ${receiptAmountSar} ${receiptCurrency} لصالح شركة رياض محمد الزهراني للمحاماة.\nاسم الدافع: ${receiptPayerName}\nتاريخ السداد: ${receiptPaidAt ? new Date(receiptPaidAt).toLocaleDateString('ar-SA') : ''}`
+      : `Dear RMA Legal Team,\nPayment of ${receiptAmountSar} ${receiptCurrency} for Request Ref (${receiptRef}) has been completed successfully.\nPayer: ${receiptPayerName}`;
     return `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
   };
 
   return (
     <div className="min-h-screen bg-canvas py-10 sm:py-16 px-4 sm:px-6 lg:px-8 font-body-ar">
       {/* Moyasar MPF Stylesheet & Script */}
-      {paymentsEnabled && Boolean(publishableKey) && (
+      {paymentsEnabled && Boolean(publishableKey) && data.status === 'unpaid' && (
         <>
-          <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.14.0/moyasar.css" />
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/moyasar-payment-form@2.3.1/dist/moyasar.css" />
           <Script
-            src="https://cdn.moyasar.com/mpf/1.14.0/moyasar.js"
+            src="https://cdn.jsdelivr.net/npm/moyasar-payment-form@2.3.1/dist/moyasar.umd.min.js"
             strategy="lazyOnload"
             onLoad={() => setScriptLoaded(true)}
           />
@@ -301,15 +406,15 @@ export function PaymentRequestView({
 
               <div className="text-right sm:text-left rtl:sm:text-left ltr:sm:text-right">
                 <span className="text-xs text-muted block">{isAr ? 'رقم الإيصال المرجعي' : 'Receipt Ref'}</span>
-                <span className="font-mono font-bold text-ink text-base">{data.id}</span>
+                <span className="font-mono font-bold text-ink text-base">{receiptRef}</span>
               </div>
             </div>
 
             {/* Receipt Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
               <div className="p-3.5 rounded-xl bg-canvas/60 border border-border/40 space-y-1">
-                <span className="text-xs text-muted block">{isAr ? 'اسم العميل / المنشأة' : 'Client / Entity'}</span>
-                <span className="font-semibold text-ink text-base block">{data.clientName}</span>
+                <span className="text-xs text-muted block">{isAr ? 'اسم الدافع / العميل' : 'Payer / Client Name'}</span>
+                <span className="font-semibold text-ink text-base block">{receiptPayerName}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-canvas/60 border border-border/40 space-y-1">
@@ -320,7 +425,7 @@ export function PaymentRequestView({
               <div className="p-3.5 rounded-xl bg-canvas/60 border border-border/40 space-y-1">
                 <span className="text-xs text-muted block">{isAr ? 'تاريخ وتوقيت السداد' : 'Payment Timestamp'}</span>
                 <span className="font-medium text-ink block">
-                  {data.paidAt ? new Date(data.paidAt).toLocaleString(isAr ? 'ar-SA' : 'en-US') : '-'}
+                  {receiptPaidAt ? new Date(receiptPaidAt).toLocaleString(isAr ? 'ar-SA' : 'en-US') : '-'}
                 </span>
               </div>
 
@@ -328,21 +433,21 @@ export function PaymentRequestView({
                 <span className="text-xs text-muted block">{isAr ? 'وسيلة الدفع والمعرّف' : 'Method & Transaction ID'}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-ink uppercase">
-                    {data.paymentMethod === 'applepay'
+                    {receiptMethod === 'applepay'
                       ? 'Apple Pay'
-                      : data.paymentMethod === 'mada'
+                      : receiptMethod === 'mada'
                       ? 'Mada (مدى)'
-                      : data.paymentMethod === 'office'
+                      : receiptMethod === 'office'
                       ? (isAr ? 'سداد مكتبي' : 'Office Cash')
                       : 'Card'}
                   </span>
-                  {data.maskedCard && (
-                    <span className="text-xs text-muted font-mono">{data.maskedCard}</span>
+                  {receiptMaskedCard && (
+                    <span className="text-xs text-muted font-mono">{receiptMaskedCard}</span>
                   )}
                 </div>
-                {data.moyasarPaymentId && (
-                  <span className="text-[11px] text-muted font-mono block truncate">
-                    Ref: {data.moyasarPaymentId}
+                {receiptPaymentId && receiptPaymentId !== '-' && (
+                  <span className="text-[11px] text-muted font-mono block truncate" dir="ltr">
+                    Moyasar ID: {receiptPaymentId}
                   </span>
                 )}
               </div>
@@ -360,13 +465,13 @@ export function PaymentRequestView({
               </div>
               <div className="text-right rtl:text-right ltr:text-left">
                 <span className="text-3xl font-body-ar font-bold text-white tabular-nums">
-                  {data.amountSar.toLocaleString('en-US', {
+                  {receiptAmountSar.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
                 <span className="text-sm font-semibold text-gold mr-1.5 ml-1.5">
-                  {isAr ? 'ر.س' : 'SAR'}
+                  {isAr && receiptCurrency === 'SAR' ? 'ر.س' : receiptCurrency}
                 </span>
               </div>
             </div>
@@ -375,7 +480,7 @@ export function PaymentRequestView({
             <div className="border-t border-border/60 pt-4 text-xs text-muted space-y-1 leading-relaxed">
               <p>
                 {isAr
-                  ? 'هذا المستند يمثل إيصال سداد إلكتروني معتمد صادر عن شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية (ترخيص معتمد بالمملكة العربية السعودية).'
+                  ? 'هذا المستند يمثل إيصال سداد إلكتروني معتمد صادر عن شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية.'
                   : 'This document constitutes an official Electronic Payment Receipt issued by Riyadh Mohammed Alzahrani Law Firm & Legal Consultations.'}
               </p>
               <p className="text-[11px] text-muted/80">
@@ -390,20 +495,29 @@ export function PaymentRequestView({
               <button
                 type="button"
                 onClick={handlePrint}
-                className="w-full sm:w-1/2 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-ink/20 text-ink font-semibold text-sm hover:bg-canvas transition shadow-sm"
+                className="w-full sm:w-1/3 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-ink/20 text-ink font-semibold text-sm hover:bg-canvas transition shadow-sm"
               >
                 <Printer className="w-4 h-4 text-gold-ink" />
-                <span>{isAr ? 'طباعة الإيصال الرسمي' : 'Print Receipt'}</span>
+                <span>{isAr ? 'طباعة الإيصال' : 'Print Receipt'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadReceipt}
+                className="w-full sm:w-1/3 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gold/50 bg-gold/10 text-ink font-semibold text-sm hover:bg-gold/20 transition shadow-sm"
+              >
+                <Download className="w-4 h-4 text-gold-ink" />
+                <span>{isAr ? 'تنزيل الإيصال' : 'Download Receipt'}</span>
               </button>
 
               <a
                 href={getWhatsAppLink()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-1/2 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-success text-white font-semibold text-sm hover:bg-success/90 transition shadow-sm"
+                className="w-full sm:w-1/3 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-success text-white font-semibold text-sm hover:bg-success/90 transition shadow-sm"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>{isAr ? 'إرسال تأكيد للمكتب عبر واتساب' : 'WhatsApp Confirmation'}</span>
+                <span>{isAr ? 'تأكيد عبر واتساب' : 'WhatsApp'}</span>
               </a>
             </div>
           </div>

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { store } from '@/server/db/store';
-import { fetchMoyasarPayment, isPaymentsEnabled, PaymentVerificationError } from '@/server/payments/moyasar';
+import {
+  applySettledPaymentToRequest,
+  buildPaymentRequestReceipt,
+  fetchMoyasarPayment,
+  isPaymentsEnabled,
+  PaymentVerificationError,
+  reconcilePaidPaymentRequest,
+} from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp, logInvalidTokenProbe } from '@/server/security/rate-limit';
-import { PaymentRequestMethod } from '@/server/types';
 
 const VerifyInvoiceSchema = z
   .object({
@@ -37,7 +44,7 @@ export async function POST(
     );
   }
 
-  // 2. Token lookup
+  // 2. Token lookup + reconciliation
   const pr = store.getPaymentRequestByToken(token);
   if (!pr) {
     logInvalidTokenProbe(ip, token, userAgent);
@@ -47,21 +54,30 @@ export async function POST(
     );
   }
 
-  // 3. Strict Idempotency: If already marked paid, return success immediately
+  await reconcilePaidPaymentRequest(pr);
+
+  // 3. Strict Idempotency: If already marked paid, return persisted receipt immediately
   if (pr.status === 'paid') {
+    const receipt = buildPaymentRequestReceipt(pr);
     return NextResponse.json({
       success: true,
+      alreadyProcessed: true,
       message: 'تم التحقق من السداد بنجاح مسبقاً',
       data: {
         id: pr.id,
         token: pr.token,
         clientName: pr.clientName,
+        payerName: receipt.payerName,
         serviceCategory: pr.serviceCategory,
         amountSar: pr.amountSar,
+        amountMinor: pr.amountMinor,
+        currency: receipt.currency,
         status: pr.status,
         paymentMethod: pr.paymentMethod,
         moyasarPaymentId: pr.moyasarPaymentId,
+        maskedCard: receipt.maskedCard,
         paidAt: pr.paidAt,
+        receipt,
       },
     });
   }
@@ -117,25 +133,13 @@ export async function POST(
       return NextResponse.json({ error: 'فشل التحقق: المبلغ المدفوع لا يتطابق مع قيمة الطلب' }, { status: 400 });
     }
 
-    // Detect payment method
-    let detectedMethod: PaymentRequestMethod = 'creditcard';
-    if (payment.source?.type === 'applepay') {
-      detectedMethod = 'applepay';
-    } else if (payment.source?.company === 'mada') {
-      detectedMethod = 'mada';
-    }
+    const { receipt } = applySettledPaymentToRequest(pr, payment);
 
-    // Update payment request state
-    pr.status = 'paid';
-    pr.moyasarPaymentId = payment.id;
-    pr.paymentMethod = detectedMethod;
-    pr.paidAt = new Date().toISOString();
-
-    store.paymentRequests.set(pr.id, pr);
-    store.persistToDisk();
-
-    // Masked card info for receipt
-    const maskedCard = payment.source?.number ? `•••• •••• •••• ${payment.source.number.slice(-4)}` : undefined;
+    try {
+      revalidatePath('/admin/invoices');
+      revalidatePath(`/ar/pay/${pr.token}`);
+      revalidatePath(`/en/pay/${pr.token}`);
+    } catch {}
 
     return NextResponse.json({
       success: true,
@@ -144,14 +148,17 @@ export async function POST(
         id: pr.id,
         token: pr.token,
         clientName: pr.clientName,
+        payerName: receipt.payerName,
         serviceCategory: pr.serviceCategory,
         amountSar: pr.amountSar,
         amountMinor: pr.amountMinor,
+        currency: receipt.currency,
         status: pr.status,
         paymentMethod: pr.paymentMethod,
         moyasarPaymentId: pr.moyasarPaymentId,
         paidAt: pr.paidAt,
-        maskedCard,
+        maskedCard: receipt.maskedCard,
+        receipt,
       },
     });
   } catch (err: any) {

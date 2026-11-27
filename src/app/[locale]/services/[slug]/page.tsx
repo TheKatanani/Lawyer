@@ -11,6 +11,7 @@ import { ImageSlot } from '@/components/ImageSlot';
 import { isSiteImageSlug } from '@/lib/site-images';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale, slug },
@@ -48,17 +49,31 @@ export default async function ServiceDetailPage({
 
   const area = getPracticeAreaBySlug(slug);
 
-  const scopeItems = area
+  const dbDeliverables = Array.isArray(service.metadata?.deliverables)
+    ? service.metadata.deliverables.filter(Boolean)
+    : [];
+  const scopeItems = dbDeliverables.length > 0
+    ? dbDeliverables
+    : area
     ? (isAr ? area.scopeOfServicesAr : area.scopeOfServicesEn)
-    : (service.metadata?.deliverables || []);
+    : [];
 
-  const problemsItems = area
+  const dbProblemsBlock = service.blocks?.find((b) => b.id.includes('list-problems'));
+  const dbProblems = Array.isArray(dbProblemsBlock?.data?.items)
+    ? dbProblemsBlock!.data.items.filter(Boolean)
+    : [];
+  const problemsItems = dbProblems.length > 0
+    ? dbProblems
+    : area
     ? (isAr ? area.problemsAddressedAr : area.problemsAddressedEn)
     : [];
 
   const steps = area?.methodologySteps || [];
 
-  const valueQuote = area
+  const dbValueBlock = service.blocks?.find((b) => b.id.includes('callout-val'));
+  const valueQuote = dbValueBlock?.data?.text
+    ? String(dbValueBlock.data.text)
+    : area
     ? (isAr ? area.valueToClientAr : area.valueToClientEn)
     : null;
 
@@ -72,6 +87,13 @@ export default async function ServiceDetailPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={isAr ? 'ar' : 'en'}
+        items={[
+          { name: isAr ? 'مجالات الممارسة' : 'Practice Areas', path: '/services' },
+          { name: service.title, path: `/services/${service.slug}` },
+        ]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Breadcrumb & Header */}
         <ScrollReveal direction="up">

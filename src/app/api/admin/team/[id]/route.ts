@@ -3,6 +3,7 @@ import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { publishTeamMemberPaired, unpublishTeamMember } from '@/server/repositories/content';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(
   req: NextRequest,
@@ -71,10 +72,20 @@ export async function PATCH(
     // Handle Publish / Unpublish actions
     if (action === 'publish') {
       await publishTeamMemberPaired(params.id, user.uid);
+      store.persistToDisk();
+      revalidateSiteRoutes([
+        `/ar/team/${member.locales.ar.slug || params.id}`,
+        `/en/team/${member.locales.en.slug || params.id}`,
+      ]);
       return NextResponse.json({ success: true, isPublished: true });
     }
     if (action === 'unpublish') {
       await unpublishTeamMember(params.id, user.uid);
+      store.persistToDisk();
+      revalidateSiteRoutes([
+        `/ar/team/${member.locales.ar.slug || params.id}`,
+        `/en/team/${member.locales.en.slug || params.id}`,
+      ]);
       return NextResponse.json({ success: true, isPublished: false });
     }
 
@@ -125,6 +136,12 @@ export async function PATCH(
       await publishTeamMemberPaired(params.id, user.uid);
     }
 
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/team/${member.locales.ar.slug || params.id}`,
+      `/en/team/${member.locales.en.slug || params.id}`,
+    ]);
+
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
       actorUid: user.uid,
@@ -170,6 +187,11 @@ export async function DELETE(
 
     // Delete entity
     store.teamMembers.delete(params.id);
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/team/${member.locales.ar.slug || params.id}`,
+      `/en/team/${member.locales.en.slug || params.id}`,
+    ]);
 
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,

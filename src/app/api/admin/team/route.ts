@@ -4,6 +4,7 @@ import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { TeamMemberEntity, TeamMemberRevision } from '@/server/types';
 import { publishTeamMemberPaired } from '@/server/repositories/content';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(req: NextRequest) {
   try {
@@ -160,6 +161,9 @@ export async function POST(req: NextRequest) {
     if (publishImmediately) {
       await publishTeamMemberPaired(memberId, user.uid);
     }
+
+    store.persistToDisk();
+    revalidateSiteRoutes([`/ar/team/${memberId}`, `/en/team/${memberId}`]);
 
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,

@@ -23,10 +23,10 @@ const nextConfig = {
 
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.moyasar.com https://api.moyasar.com https://*.firebaseio.com https://*.googleapis.com https://apis.google.com https://identitytoolkit.googleapis.com;
-      style-src 'self' 'unsafe-inline' https://cdn.moyasar.com https://fonts.googleapis.com;
-      img-src 'self' blob: data: https://res.cloudinary.com https://images.unsplash.com https://cdn.moyasar.com;
-      font-src 'self' data: https://fonts.gstatic.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.moyasar.com https://cdn.jsdelivr.net https://api.moyasar.com https://*.firebaseio.com https://*.googleapis.com https://apis.google.com https://identitytoolkit.googleapis.com;
+      style-src 'self' 'unsafe-inline' https://cdn.moyasar.com https://cdn.jsdelivr.net https://fonts.googleapis.com;
+      img-src 'self' blob: data: https://res.cloudinary.com https://images.unsplash.com https://cdn.moyasar.com https://cdn.jsdelivr.net;
+      font-src 'self' data: https://fonts.gstatic.com https://cdn.moyasar.com https://cdn.jsdelivr.net;
       connect-src 'self' https://api.moyasar.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://res.cloudinary.com;
       frame-src 'self' https://api.moyasar.com https://*.firebaseapp.com;
       object-src 'none';

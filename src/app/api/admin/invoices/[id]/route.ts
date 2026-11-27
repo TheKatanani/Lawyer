@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
+import { buildPaymentRequestReceipt } from '@/server/payments/moyasar';
 import { PaymentRequestStatus, PaymentRequestMethod } from '@/server/types';
 
 export const dynamic = 'force-dynamic';
@@ -52,13 +53,14 @@ export async function PATCH(
         return NextResponse.json({ error: 'حالة السداد غير صالحة' }, { status: 400 });
       }
       pr.status = body.status;
-      if (body.status === 'paid' && !pr.paidAt) {
-        pr.paidAt = new Date().toISOString();
+      if (body.status === 'paid') {
+        if (!pr.paidAt) pr.paidAt = new Date().toISOString();
         if (body.paymentMethod) {
           pr.paymentMethod = body.paymentMethod as PaymentRequestMethod;
         } else if (!pr.paymentMethod) {
           pr.paymentMethod = 'office';
         }
+        pr.receipt = buildPaymentRequestReceipt(pr);
       }
     }
 

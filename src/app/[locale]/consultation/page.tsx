@@ -5,6 +5,7 @@ import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ConsultationForm } from '@/components/consultation/ConsultationForm';
 import { buildPageMetadata } from '@/lib/seo';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 interface Props {
   params: { locale: string };
@@ -84,6 +85,10 @@ export default async function ConsultationPage({ params: { locale } }: Props) {
 
   return (
     <div className="py-12 sm:py-16 md:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={currentLocale === 'en' ? 'en' : 'ar'}
+        items={[{ name: currentLocale === 'en' ? 'Consultation' : 'طلب استشارة', path: '/consultation' }]}
+      />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <Suspense fallback={<FormFallback />}>
           <ConsultationForm

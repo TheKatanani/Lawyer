@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/server/db/store';
+import { buildPaymentRequestReceipt, reconcilePaidPaymentRequest } from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp, logInvalidTokenProbe } from '@/server/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export async function GET(
     );
   }
 
-  // 2. Lookup by cryptographic token
+  // 2. Lookup by cryptographic token and reconcile paid status with Moyasar if needed
   const pr = store.getPaymentRequestByToken(token);
   if (!pr) {
     // Log masked probe event to security audit log
@@ -31,6 +32,9 @@ export async function GET(
       { status: 404 }
     );
   }
+
+  await reconcilePaidPaymentRequest(pr);
+  const receipt = pr.status === 'paid' ? buildPaymentRequestReceipt(pr) : null;
 
   // 3. Return sanitized public representation (never expose internal notes)
   return NextResponse.json({
@@ -42,10 +46,15 @@ export async function GET(
       serviceCategory: pr.serviceCategory,
       amountSar: pr.amountSar,
       amountMinor: pr.amountMinor,
+      currency: pr.currency || receipt?.currency || 'SAR',
       description: pr.description,
       status: pr.status,
       paymentMethod: pr.paymentMethod,
+      payerName: pr.payerName || receipt?.payerName || pr.clientName,
+      moyasarPaymentId: pr.moyasarPaymentId,
+      maskedCard: pr.maskedCard || receipt?.maskedCard,
       paidAt: pr.paidAt,
+      receipt,
       createdAt: pr.createdAt,
       expiresAt: pr.expiresAt,
       isExpired: pr.expiresAt ? new Date(pr.expiresAt).getTime() < Date.now() : false,

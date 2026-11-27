@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { unpublishService } from '@/server/repositories/content';
+import { store } from '@/server/db/store';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 const UnpublishSchema = z.object({
   entityType: z.enum(['service']),
@@ -25,6 +27,11 @@ export async function POST(req: NextRequest) {
     }
 
     const res = await unpublishService(parsed.data.entityId, user.uid);
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/services/${parsed.data.entityId}`,
+      `/en/services/${parsed.data.entityId}`,
+    ]);
     return NextResponse.json(res);
   } catch (err: any) {
     const msg = err.message || 'Unpublish transaction failed';

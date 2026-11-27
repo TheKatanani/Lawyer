@@ -3,6 +3,7 @@ import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { store } from '@/server/db/store';
 import { publishServicePaired } from '@/server/repositories/content';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 export async function GET(
   req: NextRequest,
@@ -98,6 +99,12 @@ export async function PATCH(
       await publishServicePaired(service.id, user.uid);
     }
 
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/services/${service.locales.ar.slug || service.id}`,
+      `/en/services/${service.locales.en.slug || service.id}`,
+    ]);
+
     // Audit log
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
@@ -139,6 +146,11 @@ export async function DELETE(
     store.publishedContent.delete(`service_${params.id}_en`);
 
     store.services.delete(params.id);
+    store.persistToDisk();
+    revalidateSiteRoutes([
+      `/ar/services/${service.locales.ar.slug || params.id}`,
+      `/en/services/${service.locales.en.slug || params.id}`,
+    ]);
 
     // Audit log
     store.auditLogs.unshift({

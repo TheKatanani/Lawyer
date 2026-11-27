@@ -7,7 +7,10 @@ import { SupportedLocale } from '@/server/types';
 import { Phone, MessageSquare, MapPin, Clock, ShieldCheck, Mail, Globe } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
+import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { buildPageMetadata } from '@/lib/seo';
+
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
   params: { locale },
@@ -36,6 +39,13 @@ export default async function ContactPage({
   const t = await getTranslations();
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const contactAddress = isAr ? (settings.addressAr || FIRM_DETAILS.addressAr) : (settings.addressEn || FIRM_DETAILS.addressEn);
+  const contactPhone = settings.phone || FIRM_DETAILS.phone;
+  const contactPhoneRaw = contactPhone.replace(/[^\d+]/g, '');
+  const contactWhatsapp = settings.whatsapp || FIRM_DETAILS.whatsapp;
+  const contactWhatsappUrl = `https://wa.me/${contactWhatsapp.replace(/[^\d]/g, '')}`;
+  const contactEmail = settings.email || FIRM_DETAILS.email;
 
   const publishedServices = await listPublishedProjections('service', currentLocale);
   const serviceOptions = publishedServices.map((s) => ({
@@ -69,6 +79,10 @@ export default async function ContactPage({
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
+      <BreadcrumbJsonLd
+        locale={currentLocale === 'en' ? 'en' : 'ar'}
+        items={[{ name: isAr ? 'تواصل معنا' : 'Contact Us', path: '/contact' }]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
@@ -108,7 +122,7 @@ export default async function ContactPage({
                     <MapPin className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold text-ink block">{isAr ? 'المقر الرئيسي (جدة)' : 'Headquarters (Jeddah)'}</span>
-                      <span className="text-muted leading-relaxed block">{isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn}</span>
+                      <span className="text-muted leading-relaxed block">{contactAddress}</span>
                     </div>
                   </div>
 
@@ -116,8 +130,8 @@ export default async function ContactPage({
                     <Phone className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold text-ink block">{isAr ? 'الجوال والاتصال' : 'Mobile & Telephone'}</span>
-                      <a href={`tel:${FIRM_DETAILS.phoneRaw}`} className="text-gold-ink hover:underline font-mono">
-                        <bdi dir="ltr">{FIRM_DETAILS.phone}</bdi>
+                      <a href={`tel:${contactPhoneRaw}`} className="text-gold-ink hover:underline font-mono">
+                        <bdi dir="ltr">{contactPhone}</bdi>
                       </a>
                     </div>
                   </div>
@@ -127,12 +141,12 @@ export default async function ContactPage({
                     <div>
                       <span className="font-semibold text-ink block">{isAr ? 'واتساب الرسمي' : 'Official WhatsApp'}</span>
                       <a
-                        href={FIRM_DETAILS.whatsappUrl}
+                        href={contactWhatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gold-ink hover:underline font-mono"
                       >
-                        <bdi dir="ltr">{FIRM_DETAILS.whatsapp}</bdi>
+                        <bdi dir="ltr">{contactWhatsapp}</bdi>
                       </a>
                     </div>
                   </div>
@@ -141,8 +155,8 @@ export default async function ContactPage({
                     <Mail className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold text-ink block">{isAr ? 'البريد الإلكتروني' : 'Email Address'}</span>
-                      <a href={`mailto:${FIRM_DETAILS.email}`} className="text-gold-ink hover:underline">
-                        {FIRM_DETAILS.email}
+                      <a href={`mailto:${contactEmail}`} className="text-gold-ink hover:underline">
+                        {contactEmail}
                       </a>
                     </div>
                   </div>

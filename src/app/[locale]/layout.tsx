@@ -8,7 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { FIRM_DETAILS } from '@/config/compliance';
-import { getSiteUrl } from '@/lib/seo';
+import { DEFAULT_OG_IMAGE_PATH, getSiteUrl, resolveAbsoluteAssetUrl } from '@/lib/seo';
 import '@/app/globals.css';
 
 export function generateStaticParams() {
@@ -23,6 +23,10 @@ export async function generateMetadata({
   const isAr = locale === 'ar';
   const siteUrl = getSiteUrl();
   const settings = store.siteSettings || INITIAL_SETTINGS;
+  const ogImage = resolveAbsoluteAssetUrl(
+    settings.ogImageUrl || DEFAULT_OG_IMAGE_PATH,
+    siteUrl
+  );
 
   return {
     title: {
@@ -34,7 +38,13 @@ export async function generateMetadata({
     openGraph: {
       title: isAr ? settings.seoTitleAr : settings.seoTitleEn,
       description: isAr ? settings.seoDescAr : settings.seoDescEn,
-      images: settings.ogImageUrl ? [{ url: settings.ogImageUrl, width: 1200, height: 630 }] : undefined,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: isAr ? settings.brandNameAr : settings.brandNameEn }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: isAr ? settings.seoTitleAr : settings.seoTitleEn,
+      description: isAr ? settings.seoDescAr : settings.seoDescEn,
+      images: [ogImage],
     },
     metadataBase: new URL(siteUrl),
     robots: {
@@ -59,10 +69,15 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
   const isAr = locale === 'ar';
+  const settings = store.siteSettings || INITIAL_SETTINGS;
 
   const headerMessages = {
-    brandName: (messages.common as any)?.brandName || 'شركة رياض محمد الزهراني للمحاماة',
-    brandShort: (messages.common as any)?.brandShort || 'رياض الزهراني للمحاماة',
+    brandName: isAr
+      ? settings.brandNameAr || (messages.common as any)?.brandName || 'شركة رياض محمد الزهراني للمحاماة'
+      : settings.brandNameEn || (messages.common as any)?.brandName || 'Riyadh Alzahrani Law Firm',
+    brandShort: isAr
+      ? settings.brandShortAr || (messages.common as any)?.brandShort || 'رياض الزهراني للمحاماة'
+      : settings.brandShortEn || (messages.common as any)?.brandShort || 'RMA Legal',
     navHome: (messages.nav as any)?.home || 'الرئيسية',
     navAbout: (messages.nav as any)?.about || 'عن الشركة',
     navServices: (messages.nav as any)?.services || 'الخدمات',
@@ -74,6 +89,16 @@ export default async function LocaleLayout({
     requestConsultation: (messages.nav as any)?.consultation || 'طلب استشارة',
     languageSwitchLabel: (messages.common as any)?.language || 'English',
     targetLocale: isAr ? 'en' : 'ar',
+  };
+
+  const footerSettings = {
+    brandName: isAr ? settings.brandNameAr : settings.brandNameEn,
+    brandShort: isAr ? settings.brandShortAr : settings.brandShortEn,
+    footerDesc: isAr ? settings.footerSummaryAr : settings.footerSummaryEn,
+    address: isAr ? settings.addressAr : settings.addressEn,
+    phone: settings.phone,
+    whatsapp: settings.whatsapp,
+    email: settings.email,
   };
 
   return (
@@ -88,7 +113,7 @@ export default async function LocaleLayout({
           <main id="main-content" className="flex-1 focus:outline-none">
             {children}
           </main>
-          <Footer locale={locale} />
+          <Footer locale={locale} settings={footerSettings} />
         </NextIntlClientProvider>
 
         <script
@@ -97,15 +122,15 @@ export default async function LocaleLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'LegalService',
-              name: isAr ? FIRM_DETAILS.nameAr : FIRM_DETAILS.nameEn,
-              alternateName: isAr ? FIRM_DETAILS.shortNameAr : FIRM_DETAILS.shortNameEn,
-              description: isAr ? FIRM_DETAILS.taglineAr : FIRM_DETAILS.taglineEn,
+              name: isAr ? settings.brandNameAr : settings.brandNameEn,
+              alternateName: isAr ? settings.brandShortAr : settings.brandShortEn,
+              description: isAr ? settings.taglineAr : settings.taglineEn,
               url: FIRM_DETAILS.websiteUrl,
-              telephone: FIRM_DETAILS.phone,
-              email: FIRM_DETAILS.email,
+              telephone: settings.phone || FIRM_DETAILS.phone,
+              email: settings.email || FIRM_DETAILS.email,
               address: {
                 '@type': 'PostalAddress',
-                streetAddress: isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn,
+                streetAddress: isAr ? settings.addressAr : settings.addressEn,
                 addressLocality: isAr ? FIRM_DETAILS.cityAr : FIRM_DETAILS.cityEn,
                 addressCountry: 'SA',
               },

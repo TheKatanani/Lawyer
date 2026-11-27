@@ -4,6 +4,7 @@ import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { store, INITIAL_SETTINGS } from '@/server/db/store';
 import { SiteSettings } from '@/server/types';
+import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 const UpdateSiteSettingsSchema = z
   .object({
@@ -24,10 +25,22 @@ const UpdateSiteSettingsSchema = z
     seoDescEn: z.string().trim().max(500).optional(),
     ogImageUrl: z.string().trim().max(500).optional(),
     faviconUrl: z.string().trim().max(500).optional(),
+    heroEyebrowAr: z.string().trim().max(250).optional(),
+    heroEyebrowEn: z.string().trim().max(250).optional(),
     heroHeadlineAr: z.string().trim().max(300).optional(),
     heroHeadlineEn: z.string().trim().max(300).optional(),
     heroDescAr: z.string().trim().max(600).optional(),
     heroDescEn: z.string().trim().max(600).optional(),
+    leadershipQuoteAr: z.string().trim().max(600).optional(),
+    leadershipQuoteEn: z.string().trim().max(600).optional(),
+    closingWordAr: z.string().trim().max(800).optional(),
+    closingWordEn: z.string().trim().max(800).optional(),
+    homeCtaHeadingAr: z.string().trim().max(300).optional(),
+    homeCtaHeadingEn: z.string().trim().max(300).optional(),
+    homeCtaDescAr: z.string().trim().max(600).optional(),
+    homeCtaDescEn: z.string().trim().max(600).optional(),
+    footerSummaryAr: z.string().trim().max(500).optional(),
+    footerSummaryEn: z.string().trim().max(500).optional(),
     aboutTextAr: z.string().trim().max(2000).optional(),
     aboutTextEn: z.string().trim().max(2000).optional(),
     aboutMissionAr: z.string().trim().max(1000).optional(),
@@ -99,6 +112,9 @@ export async function PUT(req: NextRequest) {
       ...store.siteSettings,
       ...sanitized,
     };
+
+    store.persistToDisk();
+    revalidateSiteRoutes();
 
     store.auditLogs.unshift({
       id: `AUDIT-${Date.now()}`,
