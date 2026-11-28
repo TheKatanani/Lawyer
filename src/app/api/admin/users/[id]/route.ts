@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUser } from '@/server/auth/session';
+import { getSessionUser, protectLastSuperAdmin } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  deleteAdmin,
+  getAdminByUid,
+  listAdmins,
+  saveAdmin,
+} from '@/server/db/dal';
 import { AdminRole } from '@/server/types';
 
 export async function PATCH(
@@ -15,7 +21,7 @@ export async function PATCH(
     }
     assertCapability(user.role, 'admins.manage');
 
-    const targetAdmin = store.admins.get(params.id);
+    const targetAdmin = await getAdminByUid(params.id);
     if (!targetAdmin) {
       return NextResponse.json({ error: 'Admin user not found.' }, { status: 404 });
     }
@@ -23,9 +29,11 @@ export async function PATCH(
     const body = await req.json();
     const { displayName, role, isActive } = body;
 
-    // Last super_admin protection
-    if (targetAdmin.role === 'super_admin' && (role && role !== 'super_admin' || isActive === false)) {
-      const superAdminCount = Array.from(store.admins.values()).filter(
+    if (
+      targetAdmin.role === 'super_admin' &&
+      ((role && role !== 'super_admin') || isActive === false)
+    ) {
+      const superAdminCount = (await listAdmins()).filter(
         (a) => a.role === 'super_admin' && a.isActive
       ).length;
       if (superAdminCount <= 1) {
@@ -49,15 +57,15 @@ export async function PATCH(
     }
     targetAdmin.updatedAt = new Date().toISOString();
 
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await saveAdmin(targetAdmin);
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'ADMIN_UPDATED',
       targetType: 'admin',
       targetId: params.id,
       details: { role: targetAdmin.role, isActive: targetAdmin.isActive },
-      createdAt: new Date().toISOString(),
+      createdAt: targetAdmin.updatedAt,
     });
 
     return NextResponse.json({ success: true, admin: targetAdmin });
@@ -84,34 +92,28 @@ export async function DELETE(
       );
     }
 
-    const targetAdmin = store.admins.get(params.id);
+    const targetAdmin = await getAdminByUid(params.id);
     if (!targetAdmin) {
       return NextResponse.json({ error: 'Admin user not found.' }, { status: 404 });
     }
 
-    // Last super_admin protection
-    if (targetAdmin.role === 'super_admin') {
-      const superAdminCount = Array.from(store.admins.values()).filter(
-        (a) => a.role === 'super_admin' && a.isActive
-      ).length;
-      if (superAdminCount <= 1) {
-        return NextResponse.json(
-          { error: 'Operation prohibited: The firm must maintain at least one active Super Admin.' },
-          { status: 400 }
-        );
-      }
+    try {
+      await protectLastSuperAdmin(params.id);
+    } catch {
+      return NextResponse.json(
+        { error: 'Operation prohibited: The firm must maintain at least one active Super Admin.' },
+        { status: 400 }
+      );
     }
 
-    store.admins.delete(params.id);
-
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await deleteAdmin(params.id);
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'ADMIN_DELETED',
       targetType: 'admin',
       targetId: params.id,
-      details: { email: targetAdmin.email },
+      details: { email: targetAdmin.email, role: targetAdmin.role },
       createdAt: new Date().toISOString(),
     });
 

@@ -7,6 +7,10 @@ import { SupportedLocale } from '@/server/types';
 import { Scale } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
+import { getSiteSettings } from '@/server/db/dal';
+import { pickLocalized } from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
@@ -17,7 +21,7 @@ export async function generateMetadata({
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/team',
     title: isAr ? 'القيادة وفريق المحامين' : 'Leadership & Legal Team',
@@ -37,7 +41,10 @@ export default async function TeamPage({
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
 
-  const team = await listPublishedProjections('teamMember', currentLocale);
+  const [team, settings] = await Promise.all([
+    listPublishedProjections('teamMember', currentLocale),
+    getSiteSettings(),
+  ]);
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
@@ -49,13 +56,16 @@ export default async function TeamPage({
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
             <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              {t('teamSection.eyebrow')}
+              {pickLocalized(currentLocale, settings.teamSectionEyebrowAr, settings.teamSectionEyebrowEn) ||
+                t('teamSection.eyebrow')}
             </span>
             <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-              {t('teamSection.heading')}
+              {pickLocalized(currentLocale, settings.teamSectionHeadingAr, settings.teamSectionHeadingEn) ||
+                t('teamSection.heading')}
             </h1>
             <p className="text-muted text-base sm:text-lg leading-relaxed">
-              {t('teamSection.description')}
+              {pickLocalized(currentLocale, settings.teamSectionDescAr, settings.teamSectionDescEn) ||
+                t('teamSection.description')}
             </p>
           </div>
         </ScrollReveal>

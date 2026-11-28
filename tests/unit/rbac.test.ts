@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { hasCapability, assertCapability, ROLE_CAPABILITIES } from '../../src/server/permissions/rbac';
 import { protectLastSuperAdmin } from '../../src/server/auth/session';
 import { hashPassword, verifyPassword } from '../../src/server/auth/password';
-import { store } from '../../src/server/db/store';
+import { seedFirestore } from '../../src/server/db/seed';
 
 describe('RBAC & Authority Matrix Verification (A11, A12)', () => {
   it('Super Admin possesses all defined system capabilities', () => {
@@ -52,9 +52,10 @@ describe('RBAC & Authority Matrix Verification (A11, A12)', () => {
     expect(() => assertCapability('inquiry_manager', 'content.publish')).toThrow(/Forbidden/);
   });
 
-  it('Protects against deleting or demoting the last remaining active Super Admin', () => {
+  it('Protects against deleting or demoting the last remaining active Super Admin', async () => {
+    await seedFirestore();
     // Only admin-rma-01 is initial active Super Admin
-    expect(() => protectLastSuperAdmin('admin-rma-01')).toThrow(
+    await expect(protectLastSuperAdmin('admin-rma-01')).rejects.toThrow(
       /Cannot delete, demote, or deactivate the last remaining active Super Admin/
     );
   });

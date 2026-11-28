@@ -8,6 +8,8 @@ import { Clock, Scale, ShieldAlert } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
+
+export const dynamic = 'force-dynamic';
 import { computeArticleReadingTimeMinutes, formatReadingTime } from '@/lib/reading-time';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
@@ -23,7 +25,7 @@ export async function generateMetadata({
     return { title: currentLocale === 'ar' ? 'المقال غير موجود' : 'Article Not Found' };
   }
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: `/insights/${projection.slug}`,
     title: projection.seo.title || projection.title,

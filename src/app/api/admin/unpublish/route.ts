@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
 import { unpublishService } from '@/server/repositories/content';
-import { store } from '@/server/db/store';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
 const UnpublishSchema = z.object({
@@ -23,11 +22,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const parsed = UnpublishSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Unsupported or invalid entity payload' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Unsupported or invalid entity payload' },
+        { status: 400 }
+      );
     }
 
     const res = await unpublishService(parsed.data.entityId, user.uid);
-    store.persistToDisk();
     revalidateSiteRoutes([
       `/ar/services/${parsed.data.entityId}`,
       `/en/services/${parsed.data.entityId}`,

@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { getSiteSettings } from '@/server/db/dal';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { getSiteUrl } from '@/lib/seo';
-import { FIRM_DETAILS } from '@/config/compliance';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const siteUrl = getSiteUrl();
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
 
   const [servicesAr, servicesEn, teamAr, articlesAr] = await Promise.all([
     listPublishedProjections('service', 'ar'),
@@ -34,7 +33,7 @@ export async function GET() {
     `- Phone / الهاتف: ${settings.phone}`,
     `- WhatsApp / واتساب: ${settings.whatsapp}`,
     `- Email / البريد الإلكتروني: ${settings.email}`,
-    `- Official Domain / الموقع الرسمي: ${FIRM_DETAILS.websiteUrl}`,
+    `- Official Domain / الموقع الرسمي: ${settings.websiteUrl || 'https://www.riyadhalzahrani.com'}`,
     '',
     '## Key Pages / الصفحات الرئيسية',
     `- Arabic Home: ${siteUrl}/ar`,

@@ -9,7 +9,15 @@ import { PATCH as handlePatchInsight, DELETE as handleDeleteInsight } from '@/ap
 import { POST as handleCreateAdmin, GET as handleGetAdmins } from '@/app/api/admin/users/route';
 import { PATCH as handlePatchAdmin, DELETE as handleDeleteAdmin } from '@/app/api/admin/users/[id]/route';
 import { GET as handleGetSettings, PUT as handlePutSettings } from '@/app/api/admin/settings/route';
-import { store } from '@/server/db/store';
+import {
+  getAdminByUid,
+  getArticleDoc,
+  getServiceDoc,
+  getSiteSettings,
+  getTeamMemberDoc,
+} from '@/server/db/dal';
+import { getPublishedProjection } from '@/server/repositories/content';
+import { seedFirestore } from '@/server/db/seed';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
 
 function makeAuthCookie(role: 'super_admin' | 'admin' | 'editor' | 'inquiry_manager' = 'super_admin', uid = 'admin-rma-01') {
@@ -20,19 +28,8 @@ function makeAuthCookie(role: 'super_admin' | 'admin' | 'editor' | 'inquiry_mana
 describe('CMS Admin Full CRUD Integration Suite', () => {
   const authCookie = makeAuthCookie('super_admin');
 
-  beforeEach(() => {
-    if (!store.admins.has('admin-rma-01')) {
-      store.admins.set('admin-rma-01', {
-        uid: 'admin-rma-01',
-        email: 'admin@rma-law.sa',
-        displayName: 'Riyadh Alzahrani',
-        role: 'super_admin',
-        isActive: true,
-        mfaEnrolled: true,
-        createdAt: '2026-11-12T10:00:00Z',
-        updatedAt: '2026-11-12T10:00:00Z',
-      });
-    }
+  beforeEach(async () => {
+    await seedFirestore();
   });
 
   // --- 1. SERVICES CRUD ---
@@ -52,8 +49,8 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     const createRes = await handleCreateService(createReq);
     expect(createRes.status).toBe(201);
     const { serviceId } = await createRes.json();
-    expect(store.services.has(serviceId)).toBe(true);
-    expect(store.publishedContent.has(`service_${serviceId}_ar`)).toBe(true);
+    expect(await getServiceDoc(serviceId)).not.toBeNull();
+    expect(await getPublishedProjection('service', serviceId, 'ar')).not.toBeNull();
 
     // Update
     const patchReq = new NextRequest(`http://localhost:3000/api/admin/services/${serviceId}`, {
@@ -73,8 +70,8 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const deleteRes = await handleDeleteService(deleteReq, { params: { id: serviceId } });
     expect(deleteRes.status).toBe(200);
-    expect(store.services.has(serviceId)).toBe(false);
-    expect(store.publishedContent.has(`service_${serviceId}_ar`)).toBe(false);
+    expect(await getServiceDoc(serviceId)).toBeNull();
+    expect(await getPublishedProjection('service', serviceId, 'ar')).toBeNull();
   });
 
   // --- 2. TEAM MANAGEMENT CRUD ---
@@ -98,8 +95,8 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     const createRes = await handleCreateTeam(createReq);
     expect(createRes.status).toBe(201);
     const { memberId } = await createRes.json();
-    expect(store.teamMembers.has(memberId)).toBe(true);
-    expect(store.publishedContent.has(`teamMember_${memberId}_ar`)).toBe(true);
+    expect(await getTeamMemberDoc(memberId)).not.toBeNull();
+    expect(await getPublishedProjection('teamMember', memberId, 'ar')).not.toBeNull();
 
     // Query List
     const listReq = new NextRequest('http://localhost:3000/api/admin/team', {
@@ -129,7 +126,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const deleteRes = await handleDeleteTeam(deleteReq, { params: { id: memberId } });
     expect(deleteRes.status).toBe(200);
-    expect(store.teamMembers.has(memberId)).toBe(false);
+    expect(await getTeamMemberDoc(memberId)).toBeNull();
   });
 
   // --- 3. INSIGHTS / BLOG CRUD ---
@@ -151,7 +148,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     const createRes = await handleCreateInsight(createReq);
     expect(createRes.status).toBe(201);
     const { articleId } = await createRes.json();
-    expect(store.articles.has(articleId)).toBe(true);
+    expect(await getArticleDoc(articleId)).not.toBeNull();
 
     // Query
     const listReq = new NextRequest('http://localhost:3000/api/admin/insights', {
@@ -169,7 +166,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const unpubRes = await handlePatchInsight(unpubReq, { params: { id: articleId } });
     expect(unpubRes.status).toBe(200);
-    expect(store.publishedContent.has(`article_${articleId}_ar`)).toBe(false);
+    expect(await getPublishedProjection('article', articleId, 'ar')).toBeNull();
 
     // Delete
     const deleteReq = new NextRequest(`http://localhost:3000/api/admin/insights/${articleId}`, {
@@ -178,7 +175,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const deleteRes = await handleDeleteInsight(deleteReq, { params: { id: articleId } });
     expect(deleteRes.status).toBe(200);
-    expect(store.articles.has(articleId)).toBe(false);
+    expect(await getArticleDoc(articleId)).toBeNull();
   });
 
   // --- 4. ADMINISTRATOR & RBAC GOVERNANCE CRUD ---
@@ -196,7 +193,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     const addRes = await handleCreateAdmin(addReq);
     expect(addRes.status).toBe(201);
     const { admin } = await addRes.json();
-    expect(store.admins.has(admin.uid)).toBe(true);
+    expect(await getAdminByUid(admin.uid)).not.toBeNull();
 
     // Update Role
     const patchReq = new NextRequest(`http://localhost:3000/api/admin/users/${admin.uid}`, {
@@ -206,8 +203,9 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const patchRes = await handlePatchAdmin(patchReq, { params: { id: admin.uid } });
     expect(patchRes.status).toBe(200);
-    expect(store.admins.get(admin.uid)?.role).toBe('editor');
-    expect(store.admins.get(admin.uid)?.isActive).toBe(false);
+    const updatedAdmin = await getAdminByUid(admin.uid);
+    expect(updatedAdmin?.role).toBe('editor');
+    expect(updatedAdmin?.isActive).toBe(false);
 
     // Self-deletion guard test
     const selfDeleteReq = new NextRequest(`http://localhost:3000/api/admin/users/admin-rma-01`, {
@@ -224,7 +222,7 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const delRes = await handleDeleteAdmin(delReq, { params: { id: admin.uid } });
     expect(delRes.status).toBe(200);
-    expect(store.admins.has(admin.uid)).toBe(false);
+    expect(await getAdminByUid(admin.uid)).toBeNull();
   });
 
   // --- 5. SITE SETTINGS & SEO CRUD ---
@@ -250,8 +248,9 @@ describe('CMS Admin Full CRUD Integration Suite', () => {
     });
     const putRes = await handlePutSettings(putReq);
     expect(putRes.status).toBe(200);
-    expect(store.siteSettings.taglineAr).toBe('رؤية قانونية راسخة وشراكة موثوقة للأعمال');
-    expect(store.siteSettings.ogImageUrl).toContain('og-custom.png');
-    expect(store.siteSettings.faviconUrl).toContain('favicon-custom.ico');
+    const persisted = await getSiteSettings();
+    expect(persisted.taglineAr).toBe('رؤية قانونية راسخة وشراكة موثوقة للأعمال');
+    expect(persisted.ogImageUrl).toContain('og-custom.png');
+    expect(persisted.faviconUrl).toContain('favicon-custom.ico');
   });
 });

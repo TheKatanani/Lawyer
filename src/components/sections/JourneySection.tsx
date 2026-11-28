@@ -5,29 +5,30 @@ import { FileText, SearchCheck, FileSignature, CheckCircle2 } from 'lucide-react
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 interface JourneySectionProps {
-  locale: string;
+  locale?: string;
   messages: {
     eyebrow: string;
     heading: string;
-    step1Title: string;
-    step1Desc: string;
-    step2Title: string;
-    step2Desc: string;
-    step3Title: string;
-    step3Desc: string;
-    step4Title: string;
-    step4Desc: string;
+    steps: Array<{ title: string; desc: string }>;
   };
 }
 
-export function JourneySection({ locale, messages }: JourneySectionProps) {
-  const isAr = locale === 'ar';
-  const steps = [
-    { num: '01', title: messages.step1Title, desc: messages.step1Desc, icon: <FileText className="w-5 h-5 text-gold-ink" /> },
-    { num: '02', title: messages.step2Title, desc: messages.step2Desc, icon: <SearchCheck className="w-5 h-5 text-gold-ink" /> },
-    { num: '03', title: messages.step3Title, desc: messages.step3Desc, icon: <FileSignature className="w-5 h-5 text-gold-ink" /> },
-    { num: '04', title: messages.step4Title, desc: messages.step4Desc, icon: <CheckCircle2 className="w-5 h-5 text-gold-ink" /> },
-  ];
+const JOURNEY_ICONS = [
+  <FileText key="ft" className="w-5 h-5 text-gold-ink" />,
+  <SearchCheck key="sc" className="w-5 h-5 text-gold-ink" />,
+  <FileSignature key="fs" className="w-5 h-5 text-gold-ink" />,
+  <CheckCircle2 key="cc" className="w-5 h-5 text-gold-ink" />,
+];
+
+export function JourneySection({ messages }: JourneySectionProps) {
+  const steps = (messages.steps || []).map((s, idx) => ({
+    num: String(idx + 1).padStart(2, '0'),
+    title: s.title,
+    desc: s.desc,
+    icon: JOURNEY_ICONS[idx % JOURNEY_ICONS.length],
+  }));
+
+  if (steps.length === 0) return null;
 
   return (
     <section className="py-20 lg:py-24 bg-surface border-b border-border/50 relative overflow-hidden">

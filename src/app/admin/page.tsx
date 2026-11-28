@@ -2,8 +2,16 @@ import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/auth/session';
-import { store } from '@/server/db/store';
-import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage, CalendarCheck } from 'lucide-react';
+import {
+  listArticleDocs,
+  listAuditLogs,
+  listConsultations,
+  listInquiriesDocs,
+  listServiceDocs,
+  listTeamMemberDocs,
+} from '@/server/db/dal';
+import { pingFirestore } from '@/server/db/firestore';
+import { Briefcase, Users, BookOpen, Inbox, History, Shield, ArrowUpRight, CheckCircle2, Clock, Cloud, Flame, Image as LucideImage, CalendarCheck, AlertCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,14 +22,25 @@ export default async function AdminOverviewPage() {
     redirect('/admin/login');
   }
 
-  const serviceCount = store.services.size;
-  const teamCount = store.teamMembers.size;
-  const articleCount = store.articles.size;
-  const consultationList = Array.from(store.consultations.values());
+  const firestorePing = await pingFirestore();
+
+  const [servicesList, teamList, articleList, consultationList, inquiryList, recentAudits] =
+    firestorePing.ok
+      ? await Promise.all([
+          listServiceDocs(),
+          listTeamMemberDocs(),
+          listArticleDocs(),
+          listConsultations(),
+          listInquiriesDocs(),
+          listAuditLogs(5),
+        ])
+      : [[], [], [], [], [], []];
+
+  const serviceCount = servicesList.length;
+  const teamCount = teamList.length;
+  const articleCount = articleList.length;
   const pendingConsultations = consultationList.filter((c) => c.status === 'pending').length;
-  const inquiryList = Array.from(store.inquiries.values());
   const newInquiries = inquiryList.filter((i) => i.status === 'new').length;
-  const recentAudits = store.auditLogs.slice(0, 5);
 
   return (
     <div className="space-y-10">
@@ -37,21 +56,49 @@ export default async function AdminOverviewPage() {
 
       {/* Integrations Status Bar */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Firebase Status */}
-        <div className="bg-surface border border-gold/30 rounded-sm p-4 flex items-center justify-between shadow-xs">
+        {/* Firebase Firestore Live Ping Status */}
+        <div
+          className={`bg-surface rounded-sm p-4 flex items-center justify-between shadow-xs border ${
+            firestorePing.ok
+              ? firestorePing.seededSettings
+                ? 'border-gold/30'
+                : 'border-amber-400/60'
+              : 'border-danger/50'
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-signature rounded-sm text-gold">
               <Flame className="w-5 h-5 text-amber-500" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-ink">Google Firebase</span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" /> متصل
-                </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-ink">Cloud Firestore (Server-Only)</span>
+                {firestorePing.ok ? (
+                  firestorePing.seededSettings ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <CheckCircle2 className="w-3 h-3" />
+                      متصل ({firestorePing.mode === 'emulator' ? 'Emulator' : 'Live Cloud'}) · {firestorePing.latencyMs}ms
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                      <AlertCircle className="w-3 h-3" />
+                      متصل — القاعدة فارغة (شغّل npm run seed) · {firestorePing.latencyMs}ms
+                    </span>
+                  )
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                    <AlertCircle className="w-3 h-3" />
+                    غير متصل ({firestorePing.mode})
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-muted">
-                مشروع: <code className="bg-canvas px-1 py-0.5 rounded text-ink font-mono">lawyer-ad052</code> (حماية الخادم مفعّلة - Zero Browser Firestore)
+              <p className="text-xs text-muted mt-0.5">
+                مشروع: <code className="bg-canvas px-1 py-0.5 rounded text-ink font-mono">{firestorePing.projectId}</code>
+                {firestorePing.error ? (
+                  <span className="text-danger ms-2">— {firestorePing.error}</span>
+                ) : (
+                  <span className="ms-1">(قواعد المتصفح مغلقة · firebase-admin)</span>
+                )}
               </p>
             </div>
           </div>

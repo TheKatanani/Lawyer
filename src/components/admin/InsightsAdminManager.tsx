@@ -15,7 +15,6 @@ import {
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface ArticleItem {
   id: string;
@@ -45,6 +44,7 @@ interface ArticleItem {
 
 export function InsightsAdminManager() {
   const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [teamOptions, setTeamOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -73,10 +73,24 @@ export function InsightsAdminManager() {
   const loadArticles = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/insights');
+      const [res, teamRes] = await Promise.all([
+        fetch('/api/admin/insights'),
+        fetch('/api/admin/team').catch(() => null),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch insights');
       setArticles(data.articles || []);
+
+      if (teamRes && teamRes.ok) {
+        const teamData = await teamRes.json().catch(() => ({}));
+        const members = Array.isArray(teamData.team) ? teamData.team : [];
+        setTeamOptions(
+          members.map((m: any) => ({
+            id: m.id,
+            name: m.ar?.fullName || m.en?.fullName || m.id,
+          }))
+        );
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -475,9 +489,14 @@ export function InsightsAdminManager() {
                     onChange={(e) => setForm({ ...form, authorTeamMemberId: e.target.value })}
                     className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
                   >
-                    <option value="riyadh-alzahrani">أ. رياض بن محمد الزهراني</option>
-                    {UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers && (
-                      <option value="senior-counsel">د. عبد الرحمن العتيبي</option>
+                    {teamOptions.length === 0 ? (
+                      <option value={form.authorTeamMemberId}>{form.authorTeamMemberId}</option>
+                    ) : (
+                      teamOptions.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))
                     )}
                   </select>
                 </div>

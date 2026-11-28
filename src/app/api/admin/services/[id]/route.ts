@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  deleteServiceDoc,
+  getServiceDoc,
+  saveServiceDoc,
+} from '@/server/db/dal';
 import { publishServicePaired } from '@/server/repositories/content';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
+import { ServiceMethodologyStep } from '@/server/types';
 
 export async function GET(
   req: NextRequest,
@@ -14,11 +20,13 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     assertCapability(user.role, 'content.edit');
 
-    const service = store.services.get(params.id);
+    const service = await getServiceDoc(params.id);
     if (!service) return NextResponse.json({ error: 'Service not found.' }, { status: 404 });
 
-    const arRev = store.serviceRevisions.get(service.locales.ar.publishedRevisionId || service.locales.ar.draftRevisionId);
-    const enRev = store.serviceRevisions.get(service.locales.en.publishedRevisionId || service.locales.en.draftRevisionId);
+    const arRev =
+      service.revisions?.[service.locales.ar.publishedRevisionId || service.locales.ar.draftRevisionId];
+    const enRev =
+      service.revisions?.[service.locales.en.publishedRevisionId || service.locales.en.draftRevisionId];
 
     return NextResponse.json({ service, arRev, enRev });
   } catch (err: any) {
@@ -35,7 +43,7 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     assertCapability(user.role, 'content.edit');
 
-    const service = store.services.get(params.id);
+    const service = await getServiceDoc(params.id);
     if (!service) return NextResponse.json({ error: 'Service not found.' }, { status: 404 });
 
     const body = await req.json();
@@ -46,45 +54,93 @@ export async function PATCH(
       summaryEn,
       deliverablesAr,
       deliverablesEn,
+      problemsAr,
+      problemsEn,
+      methodologyStepsAr,
+      methodologyStepsEn,
+      valueToClientAr,
+      valueToClientEn,
       audiences,
       iconName,
     } = body;
 
     const nowIso = new Date().toISOString();
+    service.revisions = service.revisions || {};
 
-    // Update Arabic Revision
-    const arRevId = service.locales.ar.approvedRevisionId || service.locales.ar.draftRevisionId;
-    const arRev = store.serviceRevisions.get(arRevId);
+    const arRevId =
+      service.locales.ar.publishedRevisionId ||
+      service.locales.ar.approvedRevisionId ||
+      service.locales.ar.draftRevisionId;
+    const arRev = service.revisions[arRevId];
     if (arRev) {
-      if (titleAr) arRev.title = titleAr.trim();
-      if (summaryAr) {
+      if (titleAr) {
+        arRev.title = titleAr.trim();
+        arRev.seo.title = titleAr.trim();
+      }
+      if (summaryAr !== undefined) {
         arRev.summary = summaryAr.trim();
+        arRev.seo.description = summaryAr.trim();
         arRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: summaryAr.trim() } }];
       }
       if (deliverablesAr && Array.isArray(deliverablesAr)) {
-        arRev.deliverables = deliverablesAr.filter(Boolean);
+        arRev.deliverables = deliverablesAr.map((s: any) => String(s).trim()).filter(Boolean);
       }
-      if (titleAr) arRev.seo.title = titleAr.trim();
-      if (summaryAr) arRev.seo.description = summaryAr.trim();
+      if (problemsAr && Array.isArray(problemsAr)) {
+        arRev.prerequisites = problemsAr.map((s: any) => String(s).trim()).filter(Boolean);
+      }
+      if (methodologyStepsAr && Array.isArray(methodologyStepsAr)) {
+        const cleanSteps: ServiceMethodologyStep[] = methodologyStepsAr
+          .map((s: any, idx: number) => ({
+            step: Number(s?.step) || idx + 1,
+            title: String(s?.title || '').trim(),
+            description: String(s?.description || '').trim(),
+          }))
+          .filter((s) => s.title);
+        arRev.methodologySteps = cleanSteps;
+      }
+      if (valueToClientAr !== undefined) {
+        arRev.valueToClient = String(valueToClientAr).trim();
+      }
+      service.revisions[arRevId] = arRev;
     }
 
-    // Update English Revision
-    const enRevId = service.locales.en.approvedRevisionId || service.locales.en.draftRevisionId;
-    const enRev = store.serviceRevisions.get(enRevId);
+    const enRevId =
+      service.locales.en.publishedRevisionId ||
+      service.locales.en.approvedRevisionId ||
+      service.locales.en.draftRevisionId;
+    const enRev = service.revisions[enRevId];
     if (enRev) {
-      if (titleEn) enRev.title = titleEn.trim();
-      if (summaryEn) {
+      if (titleEn) {
+        enRev.title = titleEn.trim();
+        enRev.seo.title = titleEn.trim();
+      }
+      if (summaryEn !== undefined) {
         enRev.summary = summaryEn.trim();
+        enRev.seo.description = summaryEn.trim();
         enRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: summaryEn.trim() } }];
       }
       if (deliverablesEn && Array.isArray(deliverablesEn)) {
-        enRev.deliverables = deliverablesEn.filter(Boolean);
+        enRev.deliverables = deliverablesEn.map((s: any) => String(s).trim()).filter(Boolean);
       }
-      if (titleEn) enRev.seo.title = titleEn.trim();
-      if (summaryEn) enRev.seo.description = summaryEn.trim();
+      if (problemsEn && Array.isArray(problemsEn)) {
+        enRev.prerequisites = problemsEn.map((s: any) => String(s).trim()).filter(Boolean);
+      }
+      if (methodologyStepsEn && Array.isArray(methodologyStepsEn)) {
+        const cleanSteps: ServiceMethodologyStep[] = methodologyStepsEn
+          .map((s: any, idx: number) => ({
+            step: Number(s?.step) || idx + 1,
+            title: String(s?.title || '').trim(),
+            description: String(s?.description || '').trim(),
+          }))
+          .filter((s) => s.title);
+        enRev.methodologySteps = cleanSteps;
+      }
+      if (valueToClientEn !== undefined) {
+        enRev.valueToClient = String(valueToClientEn).trim();
+      }
+      service.revisions[enRevId] = enRev;
     }
 
-    // Update Entity
     if (audiences && Array.isArray(audiences)) {
       service.audiences = audiences;
     }
@@ -94,20 +150,18 @@ export async function PATCH(
     service.updatedAt = nowIso;
     service.updatedBy = user.uid;
 
-    // If already published, re-publish projections so public changes appear immediately!
+    await saveServiceDoc(service);
+
     if (service.locales.ar.publishedRevisionId && service.locales.en.publishedRevisionId) {
       await publishServicePaired(service.id, user.uid);
     }
 
-    store.persistToDisk();
     revalidateSiteRoutes([
       `/ar/services/${service.locales.ar.slug || service.id}`,
       `/en/services/${service.locales.en.slug || service.id}`,
     ]);
 
-    // Audit log
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'SERVICE_UPDATED',
@@ -117,7 +171,7 @@ export async function PATCH(
       createdAt: nowIso,
     });
 
-    return NextResponse.json({ success: true, service });
+    return NextResponse.json({ success: true, service: await getServiceDoc(params.id) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 403 });
   }
@@ -132,29 +186,17 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     assertCapability(user.role, 'content.edit');
 
-    const service = store.services.get(params.id);
+    const service = await getServiceDoc(params.id);
     if (!service) return NextResponse.json({ error: 'Service not found.' }, { status: 404 });
 
-    // Clean up revisions
-    store.serviceRevisions.delete(service.locales.ar.draftRevisionId);
-    store.serviceRevisions.delete(service.locales.en.draftRevisionId);
-    if (service.locales.ar.approvedRevisionId) store.serviceRevisions.delete(service.locales.ar.approvedRevisionId);
-    if (service.locales.en.approvedRevisionId) store.serviceRevisions.delete(service.locales.en.approvedRevisionId);
+    await deleteServiceDoc(params.id);
 
-    // Clean up projections
-    store.publishedContent.delete(`service_${params.id}_ar`);
-    store.publishedContent.delete(`service_${params.id}_en`);
-
-    store.services.delete(params.id);
-    store.persistToDisk();
     revalidateSiteRoutes([
       `/ar/services/${service.locales.ar.slug || params.id}`,
       `/en/services/${service.locales.en.slug || params.id}`,
     ]);
 
-    // Audit log
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'SERVICE_DELETED',

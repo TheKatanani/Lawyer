@@ -5,7 +5,15 @@ import { POST as handleVerifyInvoice } from '@/app/api/invoices/[token]/verify/r
 import { GET as handleGetInvoice } from '@/app/api/invoices/[token]/route';
 import { POST as handleMoyasarWebhook } from '@/app/api/webhooks/moyasar/route';
 import { POST as handleCheckoutConsultation } from '@/app/api/consultations/[id]/checkout/route';
-import { store } from '@/server/db/store';
+import {
+  deleteConsultationById,
+  deletePaymentRequestById,
+  saveConsultation,
+  savePaymentRequest,
+} from '@/server/db/dal';
+import { seedFirestore } from '@/server/db/seed';
+import { sealPaymentToken } from '@/server/payments/tokens';
+import { clearRuntimeCaches } from '@/server/security/runtime-cache';
 import { PaymentRequest } from '@/server/types';
 
 describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
@@ -14,12 +22,13 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
   const origPubKey = process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY;
   const origWebhookSecret = process.env.MOYASAR_WEBHOOK_SECRET;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.PAYMENTS_ENABLED = 'true';
     process.env.MOYASAR_SECRET_KEY = 'sk_test_unit_mock_secret';
     process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY = 'pk_test_unit_mock_pub';
     process.env.MOYASAR_WEBHOOK_SECRET = 'wh_test_secret';
-    store.rateLimits.clear();
+    clearRuntimeCaches();
+    await seedFirestore();
   });
 
   afterEach(() => {
@@ -31,7 +40,7 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
   });
 
   it('persists receipt idempotently across verify, webhook, and GET reload, and blocks double checkout (409)', async () => {
-    const token = store.generatePaymentRequestToken({
+    const token = sealPaymentToken({
       id: 'PR-2099-0777',
       clientName: 'شركة الاختبار المتكامل',
       serviceCategory: 'التقاضي التجاري',
@@ -53,7 +62,7 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
       status: 'unpaid',
       createdAt: '2026-11-27T10:00:00.000Z',
     };
-    store.paymentRequests.set(pr.id, pr);
+    await savePaymentRequest(pr);
 
     let settledOnMoyasar = false;
     let verifyLookupCalls = 0;
@@ -72,8 +81,12 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
       },
     };
 
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const origFetch = globalThis.fetch.bind(globalThis);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      if (!url.includes('moyasar.com')) {
+        return origFetch(input, init);
+      }
       if (url.includes('metadata')) {
         return new Response(JSON.stringify({ payments: settledOnMoyasar ? [paidObject] : [] }), {
           status: 200,
@@ -153,11 +166,23 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
     expect(checkoutRes.status).toBe(409);
     expect(checkoutJson.alreadyPaid).toBe(true);
 
-    store.paymentRequests.delete(pr.id);
+    await deletePaymentRequestById(pr.id);
   });
 
   it('refuses creating a second Moyasar payment intent for an already-paid consultation', async () => {
-    store.consultations.set('consult-paid-guard', {
+    const origFetch = globalThis.fetch.bind(globalThis);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      if (!url.includes('moyasar.com')) {
+        return origFetch(input, init);
+      }
+      return new Response(JSON.stringify({ payments: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    await saveConsultation({
       id: 'consult-paid-guard',
       reference: 'CR-2099-0888',
       fullName: 'سعد الاختباري',
@@ -197,6 +222,6 @@ describe('Moyasar Paid State, Idempotency & Persistent Receipt', () => {
     expect(res.status).toBe(409);
     expect(json.alreadyPaid).toBe(true);
 
-    store.consultations.delete('consult-paid-guard');
+    await deleteConsultationById('consult-paid-guard');
   });
 });

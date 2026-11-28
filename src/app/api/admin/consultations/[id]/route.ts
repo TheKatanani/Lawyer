@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  deleteConsultationById,
+  getConsultationById,
+  saveConsultation,
+} from '@/server/db/dal';
 import { ConsultationStatus } from '@/server/types';
 
 export async function GET(
@@ -15,7 +20,7 @@ export async function GET(
     }
     assertCapability(user.role, 'inquiries.read');
 
-    const consultation = store.consultations.get(params.id);
+    const consultation = await getConsultationById(params.id);
     if (!consultation) {
       return NextResponse.json({ error: 'Consultation request not found.' }, { status: 404 });
     }
@@ -37,7 +42,7 @@ export async function PATCH(
     }
     assertCapability(user.role, 'inquiries.update');
 
-    const consultation = store.consultations.get(params.id);
+    const consultation = await getConsultationById(params.id);
     if (!consultation) {
       return NextResponse.json({ error: 'Consultation request not found.' }, { status: 404 });
     }
@@ -161,8 +166,10 @@ export async function PATCH(
     consultation.updatedAt = nowIso;
     consultation.updatedBy = user.email;
 
+    await saveConsultation(consultation);
+
     // Record audit log
-    store.auditLogs.unshift({
+    await appendAuditLog({
       id: `AUDIT-${Date.now()}`,
       actorUid: user.uid,
       actorEmail: user.email,
@@ -176,8 +183,6 @@ export async function PATCH(
       },
       createdAt: nowIso,
     });
-
-    store.persistToDisk?.();
 
     return NextResponse.json({
       success: true,
@@ -199,13 +204,13 @@ export async function DELETE(
     }
     assertCapability(user.role, 'inquiries.purge');
 
-    const consultation = store.consultations.get(params.id);
+    const consultation = await getConsultationById(params.id);
     if (!consultation) {
       return NextResponse.json({ error: 'Consultation request not found.' }, { status: 404 });
     }
 
-    store.consultations.delete(params.id);
-    store.auditLogs.unshift({
+    await deleteConsultationById(params.id);
+    await appendAuditLog({
       id: `AUDIT-${Date.now()}`,
       actorUid: user.uid,
       actorEmail: user.email,
@@ -215,7 +220,6 @@ export async function DELETE(
       details: { reference: consultation.reference, fullName: consultation.fullName },
       createdAt: new Date().toISOString(),
     });
-    store.persistToDisk?.();
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

@@ -39,6 +39,16 @@ export function ServicesAdminManager({ initialServices, canPublish, actorUid }: 
   const [summaryEn, setSummaryEn] = useState('');
   const [deliverablesAr, setDeliverablesAr] = useState('');
   const [deliverablesEn, setDeliverablesEn] = useState('');
+  const [problemsAr, setProblemsAr] = useState('');
+  const [problemsEn, setProblemsEn] = useState('');
+  const [valueToClientAr, setValueToClientAr] = useState('');
+  const [valueToClientEn, setValueToClientEn] = useState('');
+  const [methodologyStepsAr, setMethodologyStepsAr] = useState<
+    Array<{ step: number; title: string; description: string }>
+  >([]);
+  const [methodologyStepsEn, setMethodologyStepsEn] = useState<
+    Array<{ step: number; title: string; description: string }>
+  >([]);
   const [audiences, setAudiences] = useState<string[]>(['business']);
   const [iconName, setIconName] = useState('Scale');
   const [saving, setSaving] = useState(false);
@@ -63,6 +73,12 @@ export function ServicesAdminManager({ initialServices, canPublish, actorUid }: 
     setSummaryEn('');
     setDeliverablesAr('');
     setDeliverablesEn('');
+    setProblemsAr('');
+    setProblemsEn('');
+    setValueToClientAr('');
+    setValueToClientEn('');
+    setMethodologyStepsAr([]);
+    setMethodologyStepsEn([]);
     setAudiences(['business']);
     setIconName('Scale');
     setIsModalOpen(true);
@@ -84,6 +100,12 @@ export function ServicesAdminManager({ initialServices, canPublish, actorUid }: 
         setSummaryEn(data.enRev?.summary || '');
         setDeliverablesAr((data.arRev?.deliverables || []).join('\n'));
         setDeliverablesEn((data.enRev?.deliverables || []).join('\n'));
+        setProblemsAr((data.arRev?.prerequisites || []).join('\n'));
+        setProblemsEn((data.enRev?.prerequisites || []).join('\n'));
+        setValueToClientAr(data.arRev?.valueToClient || '');
+        setValueToClientEn(data.enRev?.valueToClient || '');
+        setMethodologyStepsAr(data.arRev?.methodologySteps || []);
+        setMethodologyStepsEn(data.enRev?.methodologySteps || []);
         setAudiences(s.audiences || ['business']);
         setIconName(s.iconName || 'Scale');
       }
@@ -104,6 +126,12 @@ export function ServicesAdminManager({ initialServices, canPublish, actorUid }: 
       summaryEn: summaryEn.trim(),
       deliverablesAr: deliverablesAr.split('\n').map((l) => l.trim()).filter(Boolean),
       deliverablesEn: deliverablesEn.split('\n').map((l) => l.trim()).filter(Boolean),
+      problemsAr: problemsAr.split('\n').map((l) => l.trim()).filter(Boolean),
+      problemsEn: problemsEn.split('\n').map((l) => l.trim()).filter(Boolean),
+      valueToClientAr: valueToClientAr.trim(),
+      valueToClientEn: valueToClientEn.trim(),
+      methodologyStepsAr,
+      methodologyStepsEn,
       audiences,
       iconName,
     };
@@ -441,6 +469,175 @@ export function ServicesAdminManager({ initialServices, canPublish, actorUid }: 
                     onChange={(e) => setDeliverablesEn(e.target.value)}
                     className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink block">الإشكاليات والقضايا المعالجة (سطر لكل بند - عربي)</label>
+                  <textarea
+                    rows={3}
+                    dir="rtl"
+                    value={problemsAr}
+                    onChange={(e) => setProblemsAr(e.target.value)}
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink block">Problems Addressed (one per line - English)</label>
+                  <textarea
+                    rows={3}
+                    dir="ltr"
+                    value={problemsEn}
+                    onChange={(e) => setProblemsEn(e.target.value)}
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink block">القيمة للعميل (Value to Client - AR)</label>
+                  <textarea
+                    rows={2}
+                    dir="rtl"
+                    value={valueToClientAr}
+                    onChange={(e) => setValueToClientAr(e.target.value)}
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-ink block">Value to Client (English)</label>
+                  <textarea
+                    rows={2}
+                    dir="ltr"
+                    value={valueToClientEn}
+                    onChange={(e) => setValueToClientEn(e.target.value)}
+                    className="w-full px-3 py-2 bg-canvas border border-border rounded text-xs text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+              </div>
+
+              {/* Methodology Steps Editor (AR & EN) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/60 pt-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-ink">خطوات التعامل مع الملف (عربي)</label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMethodologyStepsAr([
+                          ...methodologyStepsAr,
+                          { step: methodologyStepsAr.length + 1, title: '', description: '' },
+                        ])
+                      }
+                      className="text-[11px] px-2 py-0.5 bg-canvas border border-border rounded hover:border-gold"
+                    >
+                      + خطوة
+                    </button>
+                  </div>
+                  {methodologyStepsAr.map((st, idx) => (
+                    <div key={idx} className="p-2 bg-canvas border border-border rounded space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <input
+                          type="text"
+                          placeholder={`عنوان الخطوة ${st.step}`}
+                          value={st.title}
+                          onChange={(e) => {
+                            const next = [...methodologyStepsAr];
+                            next[idx] = { ...st, title: e.target.value };
+                            setMethodologyStepsAr(next);
+                          }}
+                          className="w-full px-2 py-1 bg-surface border border-border rounded text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMethodologyStepsAr(
+                              methodologyStepsAr
+                                .filter((_, i) => i !== idx)
+                                .map((row, i) => ({ ...row, step: i + 1 }))
+                            )
+                          }
+                          className="text-danger text-[11px]"
+                        >
+                          حذف
+                        </button>
+                      </div>
+                      <textarea
+                        rows={2}
+                        placeholder="وصف الخطوة"
+                        value={st.description}
+                        onChange={(e) => {
+                          const next = [...methodologyStepsAr];
+                          next[idx] = { ...st, description: e.target.value };
+                          setMethodologyStepsAr(next);
+                        }}
+                        className="w-full px-2 py-1 bg-surface border border-border rounded text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-ink">Handling Methodology Steps (English)</label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMethodologyStepsEn([
+                          ...methodologyStepsEn,
+                          { step: methodologyStepsEn.length + 1, title: '', description: '' },
+                        ])
+                      }
+                      className="text-[11px] px-2 py-0.5 bg-canvas border border-border rounded hover:border-gold"
+                    >
+                      + Step
+                    </button>
+                  </div>
+                  {methodologyStepsEn.map((st, idx) => (
+                    <div key={idx} className="p-2 bg-canvas border border-border rounded space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <input
+                          type="text"
+                          dir="ltr"
+                          placeholder={`Step ${st.step} title`}
+                          value={st.title}
+                          onChange={(e) => {
+                            const next = [...methodologyStepsEn];
+                            next[idx] = { ...st, title: e.target.value };
+                            setMethodologyStepsEn(next);
+                          }}
+                          className="w-full px-2 py-1 bg-surface border border-border rounded text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMethodologyStepsEn(
+                              methodologyStepsEn
+                                .filter((_, i) => i !== idx)
+                                .map((row, i) => ({ ...row, step: i + 1 }))
+                            )
+                          }
+                          className="text-danger text-[11px]"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <textarea
+                        rows={2}
+                        dir="ltr"
+                        placeholder="Step description"
+                        value={st.description}
+                        onChange={(e) => {
+                          const next = [...methodologyStepsEn];
+                          next[idx] = { ...st, description: e.target.value };
+                          setMethodologyStepsEn(next);
+                        }}
+                        className="w-full px-2 py-1 bg-surface border border-border rounded text-xs"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
 

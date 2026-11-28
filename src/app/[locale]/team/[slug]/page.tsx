@@ -7,8 +7,9 @@ import { SupportedLocale } from '@/server/types';
 import { Scale, CheckCircle2, ArrowUpRight, Globe, Languages } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 import { buildPageMetadata } from '@/lib/seo';
+
+export const dynamic = 'force-dynamic';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
@@ -18,19 +19,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
 
-  if (
-    !UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers &&
-    (slug === 'senior-counsel' || slug === 'abdulrahman-alotaibi')
-  ) {
-    return { title: currentLocale === 'ar' ? 'الصفحة غير موجودة' : 'Lawyer Not Found' };
-  }
-
   const projection = await getPublishedProjection('teamMember', slug, currentLocale);
   if (!projection) {
     return { title: currentLocale === 'ar' ? 'الصفحة غير موجودة' : 'Lawyer Not Found' };
   }
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: `/team/${projection.slug}`,
     title: projection.seo.title || projection.title,
@@ -44,13 +38,6 @@ export default async function TeamMemberDetailPage({
   params: { locale: string; slug: string };
 }) {
   setRequestLocale(locale);
-  if (
-    !UNVERIFIED_CLAIMS_CONFIG.enableUnconfirmedTeamMembers &&
-    (slug === 'senior-counsel' || slug === 'abdulrahman-alotaibi')
-  ) {
-    notFound();
-  }
-
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
 

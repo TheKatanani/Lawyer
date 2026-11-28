@@ -3,26 +3,29 @@ import { NextRequest } from 'next/server';
 import { POST as handleCreateConsultation } from '@/app/api/consultations/route';
 import { GET as handleListConsultations } from '@/app/api/admin/consultations/route';
 import { PATCH as handlePatchConsultation } from '@/app/api/admin/consultations/[id]/route';
-import { store } from '@/server/db/store';
+import {
+  getConsultationById,
+  listConsultations,
+  saveConsultation,
+} from '@/server/db/dal';
+import { seedFirestore } from '@/server/db/seed';
+import { clearRuntimeCaches } from '@/server/security/runtime-cache';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
 
+import { COLLECTIONS, getDb } from '@/server/db/firestore';
+
 describe('Consultation Request Integration Flow', () => {
-  beforeEach(() => {
-    store.consultations.clear();
-    store.idempotencyKeys.clear();
-    store.rateLimits.clear();
-    if (!store.admins.has('admin-rma-01')) {
-      store.admins.set('admin-rma-01', {
-        uid: 'admin-rma-01',
-        email: 'admin@rma-law.sa',
-        displayName: 'Riyadh Alzahrani',
-        role: 'super_admin',
-        isActive: true,
-        mfaEnrolled: true,
-        createdAt: '2026-11-12T10:00:00Z',
-        updatedAt: '2026-11-12T10:00:00Z',
-      });
+  beforeEach(async () => {
+    clearRuntimeCaches();
+    await seedFirestore();
+    const db = getDb();
+    const snap = await db.collection(COLLECTIONS.consultations).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
     }
+    await db.collection(COLLECTIONS.counters).doc('consultations').delete();
   });
 
   it('rejects consultation creation with missing or blank name', async () => {
@@ -65,15 +68,16 @@ describe('Consultation Request Integration Flow', () => {
     expect(body.whatsappUrl).toContain('wa.me');
     expect(body.whatsappUrl).toContain(encodeURIComponent('CR-2026-'));
 
-    // Check store
-    const saved = Array.from(store.consultations.values())[0];
-    expect(saved).toBeDefined();
-    expect(saved.status).toBe('pending'); // Initial status strictly pending
-    expect(saved.phone).toBe('+966557775504'); // Normalized
-    expect(saved.fullName).toBe('فهد المنصور');
+    // Check Firestore
+    const saved = await getConsultationById(body.consultationId);
+    expect(saved).not.toBeNull();
+    expect(saved!.status).toBe('pending'); // Initial status strictly pending
+    expect(saved!.phone).toBe('+966557775504'); // Normalized
+    expect(saved!.fullName).toBe('فهد المنصور');
   });
 
   it('enforces idempotency on duplicate submissions with the same key', async () => {
+    const beforeCount = (await listConsultations()).length;
     const payload = {
       fullName: 'منيرة التميمي',
       phone: '+966501234567',
@@ -99,13 +103,13 @@ describe('Consultation Request Integration Flow', () => {
     const body2 = await res2.json();
 
     expect(body1.reference).toBe(body2.reference);
-    expect(store.consultations.size).toBe(1); // No duplicate created
+    expect((await listConsultations()).length).toBe(beforeCount + 1); // No duplicate created
   });
 
   it('rejects confirmation status if assigned lawyer or scheduled date is missing', async () => {
     // Seed an item
     const id = 'test-consult-001';
-    store.consultations.set(id, {
+    await saveConsultation({
       id,
       reference: 'CR-2026-9999',
       fullName: 'Client Test',
@@ -143,7 +147,7 @@ describe('Consultation Request Integration Flow', () => {
 
   it('successfully transitions from pending to confirmed when lawyer and appointment time are provided', async () => {
     const id = 'test-consult-002';
-    store.consultations.set(id, {
+    await saveConsultation({
       id,
       reference: 'CR-2026-9998',
       fullName: 'Client Confirmed Test',

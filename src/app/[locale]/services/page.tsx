@@ -5,6 +5,10 @@ import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ServicesPreview } from '@/components/sections/ServicesPreview';
 import { buildPageMetadata } from '@/lib/seo';
+import { getSiteSettings } from '@/server/db/dal';
+import { pickLocalized } from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 export async function generateMetadata({
@@ -15,7 +19,7 @@ export async function generateMetadata({
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/services',
     title: isAr ? 'مجالات الممارسة والخدمات القانونية' : 'Practice Areas & Legal Services',
@@ -33,12 +37,21 @@ export default async function ServicesPage({
   setRequestLocale(locale);
   const t = await getTranslations();
   const currentLocale = locale as SupportedLocale;
-  const publishedServices = await listPublishedProjections('service', currentLocale);
+  const [publishedServices, settings] = await Promise.all([
+    listPublishedProjections('service', currentLocale),
+    getSiteSettings(),
+  ]);
 
   const servicesMessages = {
-    eyebrow: t('servicesSection.eyebrow'),
-    heading: t('servicesSection.heading'),
-    description: t('servicesSection.description'),
+    eyebrow:
+      pickLocalized(currentLocale, settings.servicesSectionEyebrowAr, settings.servicesSectionEyebrowEn) ||
+      t('servicesSection.eyebrow'),
+    heading:
+      pickLocalized(currentLocale, settings.servicesSectionHeadingAr, settings.servicesSectionHeadingEn) ||
+      t('servicesSection.heading'),
+    description:
+      pickLocalized(currentLocale, settings.servicesSectionDescAr, settings.servicesSectionDescEn) ||
+      t('servicesSection.description'),
     filters: {
       all: t('servicesSection.filters.all'),
       individual: t('servicesSection.filters.individual'),

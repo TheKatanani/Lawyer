@@ -5,37 +5,27 @@ import { BookOpen, Scale, Lock, ShieldCheck } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 interface ValuesSectionProps {
-  locale: string;
+  locale?: string;
   messages: {
     eyebrow: string;
     heading: string;
-    value1Title: string;
-    value1Desc: string;
-    value2Title: string;
-    value2Desc: string;
-    value3Title: string;
-    value3Desc: string;
+    items: Array<{ title: string; desc: string }>;
   };
 }
 
-export function ValuesSection({ locale, messages }: ValuesSectionProps) {
-  const values = [
-    {
-      title: messages.value1Title,
-      desc: messages.value1Desc,
-      icon: <BookOpen className="w-6 h-6 text-gold" />,
-    },
-    {
-      title: messages.value2Title,
-      desc: messages.value2Desc,
-      icon: <Scale className="w-6 h-6 text-gold" />,
-    },
-    {
-      title: messages.value3Title,
-      desc: messages.value3Desc,
-      icon: <Lock className="w-6 h-6 text-gold" />,
-    },
-  ];
+const VALUE_ICONS = [
+  <BookOpen key="book" className="w-6 h-6 text-gold" />,
+  <Scale key="scale" className="w-6 h-6 text-gold" />,
+  <Lock key="lock" className="w-6 h-6 text-gold" />,
+];
+
+export function ValuesSection({ messages }: ValuesSectionProps) {
+  const values = (messages.items || []).map((item, idx) => ({
+    ...item,
+    icon: VALUE_ICONS[idx % VALUE_ICONS.length],
+  }));
+
+  if (values.length === 0) return null;
 
   return (
     <section className="py-24 bg-signature text-on-dark border-b border-gold/20 relative overflow-hidden">

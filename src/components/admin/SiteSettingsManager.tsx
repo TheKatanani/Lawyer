@@ -23,65 +23,23 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { SiteSettings } from '@/server/types';
-
-const DEFAULT_SETTINGS: SiteSettings = {
-  brandNameAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية',
-  brandNameEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations',
-  brandShortAr: 'رياض الزهراني للمحاماة',
-  brandShortEn: 'Alzahrani Law Firm',
-  taglineAr: 'رؤية قانونية واثقة، وحلول تقوم على المعرفة',
-  taglineEn: 'A clear legal perspective. An approach grounded in knowledge.',
-  phone: '+966 55 777 5504',
-  whatsapp: '+966 55 777 5504',
-  email: 'info@riyadhalzahrani.com',
-  addressAr: 'برج هيدكوارترز، الدور 46، مكتب 4602، شارع الكورنيش، حي الشاطئ، جدة',
-  addressEn: 'Headquarters Tower, Floor 46, Office 4602, Corniche Road, Al Shati District, Jeddah',
-  seoTitleAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية | جدة',
-  seoTitleEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations | Jeddah',
-  seoDescAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة تقدم حلولاً قضائية وتجارية وحوكمة رصينة للشركات والأفراد.',
-  seoDescEn: 'Licensed Saudi legal firm delivering enterprise governance, commercial dispute resolution, and regulatory advisory.',
-  ogImageUrl: '/images/home-hero.webp',
-  faviconUrl: '/favicon.ico',
-  heroEyebrowAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة',
-  heroEyebrowEn: 'Licensed Saudi Law Practice & Legal Advisory',
-  heroHeadlineAr: 'نقرأ النزاع قبل أن يصل إلى المحكمة، ونقرأ أدلته قبل أن تتحول إلى مرافعة',
-  heroHeadlineEn: 'We read the dispute before it reaches court — and its evidence before it becomes a pleading.',
-  heroDescAr: 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون.',
-  heroDescEn: 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.',
-  leadershipQuoteAr: 'يقوم العمل القانوني في جوهره على الثقة: ثقة الموكل بأن مصالحه في أيدٍ أمينة، وبأن كل ما يقع بين أيدينا يبقى في دائرة السرية التامة.',
-  leadershipQuoteEn: 'Legal practice rests on trust: the client’s trust that their interests are in safe hands, and that everything they share with us remains strictly confidential.',
-  closingWordAr: '«كل ملف يصلنا يحمل حقاً ينتظر من يحسن عرضه، وقراراً ينتظر من يحسن قراءته. نعد عملاءنا برأي صادق، وعمل منظم، وسرية لا تُمس، ومتابعة لا تنقطع حتى يصل الملف إلى نهايته.»',
-  closingWordEn: '“Every matter that reaches us carries a right waiting to be presented well, and a decision waiting to be read well. We promise our clients candid advice, organised work, inviolable confidentiality, and follow-through that does not stop until the matter is concluded.”',
-  homeCtaHeadingAr: 'تواصل مع فريق الشركة',
-  homeCtaHeadingEn: 'Contact the company team',
-  homeCtaDescAr: 'يسعدنا الرد على استفساراتكم وتنسيق جلسة استشارية أولية مع المحامي المختص.',
-  homeCtaDescEn: 'We welcome your inquiry and look forward to coordinating an initial consultation with the specialized legal team.',
-  footerSummaryAr: 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.',
-  footerSummaryEn: 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.',
-  aboutTextAr: 'تأسست شركة رياض محمد الزهراني للمحاماة لتكون شريكاً قانونياً موثوقاً للشركات ورجال الأعمال والأفراد، مع التركيز على دقة المشورة، والامتثال لأحدث الأنظمة واللوائح في المملكة العربية السعودية.',
-  aboutTextEn: 'Founded to serve as an authoritative legal partner for enterprises and individuals across the Kingdom of Saudi Arabia, upholding rigor, precision, and PDPL compliance.',
-  aboutMissionAr: 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.',
-  aboutMissionEn: 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.',
-  aboutVisionAr: 'أن نكون الشريك القانوني الرائد في صياغة الحلول النوعية وتطوير حوكمة الشركات ودعم نمو الاستثمارات في المملكة العربية السعودية.',
-  aboutVisionEn: 'To be the premier Saudi legal partner architecting transformative counsel, corporate governance, and cross-border investment growth.',
-  paymentEnabled: false,
-  paymentRequirement: 'optional',
-  consultationFee: 500,
-  consultationCurrency: 'SAR',
-  applePayEnabled: false,
-  moyasarPublishableKey: '',
-  moyasarSecretKey: '',
-  paymentNoticeAr: 'رسوم حجز الاستشارة تُحسم من أتعاب القضية أو العقد في حال التوكيل الرسمي.',
-  paymentNoticeEn: 'The initial consultation fee is deductible from overall legal representation fees upon retainer engagement.',
-};
+import {
+  AboutPageExtrasFields,
+  BrandContactExtrasFields,
+  HeroLeadershipExtrasFields,
+  SectionsAndLegalTab,
+  StatsAndMethodologyTab,
+} from './SiteSettingsExtraTabs';
 
 export function SiteSettingsManager() {
-  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'brand' | 'contact' | 'seo' | 'homepage' | 'aboutPage' | 'payment'>('brand');
+  const [activeTab, setActiveTab] = useState<
+    'brand' | 'contact' | 'seo' | 'homepage' | 'editorial' | 'aboutPage' | 'sections' | 'payment'
+  >('brand');
   const [uploadingTarget, setUploadingTarget] = useState<'favicon' | 'og' | null>(null);
 
   const faviconInputRef = useRef<HTMLInputElement>(null);
@@ -90,20 +48,17 @@ export function SiteSettingsManager() {
   const loadSettings = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch('/api/admin/settings');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load settings');
-      if (data.settings && data.settings.brandNameAr) {
-        setSettings({
-          ...DEFAULT_SETTINGS,
-          ...data.settings,
-        });
-      } else {
-        setSettings(DEFAULT_SETTINGS);
+      if (!data.settings) {
+        throw new Error('لم يتم العثور على إعدادات الموقع في Firestore. تأكد من تشغيل npm run seed.');
       }
+      setSettings(data.settings);
     } catch (err: any) {
       setError(err.message);
-      setSettings(DEFAULT_SETTINGS);
+      setSettings(null);
     } finally {
       setLoading(false);
     }
@@ -171,10 +126,10 @@ export function SiteSettingsManager() {
 
       // 4. Update state directly
       if (target === 'favicon') {
-        setSettings((prev) => ({ ...prev, faviconUrl: secureUrl }));
+        setSettings((prev) => (prev ? { ...prev, faviconUrl: secureUrl } : prev));
         setSuccessMsg('تم رفع أيقونة الموقع (Favicon) إلى Cloudinary بنجاح! احفظ التعديلات لاعتمادها.');
       } else {
-        setSettings((prev) => ({ ...prev, ogImageUrl: secureUrl }));
+        setSettings((prev) => (prev ? { ...prev, ogImageUrl: secureUrl } : prev));
         setSuccessMsg('تم رفع صورة المشاركة الاجتماعية (OG Image) بنجاح! احفظ التعديلات لاعتمادها.');
       }
     } catch (err: any) {
@@ -211,6 +166,23 @@ export function SiteSettingsManager() {
 
   if (loading) {
     return <div className="p-12 text-center text-muted">جاري تحميل إعدادات المنصة...</div>;
+  }
+
+  if (!settings) {
+    return (
+      <div className="p-8 bg-danger/10 border border-danger/30 rounded space-y-4 text-sm text-danger">
+        <p className="font-bold">
+          {error || 'لم يتم العثور على إعدادات الموقع في Firestore. يرجى تشغيل npm run seed أولاً.'}
+        </p>
+        <button
+          type="button"
+          onClick={loadSettings}
+          className="px-4 py-2 bg-surface border border-border rounded text-ink font-semibold text-xs hover:border-gold cursor-pointer"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -312,7 +284,19 @@ export function SiteSettingsManager() {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>نصوص الصفحة الرئيسية (Hero & About Preview)</span>
+          <span>الرئيسية والقيادة</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('editorial')}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+            activeTab === 'editorial'
+              ? 'border-gold text-gold-ink bg-surface'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>الإحصائيات والمنهجية والتميز</span>
         </button>
 
         <button
@@ -324,7 +308,19 @@ export function SiteSettingsManager() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>صفحة عن الشركة والرؤية (About Page & Vision)</span>
+          <span>صفحة عن الشركة والركائز</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sections')}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+            activeTab === 'sections'
+              ? 'border-gold text-gold-ink bg-surface'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>الترويسات والصفحات النظامية</span>
         </button>
 
         <button
@@ -516,6 +512,8 @@ export function SiteSettingsManager() {
                 />
               </div>
             </div>
+
+            <BrandContactExtrasFields settings={settings} setSettings={setSettings} />
           </div>
         )}
 
@@ -919,7 +917,14 @@ export function SiteSettingsManager() {
                 />
               </div>
             </div>
+
+            <HeroLeadershipExtrasFields settings={settings} setSettings={setSettings} />
           </div>
+        )}
+
+        {/* TAB: STATS, METHODOLOGY, SPECIALISED, EXCELLENCE, VALUES, JOURNEY */}
+        {activeTab === 'editorial' && (
+          <StatsAndMethodologyTab settings={settings} setSettings={setSettings} />
         )}
 
         {/* TAB 5: ABOUT PAGE & VISION */}
@@ -980,7 +985,14 @@ export function SiteSettingsManager() {
                 />
               </div>
             </div>
+
+            <AboutPageExtrasFields settings={settings} setSettings={setSettings} />
           </div>
+        )}
+
+        {/* TAB: SECTION HEADERS & LEGAL DOCUMENTS */}
+        {activeTab === 'sections' && (
+          <SectionsAndLegalTab settings={settings} setSettings={setSettings} />
         )}
 
         {/* TAB 6: PAYMENT GATEWAY (MOYASAR) */}

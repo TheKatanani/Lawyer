@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { getPaymentRequestByToken, getSiteSettings } from '@/server/db/dal';
 import {
   buildPaymentRequestReceipt,
   getMoyasarPublishableKey,
@@ -38,7 +38,7 @@ export default async function PaymentPage({
 }) {
   setRequestLocale(locale);
 
-  const pr = store.getPaymentRequestByToken(token);
+  const pr = await getPaymentRequestByToken(token);
   if (!pr) {
     notFound();
   }
@@ -46,9 +46,9 @@ export default async function PaymentPage({
   await reconcilePaidPaymentRequest(pr);
   const receipt = pr.status === 'paid' ? buildPaymentRequestReceipt(pr) : null;
 
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
   const paymentsEnabled = isPaymentsEnabled();
-  const publishableKey = paymentsEnabled ? getMoyasarPublishableKey() : '';
+  const publishableKey = paymentsEnabled ? await getMoyasarPublishableKey() : '';
   const applePayEnabled = paymentsEnabled && (settings.applePayEnabled ?? false);
   const officialPhone = settings.phone || '+966 55 777 5504';
   const officialWhatsApp = settings.whatsapp || '+966 55 777 5504';

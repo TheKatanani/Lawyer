@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { store } from '@/server/db/store';
+import { getPaymentRequestByToken } from '@/server/db/dal';
 import {
   applySettledPaymentToRequest,
   buildPaymentRequestReceipt,
@@ -35,7 +35,6 @@ export async function POST(
   const userAgent = req.headers.get('user-agent');
   const token = params.token;
 
-  // 1. Strict rate limiting on verification endpoint (max 10 req/min per IP)
   const rl = checkRateLimit(`pr_verify:${ip}`, 10, 60);
   if (!rl.allowed) {
     return NextResponse.json(
@@ -44,10 +43,9 @@ export async function POST(
     );
   }
 
-  // 2. Token lookup + reconciliation
-  const pr = store.getPaymentRequestByToken(token);
+  const pr = await getPaymentRequestByToken(token);
   if (!pr) {
-    logInvalidTokenProbe(ip, token, userAgent);
+    await logInvalidTokenProbe(ip, token, userAgent);
     return NextResponse.json(
       { error: 'طلب السداد غير موجود أو غير صالح' },
       { status: 404 }
@@ -56,7 +54,6 @@ export async function POST(
 
   await reconcilePaidPaymentRequest(pr);
 
-  // 3. Strict Idempotency: If already marked paid, return persisted receipt immediately
   if (pr.status === 'paid') {
     const receipt = buildPaymentRequestReceipt(pr);
     return NextResponse.json({
@@ -82,7 +79,6 @@ export async function POST(
     });
   }
 
-  // 4. Extract and validate Moyasar payment ID
   let paymentId: string | null = null;
   try {
     const rawBody = await req.json().catch(() => ({}));
@@ -92,7 +88,7 @@ export async function POST(
     }
     paymentId = parsed.data?.paymentId || parsed.data?.id || null;
   } catch {
-    // Body parsing error handled below
+    // Fallback to query string below
   }
 
   if (!paymentId) {
@@ -105,7 +101,6 @@ export async function POST(
     return NextResponse.json({ error: 'معرف عملية الدفع (payment_id) مفقود' }, { status: 400 });
   }
 
-  // 5. Direct server-to-server verification with Moyasar API
   try {
     const payment = await fetchMoyasarPayment(paymentId);
 
@@ -119,21 +114,18 @@ export async function POST(
       );
     }
 
-    // Exact Currency Matching
     if (payment.currency.toUpperCase() !== 'SAR') {
-      console.error(`[PAYMENT_CURRENCY_MISMATCH] Expected SAR, got ${payment.currency} for token ${token}`);
       return NextResponse.json({ error: 'فشل التحقق: عملة الدفع غير متطابقة' }, { status: 400 });
     }
 
-    // Exact Amount Matching in Halalas
     if (payment.amount !== pr.amountMinor) {
-      console.error(
-        `[PAYMENT_AMOUNT_MISMATCH] Expected ${pr.amountMinor} halalas, got ${payment.amount} for token ${token}`
+      return NextResponse.json(
+        { error: 'فشل التحقق: المبلغ المدفوع لا يتطابق مع قيمة الطلب' },
+        { status: 400 }
       );
-      return NextResponse.json({ error: 'فشل التحقق: المبلغ المدفوع لا يتطابق مع قيمة الطلب' }, { status: 400 });
     }
 
-    const { receipt } = applySettledPaymentToRequest(pr, payment);
+    const { receipt } = await applySettledPaymentToRequest(pr, payment);
 
     try {
       revalidatePath('/admin/invoices');
@@ -166,6 +158,9 @@ export async function POST(
       return NextResponse.json({ error: err.message, code: err.code }, { status: err.statusCode });
     }
     console.error('[PAYMENT_VERIFY_UNEXPECTED_ERROR]', err);
-    return NextResponse.json({ error: 'تعذر التحقق من عملية السداد، يرجى التواصل مع إدارة المكتب' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'تعذر التحقق من عملية السداد، يرجى التواصل مع إدارة المكتب' },
+      { status: 500 }
+    );
   }
 }

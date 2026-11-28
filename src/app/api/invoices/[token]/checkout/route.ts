@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/server/db/store';
+import { getPaymentRequestByToken, savePaymentRequest } from '@/server/db/dal';
 import {
   buildPaymentRequestReceipt,
   createMoyasarPaymentIntent,
@@ -28,16 +28,15 @@ export async function POST(
     );
   }
 
-  const pr = store.getPaymentRequestByToken(token);
+  const pr = await getPaymentRequestByToken(token);
   if (!pr) {
-    logInvalidTokenProbe(ip, token, userAgent);
+    await logInvalidTokenProbe(ip, token, userAgent);
     return NextResponse.json(
       { error: 'طلب السداد غير موجود أو غير صالح' },
       { status: 404 }
     );
   }
 
-  // Server-side reconciliation against DB & Moyasar to prevent duplicate payments across tabs/Lambdas
   await reconcilePaidPaymentRequest(pr);
 
   if (pr.status === 'paid') {
@@ -92,7 +91,6 @@ export async function POST(
   const locale = rawBody?.locale === 'en' ? 'en' : 'ar';
 
   try {
-    // Reuse an open 'created' Payment Intent if already initialized for this request
     if (pr.paymentIntentId) {
       const existing = await fetchMoyasarPaymentIntent(pr.paymentIntentId);
       if (existing && existing.status === 'created' && existing.client_secret) {
@@ -115,8 +113,7 @@ export async function POST(
     });
 
     pr.paymentIntentId = intent.id;
-    store.paymentRequests.set(pr.id, pr);
-    store.persistToDisk();
+    await savePaymentRequest(pr);
 
     return NextResponse.json({
       success: true,

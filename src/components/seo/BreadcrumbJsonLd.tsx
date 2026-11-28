@@ -1,15 +1,20 @@
 import React from 'react';
 import { SupportedLocale } from '@/server/types';
 import { buildBreadcrumbJsonLd } from '@/lib/seo';
+import { getSiteSettingsOrNull } from '@/server/db/dal';
 
-export function BreadcrumbJsonLd({
+export async function BreadcrumbJsonLd({
   locale,
   items,
+  siteUrl,
 }: {
   locale: SupportedLocale;
   items: Array<{ name: string; path: string }>;
+  siteUrl?: string;
 }) {
-  const schema = buildBreadcrumbJsonLd(locale, items);
+  const resolvedUrl =
+    siteUrl || (await getSiteSettingsOrNull())?.websiteUrl || undefined;
+  const schema = buildBreadcrumbJsonLd(locale, items, resolvedUrl);
   return (
     <script
       type="application/ld+json"

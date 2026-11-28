@@ -1,12 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   publishServicePaired,
   unpublishService,
   getPublishedProjection,
 } from '../../src/server/repositories/content';
-import { store } from '../../src/server/db/store';
+import { seedFirestore } from '../../src/server/db/seed';
 
 describe('Editorial Integrity & Paired Bilingual Publishing (A08, A09, A10)', () => {
+  beforeAll(async () => {
+    await seedFirestore();
+  });
   it('Successfully publishes service paired across Arabic and English', async () => {
     const res = await publishServicePaired('commercial-corporate', 'admin-rma-01');
     expect(res.success).toBe(true);

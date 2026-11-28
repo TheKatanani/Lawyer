@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
-import { store } from '@/server/db/store';
+import { appendAuditLog } from '@/server/db/dal';
+import { runtimeRateLimits } from './runtime-cache';
 
 export function getClientIp(req: NextRequest | Request): string {
   if ('headers' in req) {
@@ -22,10 +23,10 @@ export function checkRateLimit(
   windowSeconds: number = 60
 ): { allowed: boolean; remaining: number; resetInSeconds: number } {
   const now = Date.now();
-  const entry = store.rateLimits.get(key);
+  const entry = runtimeRateLimits.get(key);
 
   if (!entry || now > entry.expiresAt) {
-    store.rateLimits.set(key, {
+    runtimeRateLimits.set(key, {
       count: 1,
       expiresAt: now + windowSeconds * 1000,
     });
@@ -45,7 +46,7 @@ export function checkRateLimit(
   }
 
   entry.count += 1;
-  store.rateLimits.set(key, entry);
+  runtimeRateLimits.set(key, entry);
 
   return {
     allowed: true,
@@ -54,11 +55,11 @@ export function checkRateLimit(
   };
 }
 
-/**
- * Masked security audit logging for invalid token probes.
- * Never logs the full token in plaintext to prevent leaking nearly-valid tokens due to single-character typos.
- */
-export function logInvalidTokenProbe(ip: string, rawToken: string, userAgent?: string | null): void {
+export async function logInvalidTokenProbe(
+  ip: string,
+  rawToken: string,
+  userAgent?: string | null
+): Promise<void> {
   const safeToken = typeof rawToken === 'string' ? rawToken : '';
   const prefix = safeToken.slice(0, 6);
   const hash = crypto.createHash('sha256').update(safeToken).digest('hex').slice(0, 8);
@@ -69,25 +70,22 @@ export function logInvalidTokenProbe(ip: string, rawToken: string, userAgent?: s
     `[SECURITY_AUDIT: INVALID_PAYMENT_TOKEN] Timestamp: ${timestamp} | IP: ${ip} | MaskedToken: ${maskedSignature} | UA: ${userAgent || 'unknown'}`
   );
 
-  // Record into store audit logs for administrative inspection
-  store.auditLogs.unshift({
-    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    actorUid: 'anonymous',
-    actorEmail: `ip:${ip}`,
-    action: 'payment.invalid_token_probe',
-    targetType: 'payment_request',
-    targetId: maskedSignature,
-    details: {
-      clientIp: ip,
-      userAgent: userAgent || 'unknown',
-      prefix,
-      sha256Snippet: hash,
-    },
-    createdAt: timestamp,
-  });
-
-  // Limit audit logs size in memory
-  if (store.auditLogs.length > 500) {
-    store.auditLogs.length = 500;
+  try {
+    await appendAuditLog({
+      actorUid: 'anonymous',
+      actorEmail: `ip:${ip}`,
+      action: 'payment.invalid_token_probe',
+      targetType: 'payment_request',
+      targetId: maskedSignature,
+      details: {
+        clientIp: ip,
+        userAgent: userAgent || 'unknown',
+        prefix,
+        sha256Snippet: hash,
+      },
+      createdAt: timestamp,
+    });
+  } catch (err) {
+    console.warn('[SECURITY_AUDIT] Failed to persist audit entry to Firestore:', err);
   }
 }

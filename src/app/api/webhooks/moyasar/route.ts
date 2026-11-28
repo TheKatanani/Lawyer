@@ -1,10 +1,16 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  getConsultationById,
+  getPaymentRequestById,
+  getPaymentRequestByToken,
+  getSiteSettingsOrNull,
+  saveConsultation,
+} from '@/server/db/dal';
 import { applySettledPaymentToRequest, fetchMoyasarPayment, mapMoyasarPaymentMethod } from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp } from '@/server/security/rate-limit';
-import { ConsultationRequest } from '@/server/types';
 
 export const runtime = 'nodejs';
 
@@ -75,9 +81,9 @@ export async function POST(req: NextRequest) {
     const requestToken = payment.metadata?.token || event.data?.metadata?.token;
     const requestId = payment.metadata?.requestId || event.data?.metadata?.requestId;
 
-    let pr = requestToken ? store.getPaymentRequestByToken(requestToken) : undefined;
+    let pr = requestToken ? await getPaymentRequestByToken(requestToken) : null;
     if (!pr && requestId) {
-      pr = store.getPaymentRequestById(requestId);
+      pr = await getPaymentRequestById(requestId);
     }
 
     if (pr) {
@@ -88,7 +94,7 @@ export async function POST(req: NextRequest) {
 
       // Exact amount & currency validation
       if (payment.amount === pr.amountMinor && payment.currency.toUpperCase() === 'SAR') {
-        const { changed } = applySettledPaymentToRequest(pr, payment);
+        const { changed } = await applySettledPaymentToRequest(pr, payment);
 
         if (changed) {
           try {
@@ -108,7 +114,8 @@ export async function POST(req: NextRequest) {
     // B. Check for Consultation Booking
     const consultationId = payment.metadata?.consultationId || event.data?.metadata?.consultationId;
     if (consultationId) {
-      let consultation = store.consultations.get(consultationId);
+      const settings = await getSiteSettingsOrNull();
+      let consultation = await getConsultationById(consultationId);
       if (!consultation) {
         const fallbackNow = new Date().toISOString();
         consultation = {
@@ -134,8 +141,8 @@ export async function POST(req: NextRequest) {
           history: [],
           createdAt: fallbackNow,
           updatedAt: fallbackNow,
-          amountMinor: Math.round((store.siteSettings?.consultationFee || 500) * 100),
-          currency: store.siteSettings?.consultationCurrency || 'SAR',
+          amountMinor: Math.round((settings?.consultationFee || 500) * 100),
+          currency: settings?.consultationCurrency || 'SAR',
         };
       }
 
@@ -144,7 +151,7 @@ export async function POST(req: NextRequest) {
       }
 
       const expectedMinor =
-        consultation.amountMinor || Math.round((store.siteSettings?.consultationFee || 500) * 100);
+        consultation.amountMinor || Math.round((settings?.consultationFee || 500) * 100);
       if (payment.currency.toUpperCase() !== 'SAR' || payment.amount < expectedMinor) {
         return NextResponse.json(
           { ok: false, error: 'Consultation payment amount or currency mismatch' },
@@ -171,8 +178,21 @@ export async function POST(req: NextRequest) {
         timestamp: nowIso,
       });
 
-      store.consultations.set(consultation.id, consultation);
-      store.persistToDisk?.();
+      await saveConsultation(consultation);
+      await appendAuditLog({
+        id: `AUDIT-${Date.now()}`,
+        actorUid: 'moyasar-webhook',
+        actorEmail: consultation.phone || 'webhook/moyasar',
+        action: 'CONSULTATION_PAYMENT_SETTLED_VIA_WEBHOOK',
+        targetType: 'consultationRequest',
+        targetId: consultation.id,
+        details: {
+          reference: consultation.reference,
+          paymentId: payment.id,
+          amountSar: payment.amount / 100,
+        },
+        createdAt: nowIso,
+      });
 
       try {
         revalidatePath('/admin/consultations');

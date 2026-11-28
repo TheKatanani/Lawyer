@@ -1,13 +1,14 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { store } from '@/server/db/store';
+import { appendAuditLog, getAdminByEmail, saveAdmin } from '@/server/db/dal';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
 import { verifyPassword } from '@/server/auth/password';
 import { Role, AdminUser } from '@/server/types';
 import { getClientIp, checkRateLimit } from '@/server/security/rate-limit';
 
-const GENERIC_LOGIN_ERROR = 'بيانات الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
+const GENERIC_LOGIN_ERROR =
+  'بيانات الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
 
 async function verifyFirebaseIdToken(idToken: string, expectedEmail: string): Promise<boolean> {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
@@ -44,7 +45,6 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email.trim().toLowerCase();
     const clientIp = getClientIp(req);
 
-    // Rate limiting: 10 attempts / 15 minutes per IP, 5 attempts / 15 minutes per email
     const ipRate = checkRateLimit(`login:ip:${clientIp}`, 10, 900);
     const emailRate = checkRateLimit(`login:email:${normalizedEmail}`, 5, 900);
 
@@ -60,12 +60,9 @@ export async function POST(req: NextRequest) {
       ? await verifyFirebaseIdToken(String(idToken), normalizedEmail)
       : false;
 
-    // Lookup staff user in store
-    let matchedUser = Array.from(store.admins.values()).find(
-      (u) => u.email.toLowerCase() === normalizedEmail
-    );
+    let matchedUser = await getAdminByEmail(normalizedEmail);
 
-    // Bootstrap check or auto-provision for Firebase-authenticated users or super admin list
+    // Auto-provision Firebase-authenticated user or designated super admin email into Firestore
     const superAdminList = (process.env.SUPER_ADMIN_EMAILS || 'admin@rma-law.sa,thekatanani')
       .toLowerCase()
       .split(',')
@@ -75,34 +72,29 @@ export async function POST(req: NextRequest) {
       superAdminList.some((s) => s && (normalizedEmail === s || normalizedEmail.includes(s))) ||
       normalizedEmail === 'admin@rma-law.sa';
 
-    if (!matchedUser) {
-      if (isVerifiedFirebaseToken || isDesignatedSuperAdmin) {
-        // Deterministic UID per email so cross-lambda identity remains stable
-        const deterministicUid = `admin-${crypto
-          .createHash('sha256')
-          .update(normalizedEmail)
-          .digest('hex')
-          .slice(0, 12)}`;
-        const newRole: Role = isDesignatedSuperAdmin ? 'super_admin' : 'editor';
-        const newUser: AdminUser = {
-          uid: deterministicUid,
-          email: normalizedEmail,
-          displayName: normalizedEmail.split('@')[0],
-          role: newRole,
-          isActive: true,
-          mfaEnrolled: isVerifiedFirebaseToken,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        store.admins.set(deterministicUid, newUser);
-        matchedUser = newUser;
-      }
+    if (!matchedUser && (isVerifiedFirebaseToken || isDesignatedSuperAdmin)) {
+      const deterministicUid = `admin-${crypto
+        .createHash('sha256')
+        .update(normalizedEmail)
+        .digest('hex')
+        .slice(0, 12)}`;
+      const newRole: Role = isDesignatedSuperAdmin ? 'super_admin' : 'editor';
+      const newUser: AdminUser = {
+        uid: deterministicUid,
+        email: normalizedEmail,
+        displayName: normalizedEmail.split('@')[0],
+        role: newRole,
+        isActive: true,
+        mfaEnrolled: isVerifiedFirebaseToken,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await saveAdmin(newUser);
+      matchedUser = newUser;
     }
 
-    // Generic error: do not reveal if user does not exist
     if (!matchedUser) {
-      store.auditLogs.unshift({
-        id: `AUDIT-${Date.now()}`,
+      await appendAuditLog({
         actorUid: 'anonymous',
         actorEmail: normalizedEmail,
         action: 'ADMIN_LOGIN_FAILED_UNKNOWN_USER',
@@ -114,10 +106,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // Generic error: do not reveal account inactive status
     if (!matchedUser.isActive) {
-      store.auditLogs.unshift({
-        id: `AUDIT-${Date.now()}`,
+      await appendAuditLog({
         actorUid: matchedUser.uid,
         actorEmail: matchedUser.email,
         action: 'ADMIN_LOGIN_FAILED_INACTIVE',
@@ -133,7 +123,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // Verify password unless already authenticated via verified Firebase idToken
     if (!isVerifiedFirebaseToken) {
       const defaultExpectedPassword = process.env.ADMIN_INITIAL_PASSWORD || 'RMA@Legal2026!';
       const isValidPassword = matchedUser.passwordHash
@@ -141,8 +130,7 @@ export async function POST(req: NextRequest) {
         : password === defaultExpectedPassword;
 
       if (!isValidPassword) {
-        store.auditLogs.unshift({
-          id: `AUDIT-${Date.now()}`,
+        await appendAuditLog({
           actorUid: matchedUser.uid,
           actorEmail: matchedUser.email,
           action: 'ADMIN_LOGIN_FAILED_INVALID_PASSWORD',
@@ -155,7 +143,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Issue Signed HS256 JWT Session Cookie
     const sessionToken = encodeSessionPayload(
       matchedUser.uid,
       matchedUser.email,
@@ -169,20 +156,20 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 8 * 60 * 60, // 8 hours absolute
+      maxAge: 8 * 60 * 60,
     });
 
-    // Record login audit
     matchedUser.lastLoginAt = new Date().toISOString();
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    matchedUser.updatedAt = matchedUser.lastLoginAt;
+    await saveAdmin(matchedUser);
+    await appendAuditLog({
       actorUid: matchedUser.uid,
       actorEmail: matchedUser.email,
       action: 'ADMIN_SESSION_CREATED',
       targetType: 'adminUser',
       targetId: matchedUser.uid,
-      details: { role: matchedUser.role },
-      createdAt: new Date().toISOString(),
+      details: { role: matchedUser.role, viaFirebase: isVerifiedFirebaseToken },
+      createdAt: matchedUser.lastLoginAt,
     });
 
     return NextResponse.json({

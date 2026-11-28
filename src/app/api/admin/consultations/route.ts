@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
-import { ConsultationRequest, ConsultationStatus } from '@/server/types';
+import { listConsultations } from '@/server/db/dal';
+import { ConsultationStatus } from '@/server/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const lawyerId = searchParams.get('lawyerId');
     const query = searchParams.get('q')?.toLowerCase().trim();
 
-    let list = Array.from(store.consultations.values());
+    let list = await listConsultations();
 
     // Status filter
     if (status && status !== 'all') {

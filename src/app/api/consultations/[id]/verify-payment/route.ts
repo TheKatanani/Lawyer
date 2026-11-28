@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  getConsultationById,
+  getSiteSettingsOrNull,
+  saveConsultation,
+} from '@/server/db/dal';
 import { fetchMoyasarPayment, isPaymentsEnabled } from '@/server/payments/moyasar';
 import { ConsultationRequest } from '@/server/types';
 
@@ -20,7 +25,7 @@ interface Params {
 
 export async function POST(req: NextRequest, { params: { id } }: Params) {
   try {
-    let consultation = store.consultations.get(id);
+    let consultation = await getConsultationById(id);
 
     const rawBody = await req.json().catch(() => null);
     const parsed = VerifyConsultationPaymentSchema.safeParse(rawBody);
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
         details: { note: 'Client opted to pay consultation fee in person at firm office' },
         timestamp: new Date().toISOString(),
       });
-      store.persistToDisk?.();
+      await saveConsultation(consultation);
       return NextResponse.json({
         success: true,
         consultation,
@@ -83,6 +88,8 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
     // Direct server verification with Moyasar API
     const verifiedPayment = await fetchMoyasarPayment(paymentId);
 
+    const settings = await getSiteSettingsOrNull();
+
     // Cross-lambda fallback: if another serverless instance created this consultation,
     // verify ownership cleanly via Moyasar's verified metadata.consultationId
     if (!consultation) {
@@ -113,8 +120,8 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
         history: [],
         createdAt: fallbackNow,
         updatedAt: fallbackNow,
-        amountMinor: Math.round((store.siteSettings?.consultationFee || 500) * 100),
-        currency: store.siteSettings?.consultationCurrency || 'SAR',
+        amountMinor: Math.round((settings?.consultationFee || 500) * 100),
+        currency: settings?.consultationCurrency || 'SAR',
       };
     }
 
@@ -136,7 +143,7 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
     }
 
     // Verify amount matches
-    const expectedMinor = consultation.amountMinor || Math.round((store.siteSettings?.consultationFee || 500) * 100);
+    const expectedMinor = consultation.amountMinor || Math.round((settings?.consultationFee || 500) * 100);
     if (verifiedPayment.amount < expectedMinor) {
       return NextResponse.json(
         {
@@ -178,8 +185,7 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
       timestamp: nowIso,
     });
 
-    store.consultations.set(consultation.id, consultation);
-    store.persistToDisk?.();
+    await saveConsultation(consultation);
 
     try {
       revalidatePath('/admin/consultations');
@@ -189,7 +195,7 @@ export async function POST(req: NextRequest, { params: { id } }: Params) {
     }
 
     // Audit log
-    store.auditLogs.unshift({
+    await appendAuditLog({
       id: `AUDIT-${Date.now()}`,
       actorUid: 'moyasar-gateway',
       actorEmail: consultation.phone,

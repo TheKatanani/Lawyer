@@ -1,7 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/auth/session';
-import { store } from '@/server/db/store';
+import { listAuditLogs } from '@/server/db/dal';
 import { hasCapability } from '@/server/permissions/rbac';
 import { History, Shield, Lock } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export default async function AdminAuditPage() {
     );
   }
 
-  const logs = store.auditLogs;
+  const logs = await listAuditLogs(200);
 
   return (
     <div className="space-y-8">

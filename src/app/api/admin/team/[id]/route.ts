@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  deleteTeamMemberDoc,
+  getTeamMemberDoc,
+  saveTeamMemberDoc,
+} from '@/server/db/dal';
 import { publishTeamMemberPaired, unpublishTeamMember } from '@/server/repositories/content';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
@@ -16,13 +21,15 @@ export async function GET(
     }
     assertCapability(user.role, 'content.edit');
 
-    const member = store.teamMembers.get(params.id);
+    const member = await getTeamMemberDoc(params.id);
     if (!member) {
       return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
     }
 
-    const arRev = store.teamMemberRevisions.get(member.locales.ar.publishedRevisionId || member.locales.ar.draftRevisionId);
-    const enRev = store.teamMemberRevisions.get(member.locales.en.publishedRevisionId || member.locales.en.draftRevisionId);
+    const arRev =
+      member.revisions?.[member.locales.ar.publishedRevisionId || member.locales.ar.draftRevisionId];
+    const enRev =
+      member.revisions?.[member.locales.en.publishedRevisionId || member.locales.en.draftRevisionId];
 
     return NextResponse.json({
       member,
@@ -45,7 +52,7 @@ export async function PATCH(
     }
     assertCapability(user.role, 'content.edit');
 
-    const member = store.teamMembers.get(params.id);
+    const member = await getTeamMemberDoc(params.id);
     if (!member) {
       return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
     }
@@ -69,10 +76,8 @@ export async function PATCH(
       action,
     } = body;
 
-    // Handle Publish / Unpublish actions
     if (action === 'publish') {
       await publishTeamMemberPaired(params.id, user.uid);
-      store.persistToDisk();
       revalidateSiteRoutes([
         `/ar/team/${member.locales.ar.slug || params.id}`,
         `/en/team/${member.locales.en.slug || params.id}`,
@@ -81,7 +86,6 @@ export async function PATCH(
     }
     if (action === 'unpublish') {
       await unpublishTeamMember(params.id, user.uid);
-      store.persistToDisk();
       revalidateSiteRoutes([
         `/ar/team/${member.locales.ar.slug || params.id}`,
         `/en/team/${member.locales.en.slug || params.id}`,
@@ -89,40 +93,60 @@ export async function PATCH(
       return NextResponse.json({ success: true, isPublished: false });
     }
 
-    // Update revisions
     const nowIso = new Date().toISOString();
+    member.revisions = member.revisions || {};
     const arRevId = member.locales.ar.draftRevisionId || member.locales.ar.publishedRevisionId;
     const enRevId = member.locales.en.draftRevisionId || member.locales.en.publishedRevisionId;
 
-    let arRev = arRevId ? store.teamMemberRevisions.get(arRevId) : undefined;
-    let enRev = enRevId ? store.teamMemberRevisions.get(enRevId) : undefined;
+    const arRev = arRevId ? member.revisions[arRevId] : undefined;
+    const enRev = enRevId ? member.revisions[enRevId] : undefined;
 
     if (arRev) {
-      if (fullNameAr) arRev.fullName = fullNameAr.trim();
-      if (fullNameAr) arRev.title = fullNameAr.trim();
+      if (fullNameAr) {
+        arRev.fullName = fullNameAr.trim();
+        arRev.title = fullNameAr.trim();
+        arRev.seo.title = fullNameAr.trim();
+      }
       if (positionTitleAr !== undefined) arRev.positionTitle = positionTitleAr.trim();
       if (summaryAr !== undefined) {
         arRev.summary = summaryAr.trim();
+        arRev.seo.description = summaryAr.trim();
         arRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: summaryAr.trim() } }];
       }
-      if (practiceAreasAr !== undefined) arRev.practiceAreas = Array.isArray(practiceAreasAr) ? practiceAreasAr.filter(Boolean) : [];
-      if (spokenLanguagesAr !== undefined) arRev.spokenLanguages = Array.isArray(spokenLanguagesAr) ? spokenLanguagesAr.filter(Boolean) : [];
-      if (verifiedCredentialsAr !== undefined) arRev.verifiedCredentials = Array.isArray(verifiedCredentialsAr) ? verifiedCredentialsAr.filter(Boolean) : [];
+      if (practiceAreasAr !== undefined)
+        arRev.practiceAreas = Array.isArray(practiceAreasAr) ? practiceAreasAr.filter(Boolean) : [];
+      if (spokenLanguagesAr !== undefined)
+        arRev.spokenLanguages = Array.isArray(spokenLanguagesAr) ? spokenLanguagesAr.filter(Boolean) : [];
+      if (verifiedCredentialsAr !== undefined)
+        arRev.verifiedCredentials = Array.isArray(verifiedCredentialsAr)
+          ? verifiedCredentialsAr.filter(Boolean)
+          : [];
       if (portraitAssetId !== undefined) arRev.portraitAssetId = portraitAssetId.trim() || undefined;
+      member.revisions[arRev.id] = arRev;
     }
 
     if (enRev) {
-      if (fullNameEn) enRev.fullName = fullNameEn.trim();
-      if (fullNameEn) enRev.title = fullNameEn.trim();
+      if (fullNameEn) {
+        enRev.fullName = fullNameEn.trim();
+        enRev.title = fullNameEn.trim();
+        enRev.seo.title = fullNameEn.trim();
+      }
       if (positionTitleEn !== undefined) enRev.positionTitle = positionTitleEn.trim();
       if (summaryEn !== undefined) {
         enRev.summary = summaryEn.trim();
+        enRev.seo.description = summaryEn.trim();
         enRev.blocks = [{ id: 'b1', type: 'paragraph', data: { text: summaryEn.trim() } }];
       }
-      if (practiceAreasEn !== undefined) enRev.practiceAreas = Array.isArray(practiceAreasEn) ? practiceAreasEn.filter(Boolean) : [];
-      if (spokenLanguagesEn !== undefined) enRev.spokenLanguages = Array.isArray(spokenLanguagesEn) ? spokenLanguagesEn.filter(Boolean) : [];
-      if (verifiedCredentialsEn !== undefined) enRev.verifiedCredentials = Array.isArray(verifiedCredentialsEn) ? verifiedCredentialsEn.filter(Boolean) : [];
+      if (practiceAreasEn !== undefined)
+        enRev.practiceAreas = Array.isArray(practiceAreasEn) ? practiceAreasEn.filter(Boolean) : [];
+      if (spokenLanguagesEn !== undefined)
+        enRev.spokenLanguages = Array.isArray(spokenLanguagesEn) ? spokenLanguagesEn.filter(Boolean) : [];
+      if (verifiedCredentialsEn !== undefined)
+        enRev.verifiedCredentials = Array.isArray(verifiedCredentialsEn)
+          ? verifiedCredentialsEn.filter(Boolean)
+          : [];
       if (portraitAssetId !== undefined) enRev.portraitAssetId = portraitAssetId.trim() || undefined;
+      member.revisions[enRev.id] = enRev;
     }
 
     if (sortOrder !== undefined) {
@@ -131,19 +155,18 @@ export async function PATCH(
     member.updatedAt = nowIso;
     member.updatedBy = user.uid;
 
-    // If currently published, re-sync projections
+    await saveTeamMemberDoc(member);
+
     if (member.locales.ar.publishedRevisionId && member.locales.en.publishedRevisionId) {
       await publishTeamMemberPaired(params.id, user.uid);
     }
 
-    store.persistToDisk();
     revalidateSiteRoutes([
       `/ar/team/${member.locales.ar.slug || params.id}`,
       `/en/team/${member.locales.en.slug || params.id}`,
     ]);
 
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'TEAM_MEMBER_UPDATED',
@@ -170,31 +193,19 @@ export async function DELETE(
     }
     assertCapability(user.role, 'content.edit');
 
-    const member = store.teamMembers.get(params.id);
+    const member = await getTeamMemberDoc(params.id);
     if (!member) {
       return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
     }
 
-    // Unpublish and remove projections first
-    store.publishedContent.delete(`teamMember_${params.id}_ar`);
-    store.publishedContent.delete(`teamMember_${params.id}_en`);
+    await deleteTeamMemberDoc(params.id);
 
-    // Clean up revisions
-    const arRevId = member.locales.ar.publishedRevisionId || member.locales.ar.draftRevisionId;
-    const enRevId = member.locales.en.publishedRevisionId || member.locales.en.draftRevisionId;
-    if (arRevId) store.teamMemberRevisions.delete(arRevId);
-    if (enRevId) store.teamMemberRevisions.delete(enRevId);
-
-    // Delete entity
-    store.teamMembers.delete(params.id);
-    store.persistToDisk();
     revalidateSiteRoutes([
       `/ar/team/${member.locales.ar.slug || params.id}`,
       `/en/team/${member.locales.en.slug || params.id}`,
     ]);
 
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'TEAM_MEMBER_DELETED',

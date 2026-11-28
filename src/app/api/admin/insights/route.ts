@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
-import { ArticleEntity, ArticleRevision } from '@/server/types';
+import {
+  appendAuditLog,
+  getArticleDoc,
+  getTeamMemberDoc,
+  listArticleDocs,
+  saveArticleDoc,
+} from '@/server/db/dal';
+import { ArticleDocument, ArticleRevision } from '@/server/types';
 import { publishArticlePaired } from '@/server/repositories/content';
 import { computeArticleReadingTimeMinutes } from '@/lib/reading-time';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
@@ -15,26 +21,33 @@ export async function GET(req: NextRequest) {
     }
     assertCapability(user.role, 'content.edit');
 
-    const articles = Array.from(store.articles.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    const articles = await listArticleDocs();
+    const enriched = await Promise.all(
+      articles.map(async (a) => {
+        const arRev =
+          a.revisions?.[a.locales.ar.publishedRevisionId || a.locales.ar.draftRevisionId];
+        const enRev =
+          a.revisions?.[a.locales.en.publishedRevisionId || a.locales.en.draftRevisionId];
+        const author = a.authorTeamMemberId
+          ? await getTeamMemberDoc(a.authorTeamMemberId)
+          : null;
+        const authorArRev = author
+          ? author.revisions?.[
+              author.locales.ar.publishedRevisionId || author.locales.ar.draftRevisionId
+            ]
+          : null;
+
+        return {
+          ...a,
+          authorName: authorArRev?.fullName || a.authorTeamMemberId || 'شركة رياض الزهراني للمحاماة',
+          revisions: {
+            ar: arRev || null,
+            en: enRev || null,
+          },
+          isPublished: Boolean(a.locales.ar.publishedRevisionId && a.locales.en.publishedRevisionId),
+        };
+      })
     );
-
-    const enriched = articles.map((a) => {
-      const arRev = store.articleRevisions.get(a.locales.ar.publishedRevisionId || a.locales.ar.draftRevisionId);
-      const enRev = store.articleRevisions.get(a.locales.en.publishedRevisionId || a.locales.en.draftRevisionId);
-      const author = a.authorTeamMemberId ? store.teamMembers.get(a.authorTeamMemberId) : null;
-      const authorArRev = author ? store.teamMemberRevisions.get(author.locales.ar.publishedRevisionId || author.locales.ar.draftRevisionId) : null;
-
-      return {
-        ...a,
-        authorName: authorArRev?.fullName || a.authorTeamMemberId || 'شركة رياض الزهراني للمحاماة',
-        revisions: {
-          ar: arRev || null,
-          en: enRev || null,
-        },
-        isPublished: Boolean(a.locales.ar.publishedRevisionId && a.locales.en.publishedRevisionId),
-      };
-    });
 
     return NextResponse.json({ articles: enriched });
   } catch (err: any) {
@@ -61,7 +74,6 @@ export async function POST(req: NextRequest) {
       categoryIds = ['corporate-law'],
       authorTeamMemberId = 'riyadh-alzahrani',
       relatedServiceIds = [],
-      readingTimeMinutes = 5,
       coverAssetId,
       customSlug,
       publishImmediately = false,
@@ -74,11 +86,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawSlug = customSlug || titleEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const rawSlug =
+      customSlug ||
+      titleEn
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
     const articleId = rawSlug || `article-${Date.now()}`;
 
-    if (store.articles.has(articleId)) {
-      return NextResponse.json({ error: 'An article with this slug/ID already exists.' }, { status: 400 });
+    if (await getArticleDoc(articleId)) {
+      return NextResponse.json(
+        { error: 'An article with this slug/ID already exists.' },
+        { status: 400 }
+      );
     }
 
     const nowIso = new Date().toISOString();
@@ -142,7 +162,7 @@ export async function POST(req: NextRequest) {
       createdAt: nowIso,
     };
 
-    const newArticle: ArticleEntity = {
+    const newArticle: ArticleDocument = {
       id: articleId,
       schemaVersion: 1,
       version: 1,
@@ -154,6 +174,7 @@ export async function POST(req: NextRequest) {
       updatedAt: nowIso,
       createdBy: user.uid,
       updatedBy: user.uid,
+      isPublished: false,
       locales: {
         ar: {
           workflow: publishImmediately ? 'approved' : 'draft',
@@ -168,21 +189,20 @@ export async function POST(req: NextRequest) {
           slug: articleId,
         },
       },
+      revisions: {
+        [arRevId]: arRev,
+        [enRevId]: enRev,
+      },
     };
 
-    store.articleRevisions.set(arRevId, arRev);
-    store.articleRevisions.set(enRevId, enRev);
-    store.articles.set(articleId, newArticle);
+    await saveArticleDoc(newArticle);
 
     if (publishImmediately) {
       await publishArticlePaired(articleId, user.uid);
     }
 
-    store.persistToDisk();
     revalidateSiteRoutes([`/ar/insights/${articleId}`, `/en/insights/${articleId}`]);
-
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'ARTICLE_CREATED',

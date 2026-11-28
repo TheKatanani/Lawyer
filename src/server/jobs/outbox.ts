@@ -1,4 +1,5 @@
-import { store } from '../db/store';
+import 'server-only';
+import { listOutboxJobs, saveOutboxJob } from '../db/dal';
 import { OutboxJob } from '../types';
 
 export async function enqueueOutboxJob(
@@ -6,6 +7,7 @@ export async function enqueueOutboxJob(
   payload: Record<string, any>
 ): Promise<OutboxJob> {
   const jobId = `JOB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const nowIso = new Date().toISOString();
   const job: OutboxJob = {
     id: jobId,
     type,
@@ -13,12 +15,12 @@ export async function enqueueOutboxJob(
     status: 'pending',
     attempts: 0,
     maxAttempts: 5,
-    nextAttemptAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    nextAttemptAt: nowIso,
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
-  store.outboxJobs.set(jobId, job);
+  await saveOutboxJob(job);
   return job;
 }
 
@@ -26,7 +28,8 @@ export async function processOutboxJobs(): Promise<{ processed: number; failed: 
   let processed = 0;
   let failed = 0;
 
-  for (const job of Array.from(store.outboxJobs.values())) {
+  const jobs = await listOutboxJobs();
+  for (const job of jobs) {
     if (job.status !== 'pending' && job.status !== 'failed') continue;
 
     job.status = 'processing';
@@ -35,9 +38,9 @@ export async function processOutboxJobs(): Promise<{ processed: number; failed: 
 
     try {
       if (job.type === 'inquiry_notification') {
-        // Dispatches minimal notification containing dashboard URL, omitting full client PII from email
-        // In dev/test: safely logs to operational sink
-        console.log(`[OUTBOX NOTIFICATION] New inquiry received: ${job.payload.inquiryId}. Review in CMS: /admin/inquiries`);
+        console.log(
+          `[OUTBOX NOTIFICATION] New inquiry received: ${job.payload.inquiryId}. Review in CMS: /admin/inquiries`
+        );
       } else if (job.type === 'cache_invalidation') {
         console.log(`[OUTBOX CACHE] Invalidation triggered for tags:`, job.payload.tags);
       }
@@ -50,12 +53,13 @@ export async function processOutboxJobs(): Promise<{ processed: number; failed: 
         job.status = 'dead_letter';
       } else {
         job.status = 'failed';
-        // Exponential backoff
         const delayMs = Math.pow(2, job.attempts) * 60000;
         job.nextAttemptAt = new Date(Date.now() + delayMs).toISOString();
       }
       failed += 1;
     }
+
+    await saveOutboxJob(job);
   }
 
   return { processed, failed };

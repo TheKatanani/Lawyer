@@ -1,4 +1,12 @@
-import { store } from '../db/store';
+import 'server-only';
+import {
+  appendAuditLog,
+  getAdminByUid,
+  getInquiryDoc,
+  listInquiriesDocs,
+  saveInquiryDoc,
+} from '../db/dal';
+import { runtimeIdempotencyKeys, runtimeRateLimits } from '../security/runtime-cache';
 import { ContactRequest, InquiryStatus, AudienceTag, SupportedLocale, Role } from '../types';
 import { assertCapability } from '../permissions/rbac';
 import { enqueueOutboxJob } from '../jobs/outbox';
@@ -21,7 +29,6 @@ export interface CreateInquiryInput {
 export async function createInquiry(input: CreateInquiryInput) {
   // 1. Honeypot anti-bot verification
   if (input.honeypot && input.honeypot.trim().length > 0) {
-    // Silently drop spam without notifying bot
     return {
       success: true,
       referenceNumber: `RMA-INQ-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -29,33 +36,38 @@ export async function createInquiry(input: CreateInquiryInput) {
     };
   }
 
-  // 2. Sliding window distributed rate limiting
+  // 2. Sliding window rate limiting (process-local)
   const ipHash = input.clientIpHash || 'default-network';
   const now = Date.now();
-  const rateLimit = store.rateLimits.get(ipHash);
+  const rateLimit = runtimeRateLimits.get(ipHash);
   if (rateLimit) {
     if (rateLimit.expiresAt > now) {
       if (rateLimit.count >= 5) {
-        throw new Error('Rate limit exceeded. Please wait 10 minutes before submitting another request.');
+        throw new Error(
+          'Rate limit exceeded. Please wait 10 minutes before submitting another request.'
+        );
       }
       rateLimit.count += 1;
     } else {
-      store.rateLimits.set(ipHash, { count: 1, expiresAt: now + 600000 }); // 10 minutes
+      runtimeRateLimits.set(ipHash, { count: 1, expiresAt: now + 600000 });
     }
   } else {
-    store.rateLimits.set(ipHash, { count: 1, expiresAt: now + 600000 });
+    runtimeRateLimits.set(ipHash, { count: 1, expiresAt: now + 600000 });
   }
 
-  // 3. Idempotency Check
+  // 3. Idempotency Check (process-local)
   if (input.idempotencyKey) {
-    const cached = store.idempotencyKeys.get(input.idempotencyKey);
+    const cached = runtimeIdempotencyKeys.get(input.idempotencyKey);
     if (cached && cached.expiresAt > now) {
       return cached.result;
     }
   }
 
-  // 4. Generate reference number
-  const referenceNumber = `RMA-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+  // 4. Generate reference number & build entity
+  const referenceNumber = `RMA-${new Date().getFullYear()}-${Math.floor(
+    10000 + Math.random() * 90000
+  )}`;
+  const nowIso = new Date().toISOString();
   const inquiry: ContactRequest = {
     id: referenceNumber,
     audience: input.audience,
@@ -68,17 +80,17 @@ export async function createInquiry(input: CreateInquiryInput) {
     locale: input.locale,
     status: 'new',
     noticeVersion: input.noticeVersion,
-    acknowledgedAt: new Date().toISOString(),
+    acknowledgedAt: nowIso,
     retentionClass: 'INQUIRY_ACTIVE',
     notes: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
-  // 5. Store inquiry
-  store.inquiries.set(inquiry.id, inquiry);
+  // 5. Persist inquiry to Firestore
+  await saveInquiryDoc(inquiry);
 
-  // 6. Enqueue Outbox notification job
+  // 6. Enqueue Outbox notification job to Firestore
   await enqueueOutboxJob('inquiry_notification', {
     inquiryId: inquiry.id,
     name: inquiry.name,
@@ -93,9 +105,8 @@ export async function createInquiry(input: CreateInquiryInput) {
     receivedAt: inquiry.createdAt,
   };
 
-  // Cache idempotency response for 24 hours
   if (input.idempotencyKey) {
-    store.idempotencyKeys.set(input.idempotencyKey, {
+    runtimeIdempotencyKeys.set(input.idempotencyKey, {
       result: response,
       expiresAt: now + 86400000,
     });
@@ -109,15 +120,13 @@ export async function listInquiries(
   statusFilter?: InquiryStatus
 ): Promise<ContactRequest[]> {
   assertCapability(actorRole, 'inquiries.read');
-
-  const all = Array.from(store.inquiries.values());
-  const filtered = statusFilter ? all.filter((i) => i.status === statusFilter) : all;
-  return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const all = await listInquiriesDocs();
+  return statusFilter ? all.filter((i) => i.status === statusFilter) : all;
 }
 
 export async function getInquiryById(actorRole: Role, id: string): Promise<ContactRequest | null> {
   assertCapability(actorRole, 'inquiries.read');
-  return store.inquiries.get(id) || null;
+  return getInquiryDoc(id);
 }
 
 export async function updateInquiryStatus(
@@ -126,11 +135,11 @@ export async function updateInquiryStatus(
   newStatus: InquiryStatus,
   noteText?: string
 ) {
-  const actor = store.admins.get(actorUid);
+  const actor = await getAdminByUid(actorUid);
   if (!actor) throw new Error('Unauthorized');
   assertCapability(actor.role, 'inquiries.update');
 
-  const inquiry = store.inquiries.get(id);
+  const inquiry = await getInquiryDoc(id);
   if (!inquiry) throw new Error('Inquiry not found');
 
   const oldStatus = inquiry.status;
@@ -147,15 +156,15 @@ export async function updateInquiryStatus(
     });
   }
 
-  store.auditLogs.unshift({
-    id: `AUDIT-${Date.now()}`,
+  await saveInquiryDoc(inquiry);
+  await appendAuditLog({
     actorUid: actor.uid,
     actorEmail: actor.email,
     action: 'INQUIRY_STATUS_CHANGED',
     targetType: 'contactRequest',
     targetId: id,
     details: { oldStatus, newStatus },
-    createdAt: new Date().toISOString(),
+    createdAt: inquiry.updatedAt,
   });
 
   return inquiry;
@@ -164,10 +173,9 @@ export async function updateInquiryStatus(
 export async function exportInquiriesToCsv(actorRole: Role): Promise<string> {
   assertCapability(actorRole, 'inquiries.export');
 
-  const list = Array.from(store.inquiries.values());
+  const list = await listInquiriesDocs();
   const headers = ['Reference', 'Date', 'Audience', 'Name', 'Phone', 'Company', 'Service', 'Status'];
 
-  // Sanitize formula injection
   const sanitize = (val: string | undefined) => {
     if (!val) return '""';
     let s = val.replace(/"/g, '""');

@@ -5,6 +5,8 @@ import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
 import { ConsultationForm } from '@/components/consultation/ConsultationForm';
 import { buildPageMetadata } from '@/lib/seo';
+
+export const dynamic = 'force-dynamic';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 interface Props {
@@ -29,7 +31,7 @@ export async function generateMetadata({ params: { locale } }: Props): Promise<M
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const t = await getTranslations({ locale, namespace: 'consultation' });
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/consultation',
     title: t('title'),

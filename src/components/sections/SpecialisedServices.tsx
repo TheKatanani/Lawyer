@@ -5,64 +5,43 @@ import { Shield, Building2, Users, Layers, AlertTriangle, Globe, FileText, Arrow
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import Link from 'next/link';
 
-interface SpecialisedServicesProps {
-  locale: string;
+export interface SpecialisedServiceItem {
+  title: string;
+  desc: string;
 }
 
-export function SpecialisedServices({ locale }: SpecialisedServicesProps) {
-  const isAr = locale === 'ar';
+interface SpecialisedServicesProps {
+  locale: string;
+  eyebrow: string;
+  heading: string;
+  description: string;
+  items: SpecialisedServiceItem[];
+}
 
-  const services = [
-    {
-      titleAr: 'خدمات كبار العملاء',
-      titleEn: 'Private Client Services',
-      descAr: 'خدمة قانونية خاصة لرجال الأعمال وأصحاب الثروات، بتواصل مباشر مع القيادة، ومتابعة شخصية، وأعلى درجات التحفظ في كل ما يتعلق بالأصول والعلاقات والقرارات.',
-      descEn: 'Dedicated counsel for business leaders and high-net-worth individuals — with direct access to leadership, personal follow-up and the utmost discretion in all matters of assets, relationships and decisions.',
-      icon: <Shield className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'خدمات الشركات والمجموعات',
-      titleEn: 'Corporate Groups',
-      descAr: 'دعم قانوني متكامل للمجموعات متعددة الكيانات: هيكلة العلاقات بين الشركات التابعة، وتوحيد العقود والسياسات، وإدارة منازعات المجموعة من مركز واحد.',
-      descEn: 'Integrated support for multi-entity groups: structuring relationships between subsidiaries, standardising contracts and policies, and managing group disputes from a single point.',
-      icon: <Building2 className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'إدارة الثروات العائلية',
-      titleEn: 'Family Wealth Management',
-      descAr: 'تنظيم الأصول العائلية عبر الشركات القابضة والأوقاف والمواثيق العائلية، بما يدعم انتقال الثروة بين الأجيال وفق الأحكام الشرعية والنظامية، دون ادعاء حماية مطلقة.',
-      descEn: 'Organising family assets through holding companies, waqf and family charters, supporting the transfer of wealth across generations under Sharia and statutory rules — without claiming absolute protection.',
-      icon: <Users className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'إدارة النزاعات المعقدة',
-      titleEn: 'Complex Dispute Management',
-      descAr: 'للنزاعات متعددة الأطراف أو الجهات أو الدول: فريق عمل موحد، وخطة نزاع مكتوبة، وتنسيق بين المسارات القضائية والتحكيمية والتفاوضية.',
-      descEn: 'For disputes spanning several parties, authorities or countries: a single team, a written dispute plan, and coordination across litigation, arbitration and negotiation.',
-      icon: <Layers className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'الخدمات القانونية الوقائية',
-      titleEn: 'Preventive Legal Services',
-      descAr: 'مراجعة دورية للعقود والقرارات والسياسات لرصد المخاطر قبل أن تتحول إلى نزاع، مع تقرير مكتوب بالتوصيات القابلة للتنفيذ.',
-      descEn: 'Periodic review of contracts, decisions and policies to identify risk before it becomes a dispute, with a written report of recommendations.',
-      icon: <AlertTriangle className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'المنازعات العابرة للحدود',
-      titleEn: 'Cross-Border Disputes',
-      descAr: 'معالجة المنازعات ذات العنصر الأجنبي، من اختيار القانون والاختصاص إلى تنفيذ الأحكام، بالتنسيق مع مختصين في الولايات القضائية الأخرى عند الحاجة.',
-      descEn: 'Resolving disputes with a foreign element — from choice of law and forum to enforcement of judgments — coordinating with specialists in other jurisdictions where needed.',
-      icon: <Globe className="w-5 h-5 text-gold" />,
-    },
-    {
-      titleAr: 'الاستشارات القانونية المستمرة',
-      titleEn: 'Retained Legal Advisory',
-      descAr: 'اتفاقية خدمة شهرية أو سنوية توفر رأياً قانونياً سريعاً، ومراجعة للعقود، وحضوراً في القرارات المهمة، بكلفة محددة ومعروفة مسبقاً.',
-      descEn: 'A monthly or annual service agreement providing prompt legal opinions, contract review and presence at key decisions, at a cost known in advance.',
-      icon: <FileText className="w-5 h-5 text-gold" />,
-    },
+export function SpecialisedServices({
+  locale,
+  eyebrow,
+  heading,
+  description,
+  items,
+}: SpecialisedServicesProps) {
+  const isAr = locale === 'ar';
+  if (!items || items.length === 0) return null;
+
+  const SPECIALISED_ICONS = [
+    <Shield key="shield" className="w-5 h-5 text-gold" />,
+    <Building2 key="bldg" className="w-5 h-5 text-gold" />,
+    <Users key="users" className="w-5 h-5 text-gold" />,
+    <Layers key="layers" className="w-5 h-5 text-gold" />,
+    <AlertTriangle key="alert" className="w-5 h-5 text-gold" />,
+    <Globe key="globe" className="w-5 h-5 text-gold" />,
+    <FileText key="file" className="w-5 h-5 text-gold" />,
   ];
+
+  const services = items.map((item, idx) => ({
+    ...item,
+    icon: SPECIALISED_ICONS[idx % SPECIALISED_ICONS.length],
+  }));
 
   return (
     <section className="py-16 sm:py-20 lg:py-24 bg-surface border-b border-border/70 relative">
@@ -70,15 +49,13 @@ export function SpecialisedServices({ locale }: SpecialisedServicesProps) {
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
             <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              {isAr ? 'حلول مؤسسية متقدمة' : 'Institutional Solutions'}
+              {eyebrow}
             </span>
             <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-4xl lg:text-5xl leading-tight">
-              {isAr ? 'الخدمات المتخصصة' : 'Specialised Services'}
+              {heading}
             </h2>
             <p className="text-muted text-base sm:text-lg leading-relaxed font-normal">
-              {isAr
-                ? 'حزم استشارية واستراتيجية متقدمة صُممت لتلبية متطلبات كبار العملاء والشركات القابضة والمجموعات الاستثمارية.'
-                : 'Advanced strategic counsel designed for private clients, holding companies and multi-entity corporate groups.'}
+              {description}
             </p>
           </div>
         </ScrollReveal>
@@ -97,10 +74,10 @@ export function SpecialisedServices({ locale }: SpecialisedServicesProps) {
                     {s.icon}
                   </div>
                   <h3 className="font-heading-ar font-bold text-ink text-lg">
-                    {isAr ? s.titleAr : s.titleEn}
+                    {s.title}
                   </h3>
                   <p className="text-muted text-xs sm:text-sm leading-relaxed font-normal">
-                    {isAr ? s.descAr : s.descEn}
+                    {s.desc}
                   </p>
                 </div>
 

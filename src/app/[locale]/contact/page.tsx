@@ -4,10 +4,12 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ContactForm } from '@/components/forms/ContactForm';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { Phone, MessageSquare, MapPin, Clock, ShieldCheck, Mail, Globe } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, ShieldCheck, Mail, Globe } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { getSiteSettings } from '@/server/db/dal';
+import { pickLocalized } from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { buildPageMetadata } from '@/lib/seo';
 
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
@@ -20,7 +22,7 @@ export async function generateMetadata({
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/contact',
     title: isAr ? 'تواصل معنا' : 'Contact Us',
@@ -39,13 +41,13 @@ export default async function ContactPage({
   const t = await getTranslations();
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
-  const settings = store.siteSettings || INITIAL_SETTINGS;
-  const contactAddress = isAr ? (settings.addressAr || FIRM_DETAILS.addressAr) : (settings.addressEn || FIRM_DETAILS.addressEn);
-  const contactPhone = settings.phone || FIRM_DETAILS.phone;
+  const settings = await getSiteSettings();
+  const contactAddress = isAr ? settings.addressAr : settings.addressEn;
+  const contactPhone = settings.phone;
   const contactPhoneRaw = contactPhone.replace(/[^\d+]/g, '');
-  const contactWhatsapp = settings.whatsapp || FIRM_DETAILS.whatsapp;
+  const contactWhatsapp = settings.whatsapp;
   const contactWhatsappUrl = `https://wa.me/${contactWhatsapp.replace(/[^\d]/g, '')}`;
-  const contactEmail = settings.email || FIRM_DETAILS.email;
+  const contactEmail = settings.email;
 
   const publishedServices = await listPublishedProjections('service', currentLocale);
   const serviceOptions = publishedServices.map((s) => ({
@@ -53,10 +55,20 @@ export default async function ContactPage({
     title: s.title,
   }));
 
+  const contactSectionEyebrow =
+    pickLocalized(currentLocale, settings.contactSectionEyebrowAr, settings.contactSectionEyebrowEn) ||
+    t('contactSection.eyebrow');
+  const contactSectionHeading =
+    pickLocalized(currentLocale, settings.contactSectionHeadingAr, settings.contactSectionHeadingEn) ||
+    t('contactSection.heading');
+  const contactSectionDesc =
+    pickLocalized(currentLocale, settings.contactSectionDescAr, settings.contactSectionDescEn) ||
+    t('contactSection.description');
+
   const formMessages = {
-    eyebrow: t('contactSection.eyebrow'),
-    heading: t('contactSection.heading'),
-    description: t('contactSection.description'),
+    eyebrow: contactSectionEyebrow,
+    heading: contactSectionHeading,
+    description: contactSectionDesc,
     audienceLabel: t('contactSection.audienceLabel'),
     audienceIndividual: t('contactSection.audienceIndividual'),
     audienceBusiness: t('contactSection.audienceBusiness'),
@@ -71,7 +83,9 @@ export default async function ContactPage({
     privacyConsent: t('contactSection.privacyConsent'),
     submitBtn: t('contactSection.submitBtn'),
     submitting: t('contactSection.submitting'),
-    disclaimer: t('contactSection.disclaimer'),
+    disclaimer:
+      pickLocalized(currentLocale, settings.contactDisclaimerAr, settings.contactDisclaimerEn) ||
+      t('contactSection.disclaimer'),
     successTitle: t('contactSection.successTitle'),
     successMessage: t('contactSection.successMessage'),
     refNumber: t('contactSection.refNumber'),
@@ -87,13 +101,13 @@ export default async function ContactPage({
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
             <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              {t('contactSection.eyebrow')}
+              {contactSectionEyebrow}
             </span>
             <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-              {t('contactSection.heading')}
+              {contactSectionHeading}
             </h1>
             <p className="text-muted text-base sm:text-lg leading-relaxed">
-              {t('contactSection.description')}
+              {contactSectionDesc}
             </p>
           </div>
         </ScrollReveal>
@@ -161,24 +175,14 @@ export default async function ContactPage({
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-semibold text-ink block">{isAr ? 'الموقع الإلكتروني' : 'Website'}</span>
-                      <a href={FIRM_DETAILS.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-gold-ink hover:underline">
-                        {FIRM_DETAILS.website}
-                      </a>
-                    </div>
-                  </div>
-
-                  {UNVERIFIED_CLAIMS_CONFIG.enableOfficialWorkingHours && (
+                  {settings.websiteUrl && (
                     <div className="flex items-start gap-3">
-                      <Clock className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
+                      <Globe className="w-5 h-5 text-gold-ink flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-semibold text-ink block">{isAr ? 'ساعات العمل الرسمية' : 'Working Hours'}</span>
-                        <span className="text-muted">
-                          {isAr ? UNVERIFIED_CLAIMS_CONFIG.workingHoursAr : UNVERIFIED_CLAIMS_CONFIG.workingHoursEn}
-                        </span>
+                        <span className="font-semibold text-ink block">{isAr ? 'الموقع الإلكتروني' : 'Website'}</span>
+                        <a href={settings.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-gold-ink hover:underline">
+                          {settings.website || settings.websiteUrl.replace(/^https?:\/\//, '')}
+                        </a>
                       </div>
                     </div>
                   )}

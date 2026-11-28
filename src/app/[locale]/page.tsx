@@ -15,8 +15,20 @@ import { JourneySection } from '@/components/sections/JourneySection';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { listPublishedProjections } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
-import { FIRM_DETAILS } from '@/config/compliance';
+import { getSiteSettings } from '@/server/db/dal';
+import {
+  getHeroMessages,
+  getStatsBannerItems,
+  getLeadershipContent,
+  getMethodologyProps,
+  getSpecialisedProps,
+  getExcellenceProps,
+  getJourneyMessages,
+  getClosingWordProps,
+  pickLocalized,
+} from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { buildPageMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
@@ -26,9 +38,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '',
     title: {
@@ -46,25 +58,23 @@ export default async function HomePage({
   setRequestLocale(locale);
   const t = await getTranslations();
   const currentLocale = locale as SupportedLocale;
-  const isAr = locale === 'ar';
 
   const publishedServices = await listPublishedProjections('service', currentLocale);
-  const settings = store.siteSettings || INITIAL_SETTINGS;
-  const whatsappUrl = `https://wa.me/${(settings.whatsapp || FIRM_DETAILS.whatsapp).replace(/[^\d]/g, '')}`;
+  const settings = await getSiteSettings();
+  const whatsappUrl = `https://wa.me/${(settings.whatsapp || '').replace(/[^\d]/g, '')}`;
 
-  const heroMessages = {
-    eyebrow: isAr ? (settings.heroEyebrowAr || t('hero.eyebrow')) : (settings.heroEyebrowEn || t('hero.eyebrow')),
-    heading: isAr ? (settings.heroHeadlineAr || t('hero.heading')) : (settings.heroHeadlineEn || t('hero.heading')),
-    description: isAr ? (settings.heroDescAr || t('hero.description')) : (settings.heroDescEn || t('hero.description')),
-    ctaPrimary: t('hero.ctaPrimary'),
-    ctaSecondary: t('hero.ctaSecondary'),
-    imageAlt: t('hero.imageAlt'),
-  };
+  const heroMessages = getHeroMessages(settings, currentLocale);
 
   const servicesMessages = {
-    eyebrow: t('servicesSection.eyebrow'),
-    heading: t('servicesSection.heading'),
-    description: t('servicesSection.description'),
+    eyebrow:
+      pickLocalized(currentLocale, settings.servicesSectionEyebrowAr, settings.servicesSectionEyebrowEn) ||
+      t('servicesSection.eyebrow'),
+    heading:
+      pickLocalized(currentLocale, settings.servicesSectionHeadingAr, settings.servicesSectionHeadingEn) ||
+      t('servicesSection.heading'),
+    description:
+      pickLocalized(currentLocale, settings.servicesSectionDescAr, settings.servicesSectionDescEn) ||
+      t('servicesSection.description'),
     filters: {
       all: t('servicesSection.filters.all'),
       individual: t('servicesSection.filters.individual'),
@@ -73,18 +83,7 @@ export default async function HomePage({
     viewDetails: t('servicesSection.viewDetails'),
   };
 
-  const journeyMessages = {
-    eyebrow: t('journeySection.eyebrow'),
-    heading: t('journeySection.heading'),
-    step1Title: t('journeySection.step1Title'),
-    step1Desc: t('journeySection.step1Desc'),
-    step2Title: t('journeySection.step2Title'),
-    step2Desc: t('journeySection.step2Desc'),
-    step3Title: t('journeySection.step3Title'),
-    step3Desc: t('journeySection.step3Desc'),
-    step4Title: t('journeySection.step4Title'),
-    step4Desc: t('journeySection.step4Desc'),
-  };
+  const journeyMessages = getJourneyMessages(settings, currentLocale);
 
   return (
     <div className="flex flex-col">
@@ -92,16 +91,16 @@ export default async function HomePage({
       <Hero locale={locale} messages={heroMessages} />
 
       {/* 1.5 Legal Stature & Metric Counters Banner */}
-      <StatsBanner locale={locale} />
+      <StatsBanner locale={locale} items={getStatsBannerItems(settings, currentLocale)} />
 
       {/* 2. Leadership Message (PDF p. 6-7) */}
       <LeadershipMessage
         locale={locale}
-        quote={isAr ? settings.leadershipQuoteAr : settings.leadershipQuoteEn}
+        content={getLeadershipContent(settings, currentLocale)}
       />
 
       {/* 3. 5-Step Methodology & Philosophy (PDF p. 10-11) */}
-      <MethodologySection locale={locale} />
+      <MethodologySection locale={locale} {...getMethodologyProps(settings, currentLocale)} />
 
       {/* 4. 16 Official Practice Areas Directory */}
       <ServicesPreview
@@ -111,10 +110,10 @@ export default async function HomePage({
       />
 
       {/* 5. Specialised Services (PDF p. 48-51) */}
-      <SpecialisedServices locale={locale} />
+      <SpecialisedServices locale={locale} {...getSpecialisedProps(settings, currentLocale)} />
 
       {/* 6. Institutional Excellence (PDF p. 52-53) */}
-      <InstitutionalExcellence locale={locale} />
+      <InstitutionalExcellence locale={locale} {...getExcellenceProps(settings, currentLocale)} />
 
       {/* 7. Client Engagement Journey */}
       <JourneySection locale={locale} messages={journeyMessages} />
@@ -122,7 +121,7 @@ export default async function HomePage({
       {/* 8. Closing Word / Promise (PDF p. 54) */}
       <ClosingWord
         locale={locale}
-        closingWord={isAr ? settings.closingWordAr : settings.closingWordEn}
+        {...getClosingWordProps(settings, currentLocale)}
       />
 
       {/* 9. Final Contact Call to Action Banner */}
@@ -131,17 +130,16 @@ export default async function HomePage({
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
             <div className="space-y-4">
               <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-                {t('contactSection.eyebrow')}
+                {pickLocalized(currentLocale, settings.contactSectionEyebrowAr, settings.contactSectionEyebrowEn) ||
+                  t('contactSection.eyebrow')}
               </span>
               <h2 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-                {isAr
-                  ? (settings.homeCtaHeadingAr || t('contactSection.heading'))
-                  : (settings.homeCtaHeadingEn || t('contactSection.heading'))}
+                {pickLocalized(currentLocale, settings.homeCtaHeadingAr, settings.homeCtaHeadingEn) ||
+                  t('contactSection.heading')}
               </h2>
               <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto">
-                {isAr
-                  ? (settings.homeCtaDescAr || t('contactSection.description'))
-                  : (settings.homeCtaDescEn || t('contactSection.description'))}
+                {pickLocalized(currentLocale, settings.homeCtaDescAr, settings.homeCtaDescEn) ||
+                  t('contactSection.description')}
               </p>
             </div>
 

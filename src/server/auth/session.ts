@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
-import { store } from '../db/store';
+import { getAdminByUid, listAdmins, saveAdmin } from '../db/dal';
 import { AdminUser, Role } from '../types';
 import { getServerSigningSecret } from './secret';
 
@@ -98,13 +98,11 @@ export function verifySessionToken(token: string): SessionData | null {
 export async function getSessionUser(req?: any): Promise<AdminUser | null> {
   let cookieValue: string | undefined;
 
-  // 1. Check passed request cookies if provided
   if (req?.cookies?.get) {
     const c = req.cookies.get(SESSION_COOKIE_NAME);
     cookieValue = typeof c === 'string' ? c : c?.value;
   }
 
-  // 2. Fallback to raw Cookie header parsing if NextRequest wasn't parsed
   if (!cookieValue && req?.headers?.get) {
     const rawCookie = req.headers.get('cookie') || '';
     const match = rawCookie
@@ -116,14 +114,13 @@ export async function getSessionUser(req?: any): Promise<AdminUser | null> {
     }
   }
 
-  // 3. Check next/headers cookies() store
   if (!cookieValue) {
     try {
       const cookieStore = cookies();
       const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
       cookieValue = sessionCookie?.value;
     } catch {
-      // Invariant error outside Next.js server context
+      // Invariant outside Next.js server context
     }
   }
 
@@ -136,22 +133,18 @@ export async function getSessionUser(req?: any): Promise<AdminUser | null> {
     return null;
   }
 
-  // Check store first: if the user is present in this instance, honor live isActive/role state
-  const existingUser = store.admins.get(decoded.uid);
+  // Always check Firestore admins collection first for authoritative role & active state
+  const existingUser = await getAdminByUid(decoded.uid);
   if (existingUser) {
-    if (!existingUser.isActive) {
-      return null;
-    }
-    return existingUser;
+    return existingUser.isActive ? existingUser : null;
   }
 
-  // In serverless deployments (Vercel), users auto-provisioned on /api/auth/session
-  // (e.g. Firebase or SUPER_ADMIN_EMAILS accounts) do not exist in another lambda's
-  // in-memory store.admins map. Reconstruct and cache from the verified signed JWT.
   if (!VALID_ROLES.has(decoded.role as Role)) {
     return null;
   }
 
+  // If a super-admin signed in via verified Firebase Auth on an unseeded/newly bootstrapped user,
+  // persist them to Firestore so RBAC stays authoritative across Lambdas.
   const hydratedUser: AdminUser = {
     uid: decoded.uid,
     email: decoded.email,
@@ -163,7 +156,11 @@ export async function getSessionUser(req?: any): Promise<AdminUser | null> {
     updatedAt: new Date().toISOString(),
   };
 
-  store.admins.set(hydratedUser.uid, hydratedUser);
+  try {
+    await saveAdmin(hydratedUser);
+  } catch {
+    // Allow read-only session verification during unit tests when DB write isn't needed
+  }
   return hydratedUser;
 }
 
@@ -188,17 +185,18 @@ export function encodeSessionPayload(
   return signJwtHs256(payload);
 }
 
-export function protectLastSuperAdmin(targetUid: string): void {
-  const targetUser = store.admins.get(targetUid);
-  if (!targetUser || targetUser.role !== 'super_admin') return;
-
-  const activeSuperAdmins = Array.from(store.admins.values()).filter(
+/**
+ * Super Admin Lockout Protection (A12)
+ */
+export async function protectLastSuperAdmin(targetUid: string): Promise<void> {
+  const allAdmins = await listAdmins();
+  const activeSuperAdmins = allAdmins.filter(
     (u) => u.role === 'super_admin' && u.isActive
   );
 
-  if (activeSuperAdmins.length <= 1 && activeSuperAdmins[0].uid === targetUid) {
-    throw new Error('Operation blocked: Cannot delete, demote, or deactivate the last remaining active Super Admin.');
+  if (activeSuperAdmins.length <= 1 && activeSuperAdmins[0]?.uid === targetUid) {
+    throw new Error(
+      'Cannot delete, demote, or deactivate the last remaining active Super Admin.'
+    );
   }
 }
-
-export { hashPassword, verifyPassword } from './password';

@@ -6,7 +6,10 @@ import { PATCH as handlePatchService } from '@/app/api/admin/services/[id]/route
 import { GET as handleListConsultations } from '@/app/api/admin/consultations/route';
 import { POST as handleCreateConsultation } from '@/app/api/consultations/route';
 import { buildBreadcrumbJsonLd, buildPageMetadata } from '@/lib/seo';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { getSiteSettings, listServiceDocs } from '@/server/db/dal';
+import { seedFirestore } from '@/server/db/seed';
+import { getPublishedProjection } from '@/server/repositories/content';
+import { clearRuntimeCaches } from '@/server/security/runtime-cache';
 import { encodeSessionPayload, SESSION_COOKIE_NAME } from '@/server/auth/session';
 
 function makeAdminCookie() {
@@ -14,22 +17,15 @@ function makeAdminCookie() {
   return `${SESSION_COOKIE_NAME}=${token}`;
 }
 
+import { COLLECTIONS, getDb } from '@/server/db/firestore';
+import { buildSeedSettings } from '@/server/db/seed-defaults';
+import { updateSiteSettings } from '@/server/db/dal';
+
 describe('SEO, llms.txt, CMS Persistence & Consultations Ordering', () => {
-  beforeEach(() => {
-    store.siteSettings = { ...INITIAL_SETTINGS };
-    store.rateLimits.clear();
-    if (!store.admins.has('admin-rma-01')) {
-      store.admins.set('admin-rma-01', {
-        uid: 'admin-rma-01',
-        email: 'admin@rma-law.sa',
-        displayName: 'Riyadh Alzahrani',
-        role: 'super_admin',
-        isActive: true,
-        mfaEnrolled: true,
-        createdAt: '2026-11-12T10:00:00Z',
-        updatedAt: '2026-11-12T10:00:00Z',
-      });
-    }
+  beforeEach(async () => {
+    clearRuntimeCaches();
+    await seedFirestore();
+    await updateSiteSettings(buildSeedSettings());
   });
 
   it('serves /llms.txt with bilingual summary, services, team, and contact details', async () => {
@@ -45,8 +41,8 @@ describe('SEO, llms.txt, CMS Persistence & Consultations Ordering', () => {
     expect(text).toContain('/en/services');
   });
 
-  it('includes default og:image and twitter card on inner pages and www.riyadhalzahrani.com in BreadcrumbList', () => {
-    const metaAr = buildPageMetadata({
+  it('includes default og:image and twitter card on inner pages and www.riyadhalzahrani.com in BreadcrumbList', async () => {
+    const metaAr = await buildPageMetadata({
       locale: 'ar',
       path: '/about',
       title: 'عن الشركة',
@@ -63,7 +59,7 @@ describe('SEO, llms.txt, CMS Persistence & Consultations Ordering', () => {
     expect(schema.itemListElement[1].item).toBe('https://www.riyadhalzahrani.com/en/about');
   });
 
-  it('updates published service deliverables & settings cleanly in store', async () => {
+  it('updates published service deliverables & settings cleanly in Firestore', async () => {
     const cookie = makeAdminCookie();
 
     const settingsReq = new NextRequest('http://localhost:3000/api/admin/settings', {
@@ -76,10 +72,11 @@ describe('SEO, llms.txt, CMS Persistence & Consultations Ordering', () => {
     });
     const settingsRes = await handlePutSettings(settingsReq);
     expect(settingsRes.status).toBe(200);
-    expect(store.siteSettings.phone).toBe('+966 55 111 2222');
-    expect(store.siteSettings.heroEyebrowAr).toBe('شارة محدثة من الإدارة');
+    const updatedSettings = await getSiteSettings();
+    expect(updatedSettings.phone).toBe('+966 55 111 2222');
+    expect(updatedSettings.heroEyebrowAr).toBe('شارة محدثة من الإدارة');
 
-    const firstSvc = Array.from(store.services.values())[0];
+    const [firstSvc] = await listServiceDocs();
     const patchReq = new NextRequest(`http://localhost:3000/api/admin/services/${firstSvc.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Cookie: cookie },
@@ -89,12 +86,19 @@ describe('SEO, llms.txt, CMS Persistence & Consultations Ordering', () => {
     });
     const patchRes = await handlePatchService(patchReq, { params: { id: firstSvc.id } });
     expect(patchRes.status).toBe(200);
-    const updatedProj = store.publishedContent.get(`service_${firstSvc.id}_ar`);
+    const updatedProj = await getPublishedProjection('service', firstSvc.id, 'ar');
     expect(updatedProj?.metadata?.deliverables).toEqual(['مخرج محدث للاختبار']);
   });
 
   it('generates monotonic references, preserves WhatsApp country code, and sorts admin consultations newest first', async () => {
-    store.consultations.clear();
+    const db = getDb();
+    const snap = await db.collection(COLLECTIONS.consultations).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+    await db.collection(COLLECTIONS.counters).doc('consultations').delete();
     const cookie = makeAdminCookie();
 
     const req1 = new NextRequest('http://localhost:3000/api/consultations', {

@@ -4,76 +4,35 @@ import React from 'react';
 import { Award, ShieldCheck, Scale, Compass, CheckCircle } from 'lucide-react';
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
-interface StatsBannerProps {
-  locale: string;
+export interface StatsBannerItem {
+  target: number;
+  prefix?: string;
+  suffix: string;
+  title: string;
+  desc: string;
 }
 
-export function StatsBanner({ locale }: StatsBannerProps) {
-  const isAr = locale === 'ar';
+interface StatsBannerProps {
+  locale?: string;
+  items: StatsBannerItem[];
+}
 
-  const stats = [
-    {
-      target: 20,
-      prefix: '+',
-      suffix: isAr ? ' عاماً' : ' Yrs',
-      title: isAr ? 'خبرة رصينة متراكمة' : 'Years of Experience',
-      desc: isAr ? 'في التقاضي، التحكيم، والصياغة النظامية' : 'In litigation, arbitration & legislative drafting',
-      icon: <Award className="w-5 h-5 text-gold" />,
-    },
-    UNVERIFIED_CLAIMS_CONFIG.enableCompletedCasesCounter
-      ? {
-          target: 950,
-          prefix: '+',
-          suffix: '',
-          title: isAr ? 'قضية واستشارة منجزة' : 'Matters Successfully Advised',
-          desc: isAr ? 'للشركات والمستثمرين والأفراد في المملكة' : 'For corporate entities, investors & individuals',
-          icon: <ShieldCheck className="w-5 h-5 text-gold" />,
-        }
-      : {
-          target: 16,
-          prefix: '',
-          suffix: isAr ? ' مجالاً' : ' Areas',
-          title: isAr ? 'مجال ممارسة متخصص' : 'Specialised Practice Areas',
-          desc: isAr ? 'تغطية شاملة للنزاعات والمعاملات النظامية' : 'Comprehensive coverage of statutory disciplines',
-          icon: <Scale className="w-5 h-5 text-gold" />,
-        },
-    UNVERIFIED_CLAIMS_CONFIG.enable100PercentComplianceClaim
-      ? {
-          target: 100,
-          prefix: '',
-          suffix: '%',
-          title: isAr ? 'امتثال وتراخيص معتمدة' : 'MOJ Licensed & SBA Verified',
-          desc: isAr ? 'ترخيص وزارة العدل وهيئة المحامين' : 'Ministry of Justice & Saudi Bar Association',
-          icon: <Scale className="w-5 h-5 text-gold" />,
-        }
-      : {
-          target: 5,
-          prefix: '',
-          suffix: isAr ? ' خطوات' : ' Steps',
-          title: isAr ? 'منهجية العمل المعتمدة' : 'Structured Method Stages',
-          desc: isAr ? 'التشخيص، الإثبات، الإجراء، الخيارات، الوقاية' : 'Diagnosis, proof, procedure, options, prevention',
-          icon: <Compass className="w-5 h-5 text-gold" />,
-        },
-    UNVERIFIED_CLAIMS_CONFIG.enable100PercentComplianceClaim
-      ? {
-          target: 100,
-          prefix: '',
-          suffix: '%',
-          title: isAr ? 'سرية وحماية بيانات' : 'Confidentiality & PDPL',
-          desc: isAr ? 'سر مهني صارم ونظام حماية البيانات الشخصية' : 'Strict professional secrecy and PDPL adherence',
-          icon: <CheckCircle className="w-5 h-5 text-gold" />,
-        }
-      : {
-          target: 7,
-          prefix: '',
-          suffix: isAr ? ' مسارات' : ' Tracks',
-          title: isAr ? 'خدمات متخصصة ومؤسسية' : 'Specialised Client Programs',
-          desc: isAr ? 'لكبار العملاء والمجموعات والثروات والنزاعات' : 'Private clients, groups, family wealth & cross-border',
-          icon: <CheckCircle className="w-5 h-5 text-gold" />,
-        },
-  ];
+const STAT_ICONS = [
+  <Award key="award" className="w-5 h-5 text-gold" />,
+  <Scale key="scale" className="w-5 h-5 text-gold" />,
+  <Compass key="compass" className="w-5 h-5 text-gold" />,
+  <CheckCircle key="check" className="w-5 h-5 text-gold" />,
+  <ShieldCheck key="shield" className="w-5 h-5 text-gold" />,
+];
+
+export function StatsBanner({ items }: StatsBannerProps) {
+  if (!items || items.length === 0) return null;
+
+  const stats = items.map((item, idx) => ({
+    ...item,
+    icon: STAT_ICONS[idx % STAT_ICONS.length],
+  }));
 
   return (
     <section className="relative bg-surface border-y border-border/70 py-12 lg:py-16 overflow-hidden">

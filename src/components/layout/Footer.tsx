@@ -2,8 +2,6 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Phone, MessageSquare, Shield, Scale, MapPin, Mail, Globe } from 'lucide-react';
-import { FIRM_DETAILS, UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
-
 interface FooterProps {
   locale: string;
   settings?: {
@@ -14,27 +12,24 @@ interface FooterProps {
     phone?: string;
     whatsapp?: string;
     email?: string;
+    website?: string;
+    websiteUrl?: string;
+    licenseNote?: string;
+    pdplNotice?: string;
   };
 }
 
 export function Footer({ locale, settings }: FooterProps) {
   const isAr = locale === 'ar';
-  const firmName =
-    settings?.brandName || (isAr ? FIRM_DETAILS.nameAr : FIRM_DETAILS.nameEn);
-  const shortBrand =
-    settings?.brandShort ||
-    (isAr ? 'شركة رياض محمد الزهراني للمحاماة' : 'Riyadh Alzahrani Law Firm');
-  const footerDesc =
-    settings?.footerDesc ||
-    (isAr
-      ? 'شركة محاماة واستشارات قانونية مرخصة بالمملكة العربية السعودية، تقدم حلولاً تقوم على المعرفة والالتزام النظامي الصارم.'
-      : 'Licensed Saudi law practice and legal advisory providing authoritative counsel grounded in regulatory precision.');
-  const address = settings?.address || (isAr ? FIRM_DETAILS.addressAr : FIRM_DETAILS.addressEn);
-  const phone = settings?.phone || FIRM_DETAILS.phone;
+  const firmName = settings?.brandName || '';
+  const shortBrand = settings?.brandShort || firmName;
+  const footerDesc = settings?.footerDesc || '';
+  const address = settings?.address || '';
+  const phone = settings?.phone || '';
   const phoneHref = phone.replace(/[^\d+]/g, '');
-  const whatsapp = settings?.whatsapp || FIRM_DETAILS.whatsapp;
-  const whatsappUrl = `https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`;
-  const email = settings?.email || FIRM_DETAILS.email;
+  const whatsapp = settings?.whatsapp || '';
+  const whatsappUrl = whatsapp ? `https://wa.me/${whatsapp.replace(/[^\d]/g, '')}` : '#';
+  const email = settings?.email || '';
 
   return (
     <footer className="bg-signature text-on-dark/90 border-t border-gold/20 pt-16 pb-12">
@@ -58,18 +53,12 @@ export function Footer({ locale, settings }: FooterProps) {
             <p className="text-sm text-on-dark/70 leading-relaxed font-normal">
               {footerDesc}
             </p>
-            <div className="flex items-center gap-2 text-xs text-gold font-medium pt-2">
-              <Scale className="w-4 h-4 text-gold flex-shrink-0" />
-              <span>
-                {UNVERIFIED_CLAIMS_CONFIG.enableMojLicenseNumber
-                  ? isAr
-                    ? `مرخصة ومسجلة بوزارة العدل · ترخيص رقم ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}`
-                    : `Licensed by Saudi Ministry of Justice · No. ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}`
-                  : isAr
-                    ? 'مرخصة ومسجلة بوزارة العدل'
-                    : 'Licensed by Saudi Ministry of Justice'}
-              </span>
-            </div>
+            {settings?.licenseNote && (
+              <div className="flex items-center gap-2 text-xs text-gold font-medium pt-2">
+                <Scale className="w-4 h-4 text-gold flex-shrink-0" />
+                <span>{settings.licenseNote}</span>
+              </div>
+            )}
           </div>
 
           {/* Quick Links */}
@@ -135,12 +124,14 @@ export function Footer({ locale, settings }: FooterProps) {
                   {email}
                 </a>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Globe className="w-4 h-4 text-gold flex-shrink-0" />
-                <a href={FIRM_DETAILS.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">
-                  {FIRM_DETAILS.website}
-                </a>
-              </li>
+              {settings?.websiteUrl && (
+                <li className="flex items-center gap-2.5">
+                  <Globe className="w-4 h-4 text-gold flex-shrink-0" />
+                  <a href={settings.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">
+                    {settings.website || settings.websiteUrl.replace(/^https?:\/\//, '')}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -150,9 +141,10 @@ export function Footer({ locale, settings }: FooterProps) {
               {isAr ? 'الحوكمة والخصوصية' : 'Governance & Policy'}
             </h3>
             <p className="text-xs text-on-dark/60 leading-relaxed">
-              {isAr
-                ? 'تخضع كافة البيانات المقدمة لأحكام نظام حماية البيانات الشخصية السعودي (PDPL). إرسال الطلبات لا يعد تمثيلاً قانونياً ما لم يتم توقيع اتفاقية أتعاب معتمدة.'
-                : 'All submissions are governed under the Saudi Personal Data Protection Law (PDPL). Submitting an inquiry does not constitute legal representation.'}
+              {settings?.pdplNotice ||
+                (isAr
+                  ? 'تخضع كافة البيانات المقدمة لأحكام نظام حماية البيانات الشخصية السعودي (PDPL).'
+                  : 'All submissions are governed under the Saudi Personal Data Protection Law (PDPL).')}
             </p>
             <div className="pt-2 flex flex-wrap gap-4 text-xs font-medium">
               <Link href={`/${locale}/privacy`} className="text-gold hover:underline">

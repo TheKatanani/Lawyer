@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Scale, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ImageSlot } from '@/components/ImageSlot';
-import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 
 interface HeroProps {
   locale: string;
@@ -15,6 +14,10 @@ interface HeroProps {
     ctaPrimary: string;
     ctaSecondary: string;
     imageAlt: string;
+    trust1?: string;
+    trust2?: string;
+    badgeTitle?: string;
+    badgeSub?: string;
   };
 }
 
@@ -66,16 +69,22 @@ export function Hero({ locale, messages }: HeroProps) {
             </div>
 
             {/* Trust badge */}
-            <div className="pt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-muted font-medium border-t border-border/70">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-gold-ink flex-shrink-0" />
-                <span>{isAr ? 'امتثال تام لنظام المحاماة السعودي' : 'Full Compliance with Saudi Legal Regulations'}</span>
+            {(messages.trust1 || messages.trust2) && (
+              <div className="pt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-muted font-medium border-t border-border/70">
+                {messages.trust1 && (
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-gold-ink flex-shrink-0" />
+                    <span>{messages.trust1}</span>
+                  </div>
+                )}
+                {messages.trust2 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold"></span>
+                    <span>{messages.trust2}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-gold"></span>
-                <span>{isAr ? 'سرية مهنية وحوكمة موثوقة' : 'Strict Professional Confidentiality'}</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Visual Architecture Asset: 45% (~5 columns on desktop) */}
@@ -83,6 +92,7 @@ export function Hero({ locale, messages }: HeroProps) {
             <ImageSlot
               slug="home-hero"
               locale={isAr ? 'ar' : 'en'}
+              altOverride={messages.imageAlt || undefined}
               priority
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 45vw"
               aspectClassName="w-full h-[340px] sm:h-[420px] lg:h-[480px]"
@@ -100,16 +110,10 @@ export function Hero({ locale, messages }: HeroProps) {
                   </div>
                   <div>
                     <span className="text-[11px] font-bold text-ink block leading-tight">
-                      {isAr ? 'شركة محاماة مرخصة رسمياً' : 'Officially Licensed Saudi Legal Firm'}
+                      {messages.badgeTitle}
                     </span>
                     <span className="text-[10px] text-muted font-mono block mt-0.5">
-                      {UNVERIFIED_CLAIMS_CONFIG.enableMojLicenseNumber
-                        ? isAr
-                          ? `ترخيص وزارة العدل رقم ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}`
-                          : `MOJ License No. ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber} · SBA Member`
-                        : isAr
-                          ? 'عضو الهيئة السعودية للمحامين'
-                          : 'Saudi Bar Association Member'}
+                      {messages.badgeSub}
                     </span>
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import { listConsultations, listTeamMemberDocs } from '@/server/db/dal';
 import { ConsultationsManager } from '@/components/admin/ConsultationsManager';
 
 export const dynamic = 'force-dynamic';
@@ -20,14 +20,15 @@ export default async function AdminConsultationsPage() {
 
   assertCapability(user.role, 'inquiries.read');
 
-  // Load consultations sorted newest first
-  const consultations = Array.from(store.consultations.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  // Load consultations sorted newest first and team members from Firestore
+  const [consultations, teamDocs] = await Promise.all([
+    listConsultations(),
+    listTeamMemberDocs(),
+  ]);
 
-  // Load active lawyers
-  const lawyers = Array.from(store.teamMembers.values()).map((t) => {
-    const revAr = store.teamMemberRevisions.get(t.locales.ar.publishedRevisionId || '');
+  const lawyers = teamDocs.map((t) => {
+    const revArId = t.locales.ar.publishedRevisionId || t.locales.ar.draftRevisionId || '';
+    const revAr = revArId ? t.revisions?.[revArId] : undefined;
     return {
       id: t.id,
       name: revAr?.fullName || t.id,

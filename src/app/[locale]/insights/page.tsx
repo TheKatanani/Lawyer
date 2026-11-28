@@ -7,6 +7,10 @@ import { SupportedLocale } from '@/server/types';
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
+import { getSiteSettings } from '@/server/db/dal';
+import { pickLocalized } from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { computeArticleReadingTimeMinutes, formatReadingTime } from '@/lib/reading-time';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
@@ -18,7 +22,7 @@ export async function generateMetadata({
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/insights',
     title: isAr ? 'المدونة المعرفية والرؤى القانونية' : 'Legal Insights & Briefings',
@@ -38,7 +42,10 @@ export default async function InsightsPage({
   const currentLocale = locale as SupportedLocale;
   const isAr = locale === 'ar';
 
-  const articles = await listPublishedProjections('article', currentLocale);
+  const [articles, settings] = await Promise.all([
+    listPublishedProjections('article', currentLocale),
+    getSiteSettings(),
+  ]);
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas">
@@ -50,13 +57,16 @@ export default async function InsightsPage({
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
             <span className="text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              {t('insightsSection.eyebrow')}
+              {pickLocalized(currentLocale, settings.insightsSectionEyebrowAr, settings.insightsSectionEyebrowEn) ||
+                t('insightsSection.eyebrow')}
             </span>
             <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl">
-              {t('insightsSection.heading')}
+              {pickLocalized(currentLocale, settings.insightsSectionHeadingAr, settings.insightsSectionHeadingEn) ||
+                t('insightsSection.heading')}
             </h1>
             <p className="text-muted text-base sm:text-lg leading-relaxed">
-              {t('insightsSection.description')}
+              {pickLocalized(currentLocale, settings.insightsSectionDescAr, settings.insightsSectionDescEn) ||
+                t('insightsSection.description')}
             </p>
           </div>
         </ScrollReveal>

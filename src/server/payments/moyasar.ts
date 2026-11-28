@@ -1,5 +1,5 @@
 import 'server-only';
-import { store } from '@/server/db/store';
+import { getSiteSettingsOrNull, savePaymentRequest } from '@/server/db/dal';
 import { PaymentRequest, PaymentRequestMethod, PaymentRequestReceipt } from '@/server/types';
 
 export interface MoyasarPaymentIntent {
@@ -19,7 +19,7 @@ export interface MoyasarPaymentIntent {
 export interface MoyasarPayment {
   id: string;
   status: 'initiated' | 'paid' | 'failed' | 'refunded' | 'captured' | 'voided';
-  amount: number; // In Halalas (e.g., 50000 for 500 SAR)
+  amount: number;
   fee?: number;
   currency: string;
   refunded?: number;
@@ -35,8 +35,8 @@ export interface MoyasarPayment {
   updated_at?: string;
   metadata?: Record<string, any>;
   source?: {
-    type: string; // 'creditcard' | 'applepay'
-    company?: string; // 'mada' | 'visa' | 'mastercard'
+    type: string;
+    company?: string;
     name?: string;
     number?: string;
     message?: string;
@@ -56,32 +56,31 @@ export class PaymentVerificationError extends Error {
   }
 }
 
-/**
- * Checks the environment flag controlling whether public online payments are active.
- * Kept false by default until Moyasar production onboarding is confirmed.
- */
 export function isPaymentsEnabled(): boolean {
   return process.env.PAYMENTS_ENABLED === 'true';
 }
 
-/**
- * Resolves the effective Moyasar Secret Key either from database/siteSettings or env
- */
-export function getMoyasarSecretKey(): string {
-  if (store.siteSettings?.moyasarSecretKey?.trim()) {
-    return store.siteSettings.moyasarSecretKey.trim();
+export async function getMoyasarSecretKey(): Promise<string> {
+  try {
+    const settings = await getSiteSettingsOrNull();
+    if (settings?.moyasarSecretKey?.trim()) {
+      return settings.moyasarSecretKey.trim();
+    }
+  } catch {
+    // Fallback strictly to server env when settings check fails
   }
   return process.env.MOYASAR_SECRET_KEY || '';
 }
 
-/**
- * Resolves the effective Moyasar Publishable Key either from database/siteSettings or env
- */
-export function getMoyasarPublishableKey(): string {
-  if (store.siteSettings?.moyasarPublishableKey?.trim()) {
-    return store.siteSettings.moyasarPublishableKey.trim();
+export async function getMoyasarPublishableKey(): Promise<string> {
+  try {
+    const settings = await getSiteSettingsOrNull();
+    if (settings?.moyasarPublishableKey?.trim()) {
+      return settings.moyasarPublishableKey.trim();
+    }
+  } catch {
+    // Fallback strictly to server env when settings check fails
   }
-  // Avoid Next.js build-time inlining of NEXT_PUBLIC_* so runtime Vercel env edits take effect cleanly.
   const dynamicPublicKeyName = 'NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY';
   return (
     process.env.MOYASAR_PUBLISHABLE_KEY?.trim() ||
@@ -91,17 +90,22 @@ export function getMoyasarPublishableKey(): string {
   );
 }
 
-/**
- * Securely verify payment directly with Moyasar API
- */
 export async function fetchMoyasarPayment(paymentId: string): Promise<MoyasarPayment> {
   if (!paymentId || !/^[A-Za-z0-9_-]{1,150}$/.test(paymentId)) {
-    throw new PaymentVerificationError('INVALID_PAYMENT_ID', 'Invalid payment transaction ID provided.', 400);
+    throw new PaymentVerificationError(
+      'INVALID_PAYMENT_ID',
+      'Invalid payment transaction ID provided.',
+      400
+    );
   }
 
-  const secret = getMoyasarSecretKey();
+  const secret = await getMoyasarSecretKey();
   if (!secret) {
-    throw new PaymentVerificationError('PAYMENT_NOT_CONFIGURED', 'Moyasar secret key is not configured on the server.', 503);
+    throw new PaymentVerificationError(
+      'PAYMENT_NOT_CONFIGURED',
+      'Moyasar secret key is not configured on the server.',
+      503
+    );
   }
 
   const url = `https://api.moyasar.com/v1/payments/${encodeURIComponent(paymentId)}`;
@@ -132,7 +136,11 @@ export async function fetchMoyasarPayment(paymentId: string): Promise<MoyasarPay
     typeof data.currency !== 'string' ||
     typeof data.status !== 'string'
   ) {
-    throw new PaymentVerificationError('INVALID_PROVIDER_RESPONSE', 'Invalid response format received from Moyasar.', 502);
+    throw new PaymentVerificationError(
+      'INVALID_PROVIDER_RESPONSE',
+      'Invalid response format received from Moyasar.',
+      502
+    );
   }
 
   return data as MoyasarPayment;
@@ -159,9 +167,7 @@ export function buildPaymentRequestReceipt(
   }
   const maskedCard =
     pr.maskedCard ||
-    (payment?.source?.number
-      ? `•••• •••• •••• ${payment.source.number.slice(-4)}`
-      : undefined);
+    (payment?.source?.number ? `•••• •••• •••• ${payment.source.number.slice(-4)}` : undefined);
   const paidAt = pr.paidAt || payment?.created_at || new Date().toISOString();
   const payerName = pr.payerName || payment?.source?.name?.trim() || pr.clientName;
   const currency = (pr.currency || payment?.currency || 'SAR').toUpperCase();
@@ -180,10 +186,10 @@ export function buildPaymentRequestReceipt(
   };
 }
 
-export function applySettledPaymentToRequest(
+export async function applySettledPaymentToRequest(
   pr: PaymentRequest,
   payment: MoyasarPayment
-): { changed: boolean; receipt: PaymentRequestReceipt } {
+): Promise<{ changed: boolean; receipt: PaymentRequestReceipt }> {
   const alreadyPaid = pr.status === 'paid';
   const method = mapMoyasarPaymentMethod(payment);
   const maskedCard = payment.source?.number
@@ -212,9 +218,8 @@ export function applySettledPaymentToRequest(
     maskedCard,
   };
 
-  store.paymentRequests.set(pr.id, pr);
   if (!alreadyPaid) {
-    store.persistToDisk();
+    await savePaymentRequest(pr);
   }
   return { changed: !alreadyPaid, receipt: pr.receipt };
 }
@@ -225,9 +230,13 @@ export async function createMoyasarPaymentIntent(input: {
   description: string;
   callbackUrl: string;
 }): Promise<MoyasarPaymentIntent> {
-  const secret = getMoyasarSecretKey();
+  const secret = await getMoyasarSecretKey();
   if (!secret) {
-    throw new PaymentVerificationError('PAYMENT_NOT_CONFIGURED', 'Moyasar secret key is not configured on the server.', 503);
+    throw new PaymentVerificationError(
+      'PAYMENT_NOT_CONFIGURED',
+      'Moyasar secret key is not configured on the server.',
+      503
+    );
   }
 
   const response = await fetch('https://api.moyasar.com/v1/payment_intents', {
@@ -257,23 +266,32 @@ export async function createMoyasarPaymentIntent(input: {
 
   const data = await response.json();
   if (!data?.id || !data?.client_secret) {
-    throw new PaymentVerificationError('INVALID_PROVIDER_RESPONSE', 'Invalid payment intent returned by Moyasar.', 502);
+    throw new PaymentVerificationError(
+      'INVALID_PROVIDER_RESPONSE',
+      'Invalid payment intent returned by Moyasar.',
+      502
+    );
   }
   return data as MoyasarPaymentIntent;
 }
 
-export async function fetchMoyasarPaymentIntent(intentId: string): Promise<MoyasarPaymentIntent | null> {
-  const secret = getMoyasarSecretKey();
+export async function fetchMoyasarPaymentIntent(
+  intentId: string
+): Promise<MoyasarPaymentIntent | null> {
+  const secret = await getMoyasarSecretKey();
   if (!secret || !intentId) return null;
   try {
-    const response = await fetch(`https://api.moyasar.com/v1/payment_intents/${encodeURIComponent(intentId)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Basic ${Buffer.from(secret + ':').toString('base64')}`,
-      },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(8000),
-    });
+    const response = await fetch(
+      `https://api.moyasar.com/v1/payment_intents/${encodeURIComponent(intentId)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${Buffer.from(secret + ':').toString('base64')}`,
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000),
+      }
+    );
     if (!response.ok) return null;
     return (await response.json()) as MoyasarPaymentIntent;
   } catch {
@@ -287,11 +305,13 @@ export async function findPaidMoyasarPaymentByMetadata(
   expectedAmountMinor: number,
   exactAmount = true
 ): Promise<MoyasarPayment | null> {
-  const secret = getMoyasarSecretKey();
+  const secret = await getMoyasarSecretKey();
   if (!secret || !metaValue) return null;
 
   try {
-    const url = `https://api.moyasar.com/v1/payments?metadata[${encodeURIComponent(metaKey)}]=${encodeURIComponent(metaValue)}&page=1`;
+    const url = `https://api.moyasar.com/v1/payments?metadata[${encodeURIComponent(
+      metaKey
+    )}]=${encodeURIComponent(metaValue)}&page=1`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -322,33 +342,43 @@ export async function findPaidMoyasarPaymentByMetadata(
   }
 }
 
-export async function reconcilePaidPaymentRequest(pr: PaymentRequest): Promise<PaymentRequest> {
+export async function reconcilePaidPaymentRequest(
+  pr: PaymentRequest
+): Promise<PaymentRequest> {
   if (pr.status === 'paid') {
     if (!pr.receipt) {
       pr.receipt = buildPaymentRequestReceipt(pr);
-      store.paymentRequests.set(pr.id, pr);
+      await savePaymentRequest(pr);
     }
     return pr;
   }
 
-  if (!isPaymentsEnabled() || !getMoyasarSecretKey()) {
+  if (!isPaymentsEnabled() || !(await getMoyasarSecretKey())) {
     return pr;
   }
 
   if (pr.paymentIntentId) {
     const intent = await fetchMoyasarPaymentIntent(pr.paymentIntentId);
     const settledInIntent = intent?.payments?.find(
-      (p) => (p.status === 'paid' || p.status === 'captured') && (p.currency || '').toUpperCase() === 'SAR' && p.amount === pr.amountMinor
+      (p) =>
+        (p.status === 'paid' || p.status === 'captured') &&
+        (p.currency || '').toUpperCase() === 'SAR' &&
+        p.amount === pr.amountMinor
     );
     if (settledInIntent) {
-      applySettledPaymentToRequest(pr, settledInIntent);
+      await applySettledPaymentToRequest(pr, settledInIntent);
       return pr;
     }
   }
 
-  const paidPayment = await findPaidMoyasarPaymentByMetadata('token', pr.token, pr.amountMinor, true);
+  const paidPayment = await findPaidMoyasarPaymentByMetadata(
+    'token',
+    pr.token,
+    pr.amountMinor,
+    true
+  );
   if (paidPayment) {
-    applySettledPaymentToRequest(pr, paidPayment);
+    await applySettledPaymentToRequest(pr, paidPayment);
   }
   return pr;
 }

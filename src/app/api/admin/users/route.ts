@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
+import {
+  appendAuditLog,
+  getAdminByEmail,
+  listAdmins,
+  saveAdmin,
+} from '@/server/db/dal';
 import { AdminUser, AdminRole } from '@/server/types';
 
 export async function GET(req: NextRequest) {
@@ -12,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
     assertCapability(user.role, 'admins.manage');
 
-    const admins = Array.from(store.admins.values());
+    const admins = await listAdmins();
     return NextResponse.json({ admins });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 403 });
@@ -31,16 +36,19 @@ export async function POST(req: NextRequest) {
     const { email, displayName, role = 'editor' } = body;
 
     if (!email || !displayName) {
-      return NextResponse.json({ error: 'Email and display name are required.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email and display name are required.' },
+        { status: 400 }
+      );
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-
-    // Check if email already exists
-    for (const adm of store.admins.values()) {
-      if (adm.email.toLowerCase() === normalizedEmail) {
-        return NextResponse.json({ error: 'An administrator with this email already exists.' }, { status: 400 });
-      }
+    const existing = await getAdminByEmail(normalizedEmail);
+    if (existing) {
+      return NextResponse.json(
+        { error: 'An administrator with this email already exists.' },
+        { status: 400 }
+      );
     }
 
     const validRoles: AdminRole[] = ['super_admin', 'admin', 'editor', 'inquiry_manager'];
@@ -57,15 +65,13 @@ export async function POST(req: NextRequest) {
       displayName: displayName.trim(),
       role: role as AdminRole,
       isActive: true,
-      mfaEnrolled: true, // MFA enforced by default under policy
+      mfaEnrolled: true,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
 
-    store.admins.set(newUid, newAdmin);
-
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await saveAdmin(newAdmin);
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'ADMIN_INVITED',

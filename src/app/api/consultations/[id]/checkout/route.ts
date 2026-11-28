@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/server/db/store';
+import { getConsultationById, getSiteSettingsOrNull, saveConsultation } from '@/server/db/dal';
 import {
   createMoyasarPaymentIntent,
   fetchMoyasarPaymentIntent,
@@ -25,9 +25,12 @@ export async function POST(
   }
 
   const consultationId = params.id;
-  const consultation = store.consultations.get(consultationId);
+  const [consultation, settings] = await Promise.all([
+    getConsultationById(consultationId),
+    getSiteSettingsOrNull(),
+  ]);
   const feeMinor =
-    consultation?.amountMinor || Math.round((store.siteSettings?.consultationFee || 500) * 100);
+    consultation?.amountMinor || Math.round((settings?.consultationFee || 500) * 100);
 
   if (consultation?.paymentStatus === 'paid') {
     return NextResponse.json(
@@ -84,15 +87,14 @@ export async function POST(
     const reference = consultation?.reference || String(rawBody?.reference || consultationId);
     const intent = await createMoyasarPaymentIntent({
       amountMinor: feeMinor,
-      currency: consultation?.currency || store.siteSettings?.consultationCurrency || 'SAR',
+      currency: consultation?.currency || settings?.consultationCurrency || 'SAR',
       description: `RMA Legal Consultation ${reference}`,
       callbackUrl: `${origin}/${locale}/consultation/callback?consultation=${encodeURIComponent(consultationId)}`,
     });
 
     if (consultation) {
       (consultation as any).paymentIntentId = intent.id;
-      store.consultations.set(consultation.id, consultation);
-      store.persistToDisk?.();
+      await saveConsultation(consultation);
     }
 
     return NextResponse.json({

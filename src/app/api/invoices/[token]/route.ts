@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/server/db/store';
+import { getPaymentRequestByToken } from '@/server/db/dal';
 import { buildPaymentRequestReceipt, reconcilePaidPaymentRequest } from '@/server/payments/moyasar';
 import { checkRateLimit, getClientIp, logInvalidTokenProbe } from '@/server/security/rate-limit';
 
@@ -13,7 +13,6 @@ export async function GET(
   const userAgent = req.headers.get('user-agent');
   const token = params.token;
 
-  // 1. Rate limiting on public token lookup (max 15 requests/min per IP)
   const rl = checkRateLimit(`pr_lookup:${ip}`, 15, 60);
   if (!rl.allowed) {
     return NextResponse.json(
@@ -22,11 +21,9 @@ export async function GET(
     );
   }
 
-  // 2. Lookup by cryptographic token and reconcile paid status with Moyasar if needed
-  const pr = store.getPaymentRequestByToken(token);
+  const pr = await getPaymentRequestByToken(token);
   if (!pr) {
-    // Log masked probe event to security audit log
-    logInvalidTokenProbe(ip, token, userAgent);
+    await logInvalidTokenProbe(ip, token, userAgent);
     return NextResponse.json(
       { error: 'طلب السداد غير موجود أو انتهت صلاحيته' },
       { status: 404 }
@@ -36,7 +33,6 @@ export async function GET(
   await reconcilePaidPaymentRequest(pr);
   const receipt = pr.status === 'paid' ? buildPaymentRequestReceipt(pr) : null;
 
-  // 3. Return sanitized public representation (never expose internal notes)
   return NextResponse.json({
     success: true,
     data: {

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
-import { TeamMemberEntity, TeamMemberRevision } from '@/server/types';
+import {
+  appendAuditLog,
+  getTeamMemberDoc,
+  listTeamMemberDocs,
+  saveTeamMemberDoc,
+} from '@/server/db/dal';
+import { TeamMemberDocument, TeamMemberRevision } from '@/server/types';
 import { publishTeamMemberPaired } from '@/server/repositories/content';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
 
@@ -14,10 +19,10 @@ export async function GET(req: NextRequest) {
     }
     assertCapability(user.role, 'content.edit');
 
-    const members = Array.from(store.teamMembers.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+    const members = await listTeamMemberDocs();
     const enriched = members.map((m) => {
-      const arRev = store.teamMemberRevisions.get(m.locales.ar.publishedRevisionId || m.locales.ar.draftRevisionId);
-      const enRev = store.teamMemberRevisions.get(m.locales.en.publishedRevisionId || m.locales.en.draftRevisionId);
+      const arRev = m.revisions?.[m.locales.ar.publishedRevisionId || m.locales.ar.draftRevisionId];
+      const enRev = m.revisions?.[m.locales.en.publishedRevisionId || m.locales.en.draftRevisionId];
       return {
         ...m,
         revisions: {
@@ -69,16 +74,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawSlug = customSlug || fullNameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const rawSlug =
+      customSlug ||
+      fullNameEn
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
     const memberId = rawSlug || `lawyer-${Date.now()}`;
 
-    if (store.teamMembers.has(memberId)) {
-      return NextResponse.json({ error: 'A team member with this identifier/slug already exists.' }, { status: 400 });
+    if (await getTeamMemberDoc(memberId)) {
+      return NextResponse.json(
+        { error: 'A team member with this identifier/slug already exists.' },
+        { status: 400 }
+      );
     }
 
     const nowIso = new Date().toISOString();
     const arRevId = `rev-tm-${memberId}-ar-1`;
     const enRevId = `rev-tm-${memberId}-en-1`;
+    const totalMembers = (await listTeamMemberDocs()).length;
 
     const arRev: TeamMemberRevision = {
       id: arRevId,
@@ -92,7 +106,9 @@ export async function POST(req: NextRequest) {
       summary: summaryAr?.trim() || fullNameAr.trim(),
       practiceAreas: Array.isArray(practiceAreasAr) ? practiceAreasAr.filter(Boolean) : [],
       spokenLanguages: Array.isArray(spokenLanguagesAr) ? spokenLanguagesAr.filter(Boolean) : ['العربية'],
-      verifiedCredentials: Array.isArray(verifiedCredentialsAr) ? verifiedCredentialsAr.filter(Boolean) : [],
+      verifiedCredentials: Array.isArray(verifiedCredentialsAr)
+        ? verifiedCredentialsAr.filter(Boolean)
+        : [],
       portraitAssetId: portraitAssetId?.trim() || undefined,
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryAr?.trim() || fullNameAr.trim() } }],
       seo: {
@@ -115,8 +131,12 @@ export async function POST(req: NextRequest) {
       positionTitle: positionTitleEn?.trim() || 'Legal Counsel & Attorney',
       summary: summaryEn?.trim() || fullNameEn.trim(),
       practiceAreas: Array.isArray(practiceAreasEn) ? practiceAreasEn.filter(Boolean) : [],
-      spokenLanguages: Array.isArray(spokenLanguagesEn) ? spokenLanguagesEn.filter(Boolean) : ['Arabic', 'English'],
-      verifiedCredentials: Array.isArray(verifiedCredentialsEn) ? verifiedCredentialsEn.filter(Boolean) : [],
+      spokenLanguages: Array.isArray(spokenLanguagesEn)
+        ? spokenLanguagesEn.filter(Boolean)
+        : ['Arabic', 'English'],
+      verifiedCredentials: Array.isArray(verifiedCredentialsEn)
+        ? verifiedCredentialsEn.filter(Boolean)
+        : [],
       portraitAssetId: portraitAssetId?.trim() || undefined,
       blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryEn?.trim() || fullNameEn.trim() } }],
       seo: {
@@ -128,16 +148,17 @@ export async function POST(req: NextRequest) {
       createdAt: nowIso,
     };
 
-    const newMember: TeamMemberEntity = {
+    const newMember: TeamMemberDocument = {
       id: memberId,
       schemaVersion: 1,
       version: 1,
-      sortOrder: Number(sortOrder) || (store.teamMembers.size + 1),
+      sortOrder: Number(sortOrder) || totalMembers + 1,
       relatedServiceIds: [],
       createdAt: nowIso,
       updatedAt: nowIso,
       createdBy: user.uid,
       updatedBy: user.uid,
+      isPublished: false,
       locales: {
         ar: {
           workflow: publishImmediately ? 'approved' : 'draft',
@@ -152,21 +173,20 @@ export async function POST(req: NextRequest) {
           slug: memberId,
         },
       },
+      revisions: {
+        [arRevId]: arRev,
+        [enRevId]: enRev,
+      },
     };
 
-    store.teamMemberRevisions.set(arRevId, arRev);
-    store.teamMemberRevisions.set(enRevId, enRev);
-    store.teamMembers.set(memberId, newMember);
+    await saveTeamMemberDoc(newMember);
 
     if (publishImmediately) {
       await publishTeamMemberPaired(memberId, user.uid);
     }
 
-    store.persistToDisk();
     revalidateSiteRoutes([`/ar/team/${memberId}`, `/en/team/${memberId}`]);
-
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'TEAM_MEMBER_CREATED',

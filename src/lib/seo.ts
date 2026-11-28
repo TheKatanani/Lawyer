@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { SupportedLocale } from '@/server/types';
-import { FIRM_DETAILS } from '@/config/compliance';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { SiteSettings, SupportedLocale } from '@/server/types';
+import { getSiteSettingsOrNull } from '@/server/db/dal';
 
 export const DEFAULT_OG_IMAGE_PATH = '/images/home-hero.webp';
 
@@ -9,15 +8,16 @@ export const DEFAULT_OG_IMAGE_PATH = '/images/home-hero.webp';
  * Resolves the canonical public site origin from a single env variable (NEXT_PUBLIC_SITE_URL),
  * with safe fallbacks for preview/local environments.
  */
-export function getSiteUrl(): string {
+export function getSiteUrl(overrideUrl?: string): string {
   const configured =
+    overrideUrl?.trim() ||
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`
       : '') ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : '') ||
     process.env.NEXT_PUBLIC_APP_ORIGIN?.trim() ||
-    'https://rma-law.sa';
+    'https://www.riyadhalzahrani.com';
 
   return configured.replace(/\/+$/, '');
 }
@@ -33,10 +33,11 @@ export function resolveAbsoluteAssetUrl(assetPath: string | undefined, baseOrigi
 
 export function buildBreadcrumbJsonLd(
   locale: SupportedLocale,
-  items: Array<{ name: string; path: string }>
+  items: Array<{ name: string; path: string }>,
+  siteUrl?: string
 ) {
   const isAr = locale === 'ar';
-  const baseUrl = FIRM_DETAILS.websiteUrl.replace(/\/+$/, '');
+  const baseUrl = getSiteUrl(siteUrl || 'https://www.riyadhalzahrani.com');
   const crumbs = [
     {
       '@type': 'ListItem',
@@ -94,13 +95,14 @@ export function buildAlternates(pathWithoutLocale: string, locale: SupportedLoca
   };
 }
 
-export function buildPageMetadata({
+export async function buildPageMetadata({
   locale,
   path,
   title,
   description,
   ogImageUrl,
   noIndex = false,
+  settings,
 }: {
   locale: SupportedLocale;
   path: string;
@@ -108,14 +110,16 @@ export function buildPageMetadata({
   description: string;
   ogImageUrl?: string;
   noIndex?: boolean;
-}): Metadata {
+  settings?: SiteSettings | null;
+}): Promise<Metadata> {
   const siteUrl = getSiteUrl();
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const resolvedSettings =
+    settings === undefined ? await getSiteSettingsOrNull() : settings;
   const cleanTitle = typeof title === 'string' ? stripFirmTitleSuffix(title) : title;
   const alternates = buildAlternates(path, locale);
   const ogTitle = typeof cleanTitle === 'string' ? cleanTitle : cleanTitle.absolute;
   const resolvedOgImage = resolveAbsoluteAssetUrl(
-    ogImageUrl || settings.ogImageUrl || DEFAULT_OG_IMAGE_PATH,
+    ogImageUrl || resolvedSettings?.ogImageUrl || DEFAULT_OG_IMAGE_PATH,
     siteUrl
   );
 

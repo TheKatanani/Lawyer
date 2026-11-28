@@ -45,6 +45,12 @@ for (const area of PRACTICE_AREAS) {
     summary: area.leadAxiomAr,
     deliverables: area.scopeOfServicesAr,
     prerequisites: area.problemsAddressedAr,
+    methodologySteps: area.methodologySteps.map((s) => ({
+      step: s.step,
+      title: s.titleAr,
+      description: s.descriptionAr,
+    })),
+    valueToClient: area.valueToClientAr,
     blocks: [
       {
         id: `b-quote-${area.id}`,
@@ -118,6 +124,12 @@ for (const area of PRACTICE_AREAS) {
     summary: area.leadAxiomEn,
     deliverables: area.scopeOfServicesEn,
     prerequisites: area.problemsAddressedEn,
+    methodologySteps: area.methodologySteps.map((s) => ({
+      step: s.step,
+      title: s.titleEn,
+      description: s.descriptionEn,
+    })),
+    valueToClient: area.valueToClientEn,
     blocks: [
       {
         id: `b-quote-en-${area.id}`,

@@ -4,13 +4,20 @@ import Link from 'next/link';
 import { setRequestLocale } from 'next-intl/server';
 import { ArrowUpRight, Compass, Target } from 'lucide-react';
 import { ImageSlot } from '@/components/ImageSlot';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
+import { getSiteSettings } from '@/server/db/dal';
+import {
+  getLeadershipContent,
+  getMethodologyProps,
+  getExcellenceProps,
+  pickLocalized,
+} from '@/lib/settings-presenters';
+
+export const dynamic = 'force-dynamic';
 import { SupportedLocale } from '@/server/types';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { LeadershipMessage } from '@/components/sections/LeadershipMessage';
 import { MethodologySection } from '@/components/sections/MethodologySection';
 import { InstitutionalExcellence } from '@/components/sections/InstitutionalExcellence';
-import { UNVERIFIED_CLAIMS_CONFIG } from '@/config/compliance';
 import { buildPageMetadata } from '@/lib/seo';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
@@ -22,7 +29,7 @@ export async function generateMetadata({
   const currentLocale = (locale === 'en' ? 'en' : 'ar') as SupportedLocale;
   const isAr = currentLocale === 'ar';
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: '/about',
     title: isAr ? 'عن الشركة والرؤية المؤسسية' : 'About the Firm & Vision',
@@ -39,7 +46,7 @@ export default async function AboutPage({
 }) {
   setRequestLocale(locale);
   const isAr = locale === 'ar';
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
 
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-canvas overflow-x-clip">
@@ -52,19 +59,13 @@ export default async function AboutPage({
         <ScrollReveal direction="up">
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-gold-ink uppercase tracking-wider">
-              <span>{isAr ? 'عن الشركة' : 'About Firm'}</span>
-              <span>/</span>
-              <span>{isAr ? 'الرؤية والمنهجية' : 'Vision & Principles'}</span>
+              <span>{pickLocalized(locale, settings.aboutEyebrowAr, settings.aboutEyebrowEn) || (isAr ? 'عن الشركة / الرؤية والمنهجية' : 'About Firm / Vision & Principles')}</span>
             </div>
             <h1 className="font-heading-ar font-bold text-ink text-3xl sm:text-5xl leading-tight">
-              {isAr
-                ? (settings.aboutVisionAr || 'شريك قانوني يقوم على الرصانة والمعرفة النظامية العميقة')
-                : (settings.aboutVisionEn || 'A Legal Partner Grounded in Diligence and Regulatory Depth')}
+              {pickLocalized(locale, settings.aboutVisionAr, settings.aboutVisionEn)}
             </h1>
             <p className="text-muted text-base sm:text-lg leading-relaxed">
-              {isAr
-                ? (settings.aboutTextAr || 'شركة رياض محمد الزهراني للمحاماة والاستشارات القانونية شركة سعودية مقرها جدة، تخدم الأفراد والأسر والشركات والجهات الاستثمارية في طيف واسع من مجالات القانون وفق أعلى معايير الحوكمة والنزاهة.')
-                : (settings.aboutTextEn || 'Riyadh Mohammed Alzahrani Law Firm & Legal Consultations is a Saudi firm based in Jeddah, serving individuals, families, companies and investment entities across a broad spectrum of legal practice.')}
+              {pickLocalized(locale, settings.aboutTextAr, settings.aboutTextEn)}
             </p>
           </div>
         </ScrollReveal>
@@ -95,9 +96,7 @@ export default async function AboutPage({
                   <h3>{isAr ? 'رسالتنا المؤسسية' : 'Our Corporate Mission'}</h3>
                 </div>
                 <p className="text-muted text-sm leading-relaxed">
-                  {isAr
-                    ? (settings.aboutMissionAr || 'تقديم خدمات واستشارات قانونية رصينة تحمي مصالح الموكلين وتعزز استدامة الأعمال وفق الأنظمة القضائية والتجارية السعودية.')
-                    : (settings.aboutMissionEn || 'Delivering authoritative legal advisory that safeguards client interests and fosters corporate sustainability under Saudi legal frameworks.')}
+                  {pickLocalized(locale, settings.aboutMissionAr, settings.aboutMissionEn)}
                 </p>
               </div>
             </ScrollReveal>
@@ -106,16 +105,20 @@ export default async function AboutPage({
               <div className="p-6 bg-surface rounded-sm border border-border/80 hover:border-gold/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300 space-y-3">
                 <div className="flex items-center gap-3 text-gold-ink font-heading-ar font-bold text-lg">
                   <Compass className="w-5 h-5 text-gold" />
-                  <h3>{isAr ? 'الترخيص والاعتماد النظامي' : 'Official Licensing & Accreditation'}</h3>
+                  <h3>
+                    {pickLocalized(
+                      locale,
+                      settings.aboutAccreditationTitleAr,
+                      settings.aboutAccreditationTitleEn
+                    )}
+                  </h3>
                 </div>
                 <p className="text-muted text-sm leading-relaxed">
-                  {UNVERIFIED_CLAIMS_CONFIG.enableMojLicenseNumber
-                    ? isAr
-                      ? `تمارس الشركة أعمالها بموجب ترخيص وزارة العدل رقم ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber} بالمملكة العربية السعودية، ونخبة محامين مسجلين بالهيئة السعودية للمحامين.`
-                      : `The practice operates under Saudi Ministry of Justice License No. ${UNVERIFIED_CLAIMS_CONFIG.mojLicenseNumber}, with advocates certified by the Saudi Bar Association.`
-                    : isAr
-                      ? 'تمارس الشركة أعمالها بموجب تراخيص رسمية معتمدة من وزارة العدل بالمملكة العربية السعودية، وعضوية الهيئة السعودية للمحامين.'
-                      : 'The practice operates under formal accreditation from the Saudi Ministry of Justice and membership in the Saudi Bar Association.'}
+                  {pickLocalized(
+                    locale,
+                    settings.aboutAccreditationDescAr,
+                    settings.aboutAccreditationDescEn
+                  )}
                 </p>
               </div>
             </ScrollReveal>
@@ -126,63 +129,39 @@ export default async function AboutPage({
         <div className="pt-8 border-t border-border space-y-8">
           <ScrollReveal direction="up">
             <h2 className="font-heading-ar font-bold text-ink text-2xl sm:text-3xl">
-              {isAr ? 'منهجيتنا في تقديم الحلول القانونية' : 'Our Legal Advisory Framework'}
+              {pickLocalized(
+                locale,
+                settings.aboutPillarsHeadingAr,
+                settings.aboutPillarsHeadingEn
+              )}
             </h2>
           </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <ScrollReveal direction="up" delay={100}>
-              <div className="p-6 bg-surface rounded-sm border border-border hover:border-gold/70 hover:-translate-y-1.5 hover:shadow-md transition-all duration-300 space-y-3 h-full">
-                <span className="font-heading-ar font-bold text-gold text-2xl">01</span>
-                <h3 className="font-heading-ar font-bold text-ink text-lg">
-                  {isAr ? 'الفهم العميق لبيئة الأعمال' : 'Commercial Context Mastery'}
-                </h3>
-                <p className="text-muted text-sm leading-relaxed">
-                  {isAr
-                    ? 'دراسة واقع السوق السعودي واللوائح التنفيذية الصادرة عن الهيئات الحكومية لضمان جدوى المشورة نظامياً وتجارياً.'
-                    : 'Mastery of Saudi market realpolitik and ministerial bylaws ensures practical, commercially viable legal outcomes.'}
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal direction="up" delay={200}>
-              <div className="p-6 bg-surface rounded-sm border border-border hover:border-gold/70 hover:-translate-y-1.5 hover:shadow-md transition-all duration-300 space-y-3 h-full">
-                <span className="font-heading-ar font-bold text-gold text-2xl">02</span>
-                <h3 className="font-heading-ar font-bold text-ink text-lg">
-                  {isAr ? 'الوضوح والشفافية' : 'Objective Clarity'}
-                </h3>
-                <p className="text-muted text-sm leading-relaxed">
-                  {isAr
-                    ? 'تقديم تقييم موضوعي وصادق للموقف القضائي أو التعاقدي دون إعطاء وعود غير واقعية أو ضمانات وهمية.'
-                    : 'Delivering unvarnished risk assessments without hyperbolic promises or unfounded guarantees of court outcomes.'}
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal direction="up" delay={300}>
-              <div className="p-6 bg-surface rounded-sm border border-border hover:border-gold/70 hover:-translate-y-1.5 hover:shadow-md transition-all duration-300 space-y-3 h-full">
-                <span className="font-heading-ar font-bold text-gold text-2xl">03</span>
-                <h3 className="font-heading-ar font-bold text-ink text-lg">
-                  {isAr ? 'الاستدامة والوقاية النظامية' : 'Regulatory Prevention'}
-                </h3>
-                <p className="text-muted text-sm leading-relaxed">
-                  {isAr
-                    ? 'صياغة العقود ولوائح الحوكمة بطريقة وقائية تحمي المنشأة من نشوء النزاعات المستقبلية وتقلل مخاطر التقاضي.'
-                    : 'Drafting preemptive charters and agreements designed to inoculate enterprises against protracted litigation.'}
-                </p>
-              </div>
-            </ScrollReveal>
+            {(settings.aboutPillars || []).map((pillar, idx) => (
+              <ScrollReveal key={pillar.num || idx} direction="up" delay={(idx + 1) * 100}>
+                <div className="p-6 bg-surface rounded-sm border border-border hover:border-gold/70 hover:-translate-y-1.5 hover:shadow-md transition-all duration-300 space-y-3 h-full">
+                  <span className="font-heading-ar font-bold text-gold text-2xl">{pillar.num}</span>
+                  <h3 className="font-heading-ar font-bold text-ink text-lg">
+                    {isAr ? pillar.titleAr : pillar.titleEn}
+                  </h3>
+                  <p className="text-muted text-sm leading-relaxed">
+                    {isAr ? pillar.descAr : pillar.descEn}
+                  </p>
+                </div>
+              </ScrollReveal>
+            ))}
           </div>
         </div>
 
         {/* Leadership Message (PDF p. 6-7) */}
-        <LeadershipMessage locale={locale} />
+        <LeadershipMessage locale={locale} content={getLeadershipContent(settings, locale)} />
 
         {/* 5-Step Methodology (PDF p. 10-11) */}
-        <MethodologySection locale={locale} />
+        <MethodologySection locale={locale} {...getMethodologyProps(settings, locale)} />
 
         {/* Institutional Excellence (PDF p. 52-53) */}
-        <InstitutionalExcellence locale={locale} />
+        <InstitutionalExcellence locale={locale} {...getExcellenceProps(settings, locale)} />
 
         {/* CTA Banner */}
         <ScrollReveal direction="up" delay={150}>

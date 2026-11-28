@@ -4,7 +4,9 @@ import {
   sealPaymentToken,
   unsealPaymentToken,
 } from '@/server/payments/tokens';
-import { store } from '@/server/db/store';
+import { getPaymentRequestByToken } from '@/server/db/dal';
+import { seedFirestore } from '@/server/db/seed';
+import { clearRuntimeCaches } from '@/server/security/runtime-cache';
 
 describe('Cross-Lambda Payment Tokens', () => {
   it('derives deterministic tokens for built-in sample payment requests', () => {
@@ -63,7 +65,9 @@ describe('Cross-Lambda Payment Tokens', () => {
     expect(unsealPaymentToken('')).toBeNull();
   });
 
-  it('hydrates an uncached sealed token in store.getPaymentRequestByToken', () => {
+  it('hydrates an uncached sealed token in getPaymentRequestByToken', async () => {
+    await seedFirestore();
+    clearRuntimeCaches();
     const token = sealPaymentToken({
       id: 'PR-2099-0099',
       clientName: 'عميل عابر للخوادم',
@@ -73,7 +77,7 @@ describe('Cross-Lambda Payment Tokens', () => {
       createdAt: '2026-11-26T12:00:00.000Z',
     });
 
-    const resolved = store.getPaymentRequestByToken(token);
+    const resolved = await getPaymentRequestByToken(token);
     expect(resolved).toBeDefined();
     expect(resolved?.id).toBe('PR-2099-0099');
     expect(resolved?.amountSar).toBe(1500);

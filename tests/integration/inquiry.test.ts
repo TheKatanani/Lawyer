@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createInquiry, listInquiries, updateInquiryStatus, exportInquiriesToCsv } from '../../src/server/repositories/inquiries';
-import { store } from '../../src/server/db/store';
+import { getInquiryDoc, listInquiriesDocs } from '../../src/server/db/dal';
+import { seedFirestore } from '../../src/server/db/seed';
+import { clearRuntimeCaches } from '../../src/server/security/runtime-cache';
 
 describe('Intake, Anti-Spam & Operational Security (A14, A15, A16, A17)', () => {
+  beforeEach(async () => {
+    clearRuntimeCaches();
+    await seedFirestore();
+  });
   it('Successfully persists valid client consultation inquiry with durable reference', async () => {
     const res = await createInquiry({
       audience: 'business',
@@ -21,7 +27,7 @@ describe('Intake, Anti-Spam & Operational Security (A14, A15, A16, A17)', () => 
     expect(res.referenceNumber).toMatch(/^RMA-\d{4}-\d+/);
 
     // Verify stored record
-    const stored = store.inquiries.get(res.referenceNumber);
+    const stored = await getInquiryDoc(res.referenceNumber);
     expect(stored).toBeDefined();
     expect(stored?.name).toBe('سلطان القحطاني');
     expect(stored?.phoneE164).toBe('+966509876543');
@@ -69,7 +75,7 @@ describe('Intake, Anti-Spam & Operational Security (A14, A15, A16, A17)', () => 
 
     expect(res.success).toBe(true);
     // Verified that the honeypot submission was NOT persisted to live inquiries
-    const found = Array.from(store.inquiries.values()).find((i) => i.name === 'Spam Bot');
+    const found = (await listInquiriesDocs()).find((i) => i.name === 'Spam Bot');
     expect(found).toBeUndefined();
   });
 

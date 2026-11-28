@@ -6,14 +6,11 @@ import { NextIntlClientProvider } from 'next-intl';
 import { routing, type Locale } from '@/i18n/routing';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { store, INITIAL_SETTINGS } from '@/server/db/store';
-import { FIRM_DETAILS } from '@/config/compliance';
+import { getSiteSettings } from '@/server/db/dal';
+
+export const dynamic = 'force-dynamic';
 import { DEFAULT_OG_IMAGE_PATH, getSiteUrl, resolveAbsoluteAssetUrl } from '@/lib/seo';
 import '@/app/globals.css';
-
-export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
-}
 
 export async function generateMetadata({
   params: { locale },
@@ -22,7 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const isAr = locale === 'ar';
   const siteUrl = getSiteUrl();
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
   const ogImage = resolveAbsoluteAssetUrl(
     settings.ogImageUrl || DEFAULT_OG_IMAGE_PATH,
     siteUrl
@@ -69,7 +66,7 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
   const isAr = locale === 'ar';
-  const settings = store.siteSettings || INITIAL_SETTINGS;
+  const settings = await getSiteSettings();
 
   const headerMessages = {
     brandName: isAr
@@ -99,6 +96,10 @@ export default async function LocaleLayout({
     phone: settings.phone,
     whatsapp: settings.whatsapp,
     email: settings.email,
+    website: settings.website,
+    websiteUrl: settings.websiteUrl,
+    licenseNote: isAr ? settings.footerLicenseNoteAr : settings.footerLicenseNoteEn,
+    pdplNotice: isAr ? settings.footerPdplNoticeAr : settings.footerPdplNoticeEn,
   };
 
   return (
@@ -125,13 +126,13 @@ export default async function LocaleLayout({
               name: isAr ? settings.brandNameAr : settings.brandNameEn,
               alternateName: isAr ? settings.brandShortAr : settings.brandShortEn,
               description: isAr ? settings.taglineAr : settings.taglineEn,
-              url: FIRM_DETAILS.websiteUrl,
-              telephone: settings.phone || FIRM_DETAILS.phone,
-              email: settings.email || FIRM_DETAILS.email,
+              url: settings.websiteUrl || 'https://www.riyadhalzahrani.com',
+              telephone: settings.phone,
+              email: settings.email,
               address: {
                 '@type': 'PostalAddress',
                 streetAddress: isAr ? settings.addressAr : settings.addressEn,
-                addressLocality: isAr ? FIRM_DETAILS.cityAr : FIRM_DETAILS.cityEn,
+                addressLocality: isAr ? (settings.cityAr || '') : (settings.cityEn || ''),
                 addressCountry: 'SA',
               },
             }),

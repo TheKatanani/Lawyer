@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
-import { store } from '@/server/db/store';
+import { listAllPublishedProjections } from '@/server/repositories/content';
 import { getSiteUrl } from '@/lib/seo';
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = getSiteUrl();
@@ -33,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Dynamic Published Entities
-  const projections = Array.from(store.publishedContent.values());
+  const projections = await listAllPublishedProjections();
   for (const proj of projections) {
     let subPath = '';
     if (proj.entityType === 'service') subPath = `/services/${proj.slug}`;

@@ -1,10 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/server/auth/session';
 import { assertCapability } from '@/server/permissions/rbac';
-import { store } from '@/server/db/store';
-import { ServiceEntity, ServiceRevision } from '@/server/types';
+import { appendAuditLog, getServiceDoc, listServiceDocs, saveServiceDoc } from '@/server/db/dal';
+import { ServiceDocument, ServiceMethodologyStep, ServiceRevision } from '@/server/types';
 import { publishServicePaired } from '@/server/repositories/content';
 import { revalidateSiteRoutes } from '@/server/utils/revalidate';
+
+function buildServiceBlocks(
+  summary: string,
+  deliverables: string[],
+  problems: string[],
+  steps: ServiceMethodologyStep[],
+  valueToClient: string,
+  locale: 'ar' | 'en'
+) {
+  return [
+    { id: `b-quote-${locale}`, type: 'quote' as const, data: { text: summary } },
+    ...(deliverables.length > 0
+      ? [{ id: `b-list-scope-${locale}`, type: 'list' as const, data: { items: deliverables } }]
+      : []),
+    ...(problems.length > 0
+      ? [{ id: `b-list-problems-${locale}`, type: 'list' as const, data: { items: problems } }]
+      : []),
+    ...(steps.length > 0
+      ? [
+          {
+            id: `b-accordion-method-${locale}`,
+            type: 'accordion' as const,
+            data: {
+              items: steps.map((s) => ({
+                title: `${s.step}. ${s.title}`,
+                content: s.description,
+              })),
+            },
+          },
+        ]
+      : []),
+    ...(valueToClient
+      ? [
+          {
+            id: `b-callout-val-${locale}`,
+            type: 'callout' as const,
+            data: {
+              title: locale === 'ar' ? 'القيمة للعميل' : 'VALUE TO THE CLIENT',
+              text: valueToClient,
+            },
+          },
+        ]
+      : []),
+  ];
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +59,7 @@ export async function GET(req: NextRequest) {
     }
     assertCapability(user.role, 'content.edit');
 
-    const services = Array.from(store.services.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+    const services = await listServiceDocs();
     return NextResponse.json({ services });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 403 });
@@ -37,6 +82,12 @@ export async function POST(req: NextRequest) {
       summaryEn,
       deliverablesAr = [],
       deliverablesEn = [],
+      problemsAr = [],
+      problemsEn = [],
+      methodologyStepsAr = [],
+      methodologyStepsEn = [],
+      valueToClientAr = '',
+      valueToClientEn = '',
       audiences = ['business'],
       iconName = 'Scale',
       customSlug,
@@ -50,16 +101,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawSlug = customSlug || titleEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const rawSlug =
+      customSlug ||
+      titleEn
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
     const serviceId = rawSlug || `service-${Date.now()}`;
 
-    if (store.services.has(serviceId)) {
-      return NextResponse.json({ error: 'A service with this ID/slug already exists.' }, { status: 400 });
+    if (await getServiceDoc(serviceId)) {
+      return NextResponse.json(
+        { error: 'A service with this ID/slug already exists.' },
+        { status: 400 }
+      );
     }
 
     const nowIso = new Date().toISOString();
     const arRevId = `rev-${serviceId}-ar-1`;
     const enRevId = `rev-${serviceId}-en-1`;
+    const existingCount = (await listServiceDocs()).length;
+
+    const cleanDeliverablesAr = Array.isArray(deliverablesAr)
+      ? deliverablesAr.map((s: any) => String(s).trim()).filter(Boolean)
+      : [];
+    const cleanDeliverablesEn = Array.isArray(deliverablesEn)
+      ? deliverablesEn.map((s: any) => String(s).trim()).filter(Boolean)
+      : [];
+    const cleanProblemsAr = Array.isArray(problemsAr)
+      ? problemsAr.map((s: any) => String(s).trim()).filter(Boolean)
+      : [];
+    const cleanProblemsEn = Array.isArray(problemsEn)
+      ? problemsEn.map((s: any) => String(s).trim()).filter(Boolean)
+      : [];
+    const cleanStepsAr: ServiceMethodologyStep[] = Array.isArray(methodologyStepsAr)
+      ? methodologyStepsAr
+          .map((s: any, i: number) => ({
+            step: Number(s?.step) || i + 1,
+            title: String(s?.title || '').trim(),
+            description: String(s?.description || '').trim(),
+          }))
+          .filter((s) => s.title)
+      : [];
+    const cleanStepsEn: ServiceMethodologyStep[] = Array.isArray(methodologyStepsEn)
+      ? methodologyStepsEn
+          .map((s: any, i: number) => ({
+            step: Number(s?.step) || i + 1,
+            title: String(s?.title || '').trim(),
+            description: String(s?.description || '').trim(),
+          }))
+          .filter((s) => s.title)
+      : [];
+
+    const arSum = summaryAr?.trim() || titleAr.trim();
+    const enSum = summaryEn?.trim() || titleEn.trim();
+    const arVal = String(valueToClientAr || '').trim();
+    const enVal = String(valueToClientEn || '').trim();
 
     const arRev: ServiceRevision = {
       id: arRevId,
@@ -68,12 +164,22 @@ export async function POST(req: NextRequest) {
       locale: 'ar',
       title: titleAr.trim(),
       slug: serviceId,
-      summary: summaryAr?.trim() || titleAr.trim(),
-      deliverables: Array.isArray(deliverablesAr) ? deliverablesAr.filter(Boolean) : [],
-      blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryAr?.trim() || titleAr.trim() } }],
+      summary: arSum,
+      deliverables: cleanDeliverablesAr,
+      prerequisites: cleanProblemsAr,
+      methodologySteps: cleanStepsAr,
+      valueToClient: arVal,
+      blocks: buildServiceBlocks(
+        arSum,
+        cleanDeliverablesAr,
+        cleanProblemsAr,
+        cleanStepsAr,
+        arVal,
+        'ar'
+      ),
       seo: {
         title: titleAr.trim(),
-        description: summaryAr?.trim() || titleAr.trim(),
+        description: arSum,
       },
       approvalEvidenceRefs: ['EVID-NEW-SERVICE'],
       createdBy: user.uid,
@@ -87,63 +193,69 @@ export async function POST(req: NextRequest) {
       locale: 'en',
       title: titleEn.trim(),
       slug: serviceId,
-      summary: summaryEn?.trim() || titleEn.trim(),
-      deliverables: Array.isArray(deliverablesEn) ? deliverablesEn.filter(Boolean) : [],
-      blocks: [{ id: 'b1', type: 'paragraph', data: { text: summaryEn?.trim() || titleEn.trim() } }],
+      summary: enSum,
+      deliverables: cleanDeliverablesEn,
+      prerequisites: cleanProblemsEn,
+      methodologySteps: cleanStepsEn,
+      valueToClient: enVal,
+      blocks: buildServiceBlocks(
+        enSum,
+        cleanDeliverablesEn,
+        cleanProblemsEn,
+        cleanStepsEn,
+        enVal,
+        'en'
+      ),
       seo: {
         title: titleEn.trim(),
-        description: summaryEn?.trim() || titleEn.trim(),
+        description: enSum,
       },
       approvalEvidenceRefs: ['EVID-NEW-SERVICE'],
       createdBy: user.uid,
       createdAt: nowIso,
     };
 
-    store.serviceRevisions.set(arRevId, arRev);
-    store.serviceRevisions.set(enRevId, enRev);
-
-    const newService: ServiceEntity = {
+    const newService: ServiceDocument = {
       id: serviceId,
       schemaVersion: 1,
       version: 1,
-      audiences: audiences.length > 0 ? audiences : ['business'],
+      audiences: Array.isArray(audiences) && audiences.length > 0 ? audiences : ['business'],
       relatedTeamIds: ['riyadh-alzahrani'],
-      sortOrder: store.services.size + 1,
+      sortOrder: existingCount + 1,
       iconName: iconName || 'Scale',
       createdAt: nowIso,
       updatedAt: nowIso,
       createdBy: user.uid,
       updatedBy: user.uid,
+      isPublished: false,
       locales: {
         ar: {
-          workflow: 'approved',
+          workflow: publishImmediately ? 'approved' : 'draft',
           draftRevisionId: arRevId,
-          approvedRevisionId: arRevId,
-          publishedRevisionId: publishImmediately ? arRevId : undefined,
+          approvedRevisionId: publishImmediately ? arRevId : undefined,
           slug: serviceId,
         },
         en: {
-          workflow: 'approved',
+          workflow: publishImmediately ? 'approved' : 'draft',
           draftRevisionId: enRevId,
-          approvedRevisionId: enRevId,
-          publishedRevisionId: publishImmediately ? enRevId : undefined,
+          approvedRevisionId: publishImmediately ? enRevId : undefined,
           slug: serviceId,
         },
       },
+      revisions: {
+        [arRevId]: arRev,
+        [enRevId]: enRev,
+      },
     };
 
-    store.services.set(serviceId, newService);
+    await saveServiceDoc(newService);
 
     if (publishImmediately) {
       await publishServicePaired(serviceId, user.uid);
     }
 
-    store.persistToDisk();
     revalidateSiteRoutes([`/ar/services/${serviceId}`, `/en/services/${serviceId}`]);
-
-    // Audit log
-    store.auditLogs.unshift({
-      id: `AUDIT-${Date.now()}`,
+    await appendAuditLog({
       actorUid: user.uid,
       actorEmail: user.email,
       action: 'SERVICE_CREATED',
@@ -153,8 +265,11 @@ export async function POST(req: NextRequest) {
       createdAt: nowIso,
     });
 
-    return NextResponse.json({ success: true, service: newService, serviceId }, { status: 201 });
+    return NextResponse.json(
+      { success: true, serviceId, service: await getServiceDoc(serviceId) },
+      { status: 201 }
+    );
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create service.' }, { status: 403 });
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }

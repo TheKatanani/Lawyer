@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getPublishedProjection } from '@/server/repositories/content';
 import { SupportedLocale } from '@/server/types';
-import { getPracticeAreaBySlug } from '@/data/practice-areas';
 import { CheckCircle2, ArrowUpRight, ShieldCheck, Quote, Compass, AlertCircle } from 'lucide-react';
 import { setRequestLocale } from 'next-intl/server';
 import { ImageSlot } from '@/components/ImageSlot';
@@ -12,6 +11,8 @@ import { isSiteImageSlug } from '@/lib/site-images';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { buildPageMetadata } from '@/lib/seo';
 import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params: { locale, slug },
@@ -25,7 +26,7 @@ export async function generateMetadata({
     return { title: currentLocale === 'ar' ? 'الخدمة غير موجودة' : 'Service Not Found' };
   }
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     locale: currentLocale,
     path: `/services/${projection.slug}`,
     title: projection.seo.title || projection.title,
@@ -47,34 +48,31 @@ export default async function ServiceDetailPage({
     notFound();
   }
 
-  const area = getPracticeAreaBySlug(slug);
-
   const dbDeliverables = Array.isArray(service.metadata?.deliverables)
     ? service.metadata.deliverables.filter(Boolean)
     : [];
-  const scopeItems = dbDeliverables.length > 0
-    ? dbDeliverables
-    : area
-    ? (isAr ? area.scopeOfServicesAr : area.scopeOfServicesEn)
-    : [];
+  const scopeItems = dbDeliverables;
 
   const dbProblemsBlock = service.blocks?.find((b) => b.id.includes('list-problems'));
   const dbProblems = Array.isArray(dbProblemsBlock?.data?.items)
     ? dbProblemsBlock!.data.items.filter(Boolean)
     : [];
-  const problemsItems = dbProblems.length > 0
-    ? dbProblems
-    : area
-    ? (isAr ? area.problemsAddressedAr : area.problemsAddressedEn)
+  const metadataProblems = Array.isArray(service.metadata?.problems)
+    ? service.metadata.problems.filter(Boolean)
     : [];
+  const problemsItems = dbProblems.length > 0 ? dbProblems : metadataProblems;
 
-  const steps = area?.methodologySteps || [];
+  const steps: Array<{ step: number; title: string; description: string }> = Array.isArray(
+    service.metadata?.methodologySteps
+  )
+    ? service.metadata.methodologySteps
+    : [];
 
   const dbValueBlock = service.blocks?.find((b) => b.id.includes('callout-val'));
   const valueQuote = dbValueBlock?.data?.text
     ? String(dbValueBlock.data.text)
-    : area
-    ? (isAr ? area.valueToClientAr : area.valueToClientEn)
+    : service.metadata?.valueToClient
+    ? String(service.metadata.valueToClient)
     : null;
 
   const imageSlug = isSiteImageSlug(slug)
@@ -220,11 +218,11 @@ export default async function ServiceDetailPage({
                             {s.step}
                           </span>
                           <h3 className="font-heading-ar font-bold text-ink text-base">
-                            {isAr ? s.titleAr : s.titleEn}
+                            {s.title}
                           </h3>
                         </div>
                         <p className="text-xs text-muted leading-relaxed font-normal">
-                          {isAr ? s.descriptionAr : s.descriptionEn}
+                          {s.description}
                         </p>
                       </div>
                     ))}

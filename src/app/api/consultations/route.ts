@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { store } from '@/server/db/store';
-import { ConsultationRequest, ConsultationStatus, SupportedLocale } from '@/server/types';
+import {
+  allocateNextConsultationReference,
+  appendAuditLog,
+  getServiceBySlugOrId,
+  getSiteSettings,
+  getTeamMemberBySlugOrId,
+  saveConsultation,
+} from '@/server/db/dal';
+import { runtimeIdempotencyKeys, runtimeRateLimits } from '@/server/security/runtime-cache';
+import { ConsultationRequest } from '@/server/types';
 import { normalizePhoneE164, buildWhatsAppMessage } from '@/server/utils/consultation';
 import { getMoyasarPublishableKey, isPaymentsEnabled } from '@/server/payments/moyasar';
 
@@ -13,9 +21,9 @@ const MAX_REQUESTS_PER_WINDOW = 5;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
-  const record = store.rateLimits.get(ip);
+  const record = runtimeRateLimits.get(ip);
   if (!record || record.expiresAt < now) {
-    store.rateLimits.set(ip, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
+    runtimeRateLimits.set(ip, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
   if (record.count >= MAX_REQUESTS_PER_WINDOW) {
@@ -55,8 +63,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Idempotency Check
-    if (idempotencyKey && store.idempotencyKeys.has(idempotencyKey)) {
-      const cached = store.idempotencyKeys.get(idempotencyKey)!;
+    if (idempotencyKey && runtimeIdempotencyKeys.has(idempotencyKey)) {
+      const cached = runtimeIdempotencyKeys.get(idempotencyKey)!;
       if (cached.expiresAt > Date.now()) {
         return NextResponse.json(cached.result);
       }
@@ -86,22 +94,14 @@ export async function POST(req: NextRequest) {
     const effectiveServiceId = serviceId || 'general';
 
     if (effectiveServiceId !== 'general') {
-      let matchedService = store.services.get(effectiveServiceId);
-      if (!matchedService) {
-        for (const svc of Array.from(store.services.values())) {
-          if (svc.locales.ar.slug === effectiveServiceId || svc.locales.en.slug === effectiveServiceId) {
-            matchedService = svc;
-            break;
-          }
-        }
-      }
+      const matchedService = await getServiceBySlugOrId(effectiveServiceId);
       if (matchedService) {
-        const arRev = store.serviceRevisions.get(
-          matchedService.locales.ar.publishedRevisionId || matchedService.locales.ar.draftRevisionId || ''
-        );
-        const enRev = store.serviceRevisions.get(
-          matchedService.locales.en.publishedRevisionId || matchedService.locales.en.draftRevisionId || ''
-        );
+        const arRevId =
+          matchedService.locales.ar.publishedRevisionId || matchedService.locales.ar.draftRevisionId || '';
+        const enRevId =
+          matchedService.locales.en.publishedRevisionId || matchedService.locales.en.draftRevisionId || '';
+        const arRev = arRevId ? matchedService.revisions[arRevId] : undefined;
+        const enRev = enRevId ? matchedService.revisions[enRevId] : undefined;
         serviceLabelAr = arRev?.title || matchedService.id;
         serviceLabelEn = enRev?.title || matchedService.id;
       }
@@ -113,23 +113,15 @@ export async function POST(req: NextRequest) {
     let validLawyerId: string | null = null;
 
     if (preferredLawyerId && preferredLawyerId !== 'no_preference') {
-      let matchedLawyer = store.teamMembers.get(preferredLawyerId);
-      if (!matchedLawyer) {
-        for (const tm of Array.from(store.teamMembers.values())) {
-          if (tm.locales.ar.slug === preferredLawyerId || tm.locales.en.slug === preferredLawyerId) {
-            matchedLawyer = tm;
-            break;
-          }
-        }
-      }
+      const matchedLawyer = await getTeamMemberBySlugOrId(preferredLawyerId);
       if (matchedLawyer) {
         validLawyerId = matchedLawyer.id;
-        const arRev = store.teamMemberRevisions.get(
-          matchedLawyer.locales.ar.publishedRevisionId || matchedLawyer.locales.ar.draftRevisionId || ''
-        );
-        const enRev = store.teamMemberRevisions.get(
-          matchedLawyer.locales.en.publishedRevisionId || matchedLawyer.locales.en.draftRevisionId || ''
-        );
+        const arRevId =
+          matchedLawyer.locales.ar.publishedRevisionId || matchedLawyer.locales.ar.draftRevisionId || '';
+        const enRevId =
+          matchedLawyer.locales.en.publishedRevisionId || matchedLawyer.locales.en.draftRevisionId || '';
+        const arRev = arRevId ? matchedLawyer.revisions[arRevId] : undefined;
+        const enRev = enRevId ? matchedLawyer.revisions[enRevId] : undefined;
         preferredLawyerAr = arRev?.fullName || validLawyerId;
         preferredLawyerEn = enRev?.fullName || validLawyerId;
       }
@@ -158,19 +150,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Generate monotonic Reference Number & Store Entity
-    const year = new Date().getFullYear();
-    const maxSeq = Array.from(store.consultations.values()).reduce((max, item) => {
-      const m = item.reference?.match(/^CR-\d{4}-(\d+)$/);
-      const num = m ? parseInt(m[1], 10) : 0;
-      return num > max ? num : max;
-    }, 0);
-    const refNum = `CR-${year}-${String(maxSeq + 1).padStart(4, '0')}`;
+    const refNum = await allocateNextConsultationReference();
     const id = `consultation-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const nowIso = new Date().toISOString();
 
-    const settings = store.siteSettings;
+    const settings = await getSiteSettings();
     const envPaymentsEnabled = isPaymentsEnabled();
-    const publishableKey = envPaymentsEnabled ? getMoyasarPublishableKey() : '';
+    const publishableKey = envPaymentsEnabled ? await getMoyasarPublishableKey() : '';
     const paymentRequirement = settings?.paymentRequirement ?? 'optional';
     const paymentEnabled =
       envPaymentsEnabled &&
@@ -236,8 +222,7 @@ export async function POST(req: NextRequest) {
       paidAt: null,
     };
 
-    store.consultations.set(consultation.id, consultation);
-    store.persistToDisk?.();
+    await saveConsultation(consultation);
 
     try {
       revalidatePath('/admin/consultations');
@@ -247,7 +232,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Audit log
-    store.auditLogs.unshift({
+    await appendAuditLog({
       id: `AUDIT-${Date.now()}`,
       actorUid: 'public-visitor',
       actorEmail: cleanPhone,
@@ -307,7 +292,7 @@ export async function POST(req: NextRequest) {
 
     // Cache idempotency result for 1 hour
     if (idempotencyKey) {
-      store.idempotencyKeys.set(idempotencyKey, {
+      runtimeIdempotencyKeys.set(idempotencyKey, {
         result: responsePayload,
         expiresAt: Date.now() + 60 * 60 * 1000,
       });
